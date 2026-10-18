@@ -72,7 +72,7 @@ The delivery tracker below covers all recommendations individually. Proposed lea
 | M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
 | M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
 | M14 | Recurring schedule impact preview             | Claude        | Codex             | Claude              | Ready for review                             |
-| M15 | Raid-day briefing                             | Claude        | Codex             | Claude                  | Ready for review: needs db push                   |
+| M15 | Raid-day briefing                             | Claude        | Codex             | Claude              | Ready for review: needs db push              |
 | m01 | Deadline beside the availability answer       | Claude        | Codex             | Claude              | Ready for review                             |
 | m02 | Compact routine date strings                  | Claude        | Codex             | Claude              | Ready for review                             |
 | m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
