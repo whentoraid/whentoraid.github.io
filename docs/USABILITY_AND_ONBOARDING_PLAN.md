@@ -63,7 +63,7 @@ The delivery tracker below covers all recommendations individually. Proposed lea
 | M03 | Consistent app/Discord raid status            | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
 | M04 | Coherent timezone experience                  | Codex         | Claude            | Claude              | Ready for review: display default + calendar |
 | M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | Claude              | Ready for review                             |
-| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M06 | Member reminders and action inbox             | Codex         | Claude            | Claude              | Ready for review: inbox; preferences next    |
 | M07 | Standby offer-and-accept workflow             | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
 | M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started (before Nov 4)                   |
 | M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
