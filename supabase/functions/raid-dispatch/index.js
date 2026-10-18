@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { connectedChannelCheck, deliverQueued } from '../_shared/delivery-worker.js'
 import { isGuildOfficer } from '../_shared/officer.js'
 import { createSpecEmojiLoader } from '../_shared/discord-spec-emojis.js'
+import { renderRosterImage } from '../_shared/roster-image.js'
 
 const URL_ = Deno.env.get('SUPABASE_URL')
 const admin = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
@@ -59,6 +60,7 @@ Deno.serve(async (request) => {
       botToken: BOT_TOKEN,
       appUrl: APP_URL,
       loadSpecEmojis,
+      renderRosterImage,
       checkChannel: connectedChannelCheck(admin, BOT_TOKEN),
     })
     return json({ results })

@@ -4,7 +4,7 @@
  * after a press). Storage, the channel check and network calls are injected, so Vitest runs it too.
  */
 import { deliverMessages, reminderMessages } from './raid-service-core.js'
-import { rosterMessages } from './roster-post.js'
+import { rosterMessages, rosterImageModel } from './roster-post.js'
 import { signupMessages } from './signup-post.js'
 import { rosterComponents, signupComponents } from './discord-interactions.js'
 import { checkChannelInServer } from './discord-connect.js'
@@ -13,7 +13,7 @@ import { checkChannelInServer } from './discord-connect.js'
 export const MAX_DELIVERIES = 10
 
 /** What to send for one claimed job, or null when the job no longer needs a message. */
-async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
+async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage }) {
   if (job.kind === 'roster') {
     if (job.action === 'delete') return { messages: [], mentionIds: [], components: [] }
     const payload =
@@ -23,7 +23,21 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
     const components = job.channel_id ? rosterComponents(job, appUrl) : []
     const specEmojis =
       job.channel_id && !payload.cancelled && !payload.withdrawn ? await loadSpecEmojis() : {}
-    return { messages: rosterMessages(payload, mentionIds, { specEmojis }), mentionIds, components }
+    const messages = rosterMessages(payload, mentionIds, { specEmojis })
+    if (renderRosterImage && job.channel_id && !payload.cancelled && !payload.withdrawn) {
+      const model = rosterImageModel(payload, specEmojis)
+      const bytes = await renderRosterImage(model)
+      messages[0].image = {
+        filename: 'raid-roster.png',
+        description: model.sections
+          .flatMap((section) => section.members.map((member) => `${section.title}: ${member.text}`))
+          .join('; ')
+          .slice(0, 1024),
+        bytes,
+      }
+      messages[0].embeds.unshift({ color: 0x80c8ff, image: { url: 'attachment://raid-roster.png' } })
+    }
+    return { messages, mentionIds, components }
   }
   if (job.kind === 'signup') {
     // Sign-ups are read now, so the post shows every press made before this send.
@@ -55,9 +69,10 @@ async function targetFor(job, { botToken, appUrl, checkChannel, checked }) {
   if (!botToken || !appUrl) throw new Error('The WhenToRaid Discord bot is not configured on this server.')
   // Sign-up and roster cards are embeds, which need one more channel permission than text posts.
   const needEmbeds = job.kind === 'signup' || job.kind === 'roster'
-  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}`
+  const needAttachments = job.kind === 'roster'
+  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}/${needAttachments}`
   if (!checked.has(key)) {
-    await checkChannel(job.guild_id, job.channel_id, { needEmbeds })
+    await checkChannel(job.guild_id, job.channel_id, { needEmbeds, needAttachments })
     checked.add(key)
   }
   return { type: 'bot', channelId: job.channel_id, token: botToken }
@@ -118,11 +133,22 @@ export async function deliverQueued({
   checkChannel,
   fetchFn = fetch,
   loadSpecEmojis = async () => ({}),
+  renderRosterImage = null,
   max = MAX_DELIVERIES,
   log = (message) => console.error(message),
 }) {
   // Channels confirmed to be in their guild's connected server during this call.
-  const context = { rpc, botToken, appUrl, checkChannel, fetchFn, loadSpecEmojis, log, checked: new Set() }
+  const context = {
+    rpc,
+    botToken,
+    appUrl,
+    checkChannel,
+    fetchFn,
+    loadSpecEmojis,
+    renderRosterImage,
+    log,
+    checked: new Set(),
+  }
   const results = []
   for (let i = 0; i < max; i += 1) {
     const job = await rpc('claim_discord_delivery', { p_guild_id: guildId })
@@ -134,13 +160,19 @@ export async function deliverQueued({
 
 /** The production channel check: the channel must be in the Discord server the guild connected. */
 export function connectedChannelCheck(admin, botToken) {
-  return async (guildId, channelId, { needEmbeds = false } = {}) => {
+  return async (guildId, channelId, { needEmbeds = false, needAttachments = false } = {}) => {
     const { data, error } = await admin
       .from('guild_discord_servers')
       .select('server_id')
       .eq('guild_id', guildId)
       .maybeSingle()
     if (error) throw new Error(`guild_discord_servers: ${error.message}`)
-    await checkChannelInServer({ channelId, serverId: data?.server_id, botToken, needEmbeds })
+    await checkChannelInServer({
+      channelId,
+      serverId: data?.server_id,
+      botToken,
+      needEmbeds,
+      needAttachments,
+    })
   }
 }

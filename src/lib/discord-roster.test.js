@@ -185,4 +185,34 @@ describe('complete named raid lists', () => {
     expect(requests.filter((request) => request.method === 'DELETE')).toHaveLength(ids.length - 1)
     expect(saved.at(-1)).toHaveLength(1)
   })
+
+  it('uploads and replaces the colored roster image on message edits', async () => {
+    const requests = []
+    const fetchFn = async (url, init) => {
+      requests.push({ url, ...init })
+      return new Response(JSON.stringify({ id: '100000000000000009' }), { status: 200 })
+    }
+    const target = { type: 'bot', channelId: '200000000000000001', token: 'test-token' }
+    const message = {
+      embeds: [{ image: { url: 'attachment://raid-roster.png' } }],
+      image: {
+        filename: 'raid-roster.png',
+        description: 'Tankus Protection',
+        bytes: new Uint8Array([137, 80, 78, 71]),
+      },
+    }
+    const ids = await deliverMessages(target, [message], [], { fetchFn, checkpoint: async () => {} })
+    await deliverMessages(target, [message], ids, { fetchFn, checkpoint: async () => {} })
+    expect(requests.map((request) => request.method)).toEqual(['POST', 'PATCH'])
+    for (const request of requests) {
+      expect(request.headers['Content-Type']).toBeUndefined()
+      expect(request.body).toBeInstanceOf(FormData)
+      const payload = JSON.parse(request.body.get('payload_json'))
+      expect(payload.attachments).toEqual([
+        { id: 0, filename: 'raid-roster.png', description: 'Tankus Protection' },
+      ])
+      expect(payload.embeds[0].image.url).toBe('attachment://raid-roster.png')
+      expect(request.body.get('files[0]').name).toBe('raid-roster.png')
+    }
+  })
 })

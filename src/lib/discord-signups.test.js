@@ -618,6 +618,47 @@ describe('the delivery worker', () => {
     expect(body.allowed_mentions).toEqual({ parse: [], users: [] })
   })
 
+  it('renders colored names into the roster image while keeping the text and controls', async () => {
+    const { rpc, fetchFn } = worker(
+      claimed({
+        kind: 'roster',
+        payload: {
+          guildName: 'Guild',
+          raidName: 'Raid',
+          start: START,
+          targets: [2, 4, 14],
+          team: [{ name: 'Skogerino', player: 'Skoog', spec: 'Shadow', role: 'DPS', response: 'confirmed' }],
+          standby: [{ name: 'Oak', spec: 'Shadow', role: 'DPS' }],
+        },
+      }),
+    )
+    const renderRosterImage = vi.fn(async () => new Uint8Array([137, 80, 78, 71]))
+    const results = await deliverQueued({
+      rpc,
+      guildId: GUILD,
+      botToken: 'bot-secret',
+      appUrl: 'https://whentoraid.example/',
+      checkChannel: vi.fn(),
+      fetchFn,
+      renderRosterImage,
+    })
+    expect(results).toEqual([{ id: JOB, status: 'sent' }])
+    const model = renderRosterImage.mock.calls[0][0]
+    expect(model.sections.flatMap((section) => section.members)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Skogerino (Skoog) Shadow', color: 'blue' }),
+        expect.objectContaining({ text: 'Oak Shadow', color: 'yellow' }),
+      ]),
+    )
+    const body = fetchFn.mock.calls[0][1].body
+    expect(body).toBeInstanceOf(FormData)
+    const payloadJson = JSON.parse(body.get('payload_json'))
+    expect(payloadJson.embeds[0].image.url).toBe('attachment://raid-roster.png')
+    expect(JSON.stringify(payloadJson.embeds)).not.toContain('🟦')
+    expect(JSON.stringify(payloadJson.embeds)).toContain('**Skogerino**')
+    expect(payloadJson.components[0].components[0].label).toBe('Confirm')
+  })
+
   it('does not post a sign-up for a raid that already started', async () => {
     const { rpc, fetchFn } = worker(claimed({ message_ids: [] }), payload({ closed: true }))
     const results = await deliverQueued({

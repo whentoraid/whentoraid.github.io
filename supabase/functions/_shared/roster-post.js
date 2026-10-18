@@ -9,6 +9,7 @@ import { ROLE_HEADINGS, displayRoles, damageSummary } from './raid-presentation.
 import { SIGNUP_ROLES } from './signup-lineup.js'
 import { roleNeeds } from './raid-readiness.js'
 import { listFields, fieldPages } from './discord-lists.js'
+import { specEmojiName } from './spec-icons.js'
 
 /** Discord accepts at most 100 user mentions, and 2000 characters, per message. */
 const MAX_MENTIONS = 100
@@ -65,10 +66,7 @@ function describe(payload, { budgetRoles, total }) {
 }
 
 function rosterFields({ roles, other }, specEmojis) {
-  const rosterLine = (entry) => {
-    const line = entryLine(entry, { specEmojis })
-    return entry.response === 'confirmed' ? `🟦 ${line}` : line
-  }
+  const rosterLine = (entry) => entryLine(entry, { specEmojis })
   const fields = roles.flatMap(({ role, target, members }) =>
     listFields(
       `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
@@ -79,6 +77,43 @@ function rosterFields({ roles, other }, specEmojis) {
   if (other.length)
     fields.push(...listFields(`❔ No role (${other.length})`, other.map(rosterLine), { joiner: '\n\n' }))
   return fields
+}
+
+/** Plain, bounded data for the colored roster image. The embed remains a readable text fallback. */
+export function rosterImageModel(payload, specEmojis = {}) {
+  const groups = lineup(payload)
+  const imageHeadings = {
+    Tank: 'Tanks',
+    Healer: 'Healers',
+    Melee: 'Melee DPS',
+    Ranged: 'Ranged DPS',
+    Unknown: 'DPS · spec needed',
+  }
+  const sections = [
+    ...groups.roles.map(({ role, members }) => ({ title: imageHeadings[role] ?? role, members })),
+    ...(groups.other.length ? [{ title: 'No role', members: groups.other }] : []),
+    ...(payload.standby?.length ? [{ title: 'Available as backup', members: payload.standby }] : []),
+  ]
+  return {
+    title: String(payload.raidName ?? 'Raid').slice(0, 100),
+    sections: sections.map(({ title, members }) => ({
+      title,
+      members: members.map((entry) => {
+        const name = String(entry.name || entry.player || 'Unknown player').slice(0, 80)
+        const player =
+          entry.player && entry.player !== entry.name ? ` (${String(entry.player).slice(0, 80)})` : ''
+        const spec = entry.spec ? ` ${String(entry.spec).slice(0, 60)}` : ''
+        const emojiName = specEmojiName(entry.class, entry.spec)
+        const emojiId = specEmojis[emojiName]
+        return {
+          text: `${name}${player}${spec}`,
+          color:
+            title === 'Available as backup' ? 'yellow' : entry.response === 'confirmed' ? 'blue' : 'default',
+          emojiId: /^\d{17,20}$/.test(emojiId ?? '') ? emojiId : null,
+        }
+      }),
+    })),
+  }
 }
 
 /** As many valid mentions as fit in one message's text. */
@@ -114,10 +149,8 @@ export function rosterMessages(payload, mentionIds = [], { specEmojis = {} } = {
   if (payload.standby?.length)
     fields.push(
       ...listFields(
-        `🟨 Available as backup (${payload.standby.length})`,
-        payload.standby.map(
-          (entry, index) => `🟨 ${entryLine({ ...entry, number: index + 1 }, { specEmojis })}`,
-        ),
+        `Available as backup (${payload.standby.length})`,
+        payload.standby.map((entry, index) => entryLine({ ...entry, number: index + 1 }, { specEmojis })),
         { joiner: '\n\n' },
       ),
     )

@@ -15,6 +15,7 @@ const BOT_ROLE = '700000000000000004'
 const VIEW = 1 << 10
 const SEND = 1 << 11
 const EMBED = 1 << 14
+const ATTACH = 1 << 15
 const GUILD_ID = '11111111-2222-3333-4444-555555555555'
 const REDIRECT = 'https://whentoraid.github.io/discord-connect.html'
 
@@ -203,6 +204,26 @@ describe('the bot only posts in the connected server', () => {
     await expect(check(api(VIEW | SEND | EMBED))).resolves.toBeUndefined()
     const allowed = [{ id: BOT_ROLE, type: 0, allow: String(EMBED), deny: '0' }]
     await expect(check(api(VIEW | SEND, allowed))).resolves.toBeUndefined()
+    await expect(
+      checkChannelInServer({
+        channelId: '800000000000000001',
+        serverId: SERVER,
+        botToken: 't',
+        needEmbeds: true,
+        needAttachments: true,
+        fetchFn: api(VIEW | SEND | EMBED),
+      }),
+    ).rejects.toThrow(/Attach Files/)
+    await expect(
+      checkChannelInServer({
+        channelId: '800000000000000001',
+        serverId: SERVER,
+        botToken: 't',
+        needEmbeds: true,
+        needAttachments: true,
+        fetchFn: api(VIEW | SEND | EMBED | ATTACH),
+      }),
+    ).resolves.toBeUndefined()
   })
 })
 
@@ -231,7 +252,7 @@ describe('officer requests', () => {
     expect(Object.fromEntries(params)).toEqual({
       client_id: BOT,
       scope: 'bot',
-      permissions: String(VIEW | SEND | EMBED),
+      permissions: String(VIEW | SEND | EMBED | ATTACH),
       response_type: 'code',
       redirect_uri: REDIRECT,
       state: 'a'.repeat(32),
