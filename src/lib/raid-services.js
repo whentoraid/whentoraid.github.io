@@ -117,6 +117,23 @@ export const setMyReminderPrefs = (client, guildId, { ping, quietStart, quietEnd
     p_timezone: timezone,
   })
 
+export const getRaidBriefings = (client, guildId) =>
+  rpc(client, 'get_raid_briefings', { p_guild_id: guildId })
+
+export const setRaidBriefing = (client, guildId, raidId, briefing) =>
+  rpc(client, 'set_raid_briefing', {
+    p_guild_id: guildId,
+    p_raid_id: raidId,
+    p_assembly_minutes: briefing.assemblyMinutes ?? null,
+    p_location: briefing.location ?? '',
+    p_voice_url: briefing.voiceUrl ?? '',
+    p_contact: briefing.contact ?? '',
+    p_notes: briefing.notes ?? '',
+  })
+
+export const setRaidWeekNote = (client, guildId, week, raidId, note) =>
+  rpc(client, 'set_raid_week_note', { p_guild_id: guildId, p_week: week, p_raid_id: raidId, p_note: note })
+
 export const queueDiscordDelivery = (client, guildId, week, raidId, action = 'post') =>
   rpc(client, 'queue_discord_delivery', {
     p_guild_id: guildId,

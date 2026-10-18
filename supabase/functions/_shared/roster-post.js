@@ -10,6 +10,7 @@ import { SIGNUP_ROLES } from './signup-lineup.js'
 import { roleNeeds } from './raid-readiness.js'
 import { listFields, fieldPages } from './discord-lists.js'
 import { specEmojiName } from './spec-icons.js'
+import { safeVoiceLink } from './raid-briefing.js'
 
 /** Discord accepts at most 100 user mentions, and 2000 characters, per message. */
 const MAX_MENTIONS = 100
@@ -45,6 +46,27 @@ function lineup(payload) {
   return { roles, budgetRoles, other, total: count }
 }
 
+/** M15: the officer's raid-day logistics, one short line each; nothing when the guild set none. */
+export function briefingLines(briefing, start) {
+  if (!briefing) return []
+  const text = (value, max) => escapeDiscord(String(value).replace(/\s+/g, ' ').slice(0, max))
+  const lines = []
+  const minutes = Number(briefing.assemblyMinutes)
+  const meet = Number.isInteger(minutes) && minutes > 0 && start
+  if (meet || briefing.location) {
+    const when = meet
+      ? `Meet <t:${Math.floor((start - minutes * 60000) / 1000)}:t> (${minutes} min early)`
+      : 'Meet'
+    lines.push(`📍 ${when}${briefing.location ? ` · ${text(briefing.location, 120)}` : ''}`)
+  }
+  const voice = safeVoiceLink(briefing.voiceUrl)
+  if (voice) lines.push(`🔊 [Voice chat (${voice.host})](${voice.href})`)
+  if (briefing.contact) lines.push(`🙋 Problems? Contact ${text(briefing.contact, 80)}`)
+  if (briefing.notes) lines.push(`📝 ${text(briefing.notes, 500)}`)
+  if (briefing.weekNote) lines.push(`📌 This week: ${text(briefing.weekNote, 300)}`)
+  return lines.length ? ['', ...lines] : []
+}
+
 function describe(payload, { budgetRoles, total }) {
   const seconds = Math.floor(payload.start / 1000)
   const counts = budgetRoles.map(
@@ -57,6 +79,7 @@ function describe(payload, { budgetRoles, total }) {
   return [
     `🗓️ <t:${seconds}:F>`,
     `⏰ Starts <t:${seconds}:R>`,
+    ...briefingLines(payload.briefing, payload.start),
     '',
     `${counts.join(' · ')} · **${total}** rostered`,
     damageSummary(budgetRoles),
