@@ -7,6 +7,7 @@
   import StandbyOffer from '../components/StandbyOffer.svelte'
   import ActionInbox from '../components/ActionInbox.svelte'
   import ReminderPreferences from '../components/ReminderPreferences.svelte'
+  import RaidRecord from '../components/RaidRecord.svelte'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
@@ -204,6 +205,8 @@
     </ul>
   </section>
 {/if}
+
+<div class="spaced-top"><RaidRecord {memberId} {thisWeek} {now} /></div>
 
 <RaidMonth />
 
