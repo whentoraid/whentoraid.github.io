@@ -53,6 +53,17 @@ test('a weekly schedule creates drafts without publishing, and rules are saved p
 
   await page.getByRole('button', { name: 'Cancel this week' }).first().click()
   await expect(page.getByText('This week is cancelled in the schedule.')).toBeVisible()
+
+  // Changing the time previews each affected week before anything is saved.
+  await page.getByRole('button', { name: 'Change time' }).nth(1).click()
+  await page.getByRole('radio', { name: 'This and following weeks' }).check()
+  await page.getByLabel('Start time').nth(1).fill('19:00')
+  const impact = page.getByRole('heading', { name: 'Before you save' }).locator('..')
+  await expect(impact.getByText('Draft moves').first()).toBeVisible()
+  await expect(impact.getByText(/Nothing is published or sent\./)).toBeVisible()
+  await page.getByRole('button', { name: 'Save change' }).click()
+  await expect(page.getByText('Schedule changed.')).toBeVisible()
+
   await navigate(page, 'My raids')
   // The first scheduled Friday is October 2; the calendar opens on September.
   const calendar = page.getByRole('region', { name: 'Raid calendar' })
