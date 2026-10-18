@@ -165,3 +165,47 @@ export function saveAppSignup(client, guildId, { weekIso, raidId, memberId, answ
     p_member_id: memberId,
   })
 }
+
+// Standby and place offers (online guilds, app only). Accepting never changes the published roster.
+
+/** A week's standby players: officers see everyone, players only themselves. */
+export const listRaidStandby = (client, guildId, week) =>
+  rpc(client, 'get_raid_standby', { p_guild_id: guildId, p_week: week })
+
+/** Go on standby for a published raid (optionally reachable only until `untilMs`), or leave it. */
+export const setRaidStandby = (client, guildId, { week, raidId, on, characterId = null, untilMs = null }) =>
+  rpc(client, 'set_raid_standby', {
+    p_guild_id: guildId,
+    p_week: week,
+    p_raid_id: raidId,
+    p_on: on,
+    p_character_id: on ? characterId : null,
+    p_until_ms: on ? untilMs : null,
+  })
+
+/** A week's place offers: officers see all, players their own. */
+export const listRaidOffers = (client, guildId, week) =>
+  rpc(client, 'get_raid_offers', { p_guild_id: guildId, p_week: week })
+
+/** Officers: offer a published player's place to someone else, open until `expiresAt` (ms). */
+export const offerRaidPlace = (
+  client,
+  guildId,
+  { week, raidId, vacatedMemberId, memberId, characterId, expiresAt },
+) =>
+  rpc(client, 'offer_raid_place', {
+    p_guild_id: guildId,
+    p_week: week,
+    p_raid_id: raidId,
+    p_vacated_member_id: vacatedMemberId,
+    p_member_id: memberId,
+    p_character_id: characterId,
+    p_expires_at: new Date(expiresAt).toISOString(),
+  })
+
+export const withdrawRaidOffer = (client, guildId, offerId) =>
+  rpc(client, 'withdraw_raid_offer', { p_guild_id: guildId, p_offer_id: offerId })
+
+/** The offered player answers; resolves to 'accepted' or 'declined'. */
+export const respondToRaidOffer = (client, guildId, offerId, accept) =>
+  rpc(client, 'respond_to_raid_offer', { p_guild_id: guildId, p_offer_id: offerId, p_accept: accept })

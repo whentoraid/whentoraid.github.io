@@ -4,6 +4,7 @@
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
   import RaidResponse from '../components/RaidResponse.svelte'
   import RaidQuickAnswer from '../components/RaidQuickAnswer.svelte'
+  import StandbyOffer from '../components/StandbyOffer.svelte'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
   import RaidMonth from '../components/RaidMonth.svelte'
@@ -16,6 +17,7 @@
   import { showToast } from '../lib/toast.svelte.js'
   import { personalRaids, availabilitySource, compactSessionLabel } from '../lib/personal-raids.js'
   import { weekStatus } from '../lib/raid-status.js'
+  import { standbyOnline } from '../lib/standby.svelte.js'
   import { formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
 
   let now = $state(Date.now())
@@ -164,7 +166,12 @@
           <button aria-label={`View roster for ${item.raid.name}`} onclick={() => openRaid(item)}
             >View roster</button
           >
-          {#if item.assignment}<RaidResponse {item} {memberId} />{/if}
+          {#if item.assignment}<RaidResponse {item} {memberId} />
+          {:else if standbyOnline() && remote.memberId === memberId}<StandbyOffer
+              {item}
+              {memberId}
+              {now}
+            />{/if}
         </li>
       {/each}
     </ul>

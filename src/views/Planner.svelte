@@ -14,6 +14,7 @@
   import WeekBar from '../components/WeekBar.svelte'
   import RaidSelector from '../components/RaidSelector.svelte'
   import RaidResponsesPanel from '../components/RaidResponsesPanel.svelte'
+  import StandbyOffersPanel from '../components/StandbyOffersPanel.svelte'
   import SignupsPanel from '../components/SignupsPanel.svelte'
   import WeeklyOverview from '../components/WeeklyOverview.svelte'
   import { tick } from 'svelte'
@@ -68,6 +69,8 @@
   import { deleteFromWebhook, postToWebhook } from '../lib/discord-webhook.js'
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
   import { loadRaidResponses, responseKey } from '../lib/raid-responses.svelte.js'
+  import { reachableStandby } from '../lib/standby.js'
+  import { standbyOnline, standbyWeek } from '../lib/standby.svelte.js'
   import {
     delivery,
     deliveryKey,
@@ -155,6 +158,13 @@
   let showIssues = $state(false)
   let reviewOpen = $state(false)
   let replacementTarget = $state(null)
+  const onStandby = $derived(
+    new Set(
+      reachableStandby(standbyWeek(weekIso)?.standby, app.data.currentRaidId, Date.now()).map(
+        (row) => row.member_id,
+      ),
+    ),
+  )
   const replacementEntry = $derived(context.plan.team.find((entry) => entry.memberId === replacementTarget))
   const replacements = $derived(
     replacementEntry
@@ -167,8 +177,10 @@
           .flatMap((player) =>
             player.characters
               .filter((character) => character.offered && character.role === replacementEntry.role)
-              .map((character) => ({ player, character })),
+              .map((character) => ({ player, character, standby: onStandby.has(player.id) })),
           )
+          // Players who said they're on standby come first.
+          .sort((a, b) => Number(b.standby) - Number(a.standby))
       : [],
   )
 
@@ -218,24 +230,38 @@
     replacementTarget = memberId
   }
 
-  function confirmReplacement(memberId, characterId) {
-    const result = placeInRoster(
-      benchMember(context.plan.team, replacementTarget),
-      { memberId, characterId, role: replacementEntry.role },
-      getRaid(app.data).targets,
-    )
-    if (result.error) return showToast(result.error)
+  /** Swap `vacated` for another player in the draft; officers review and publish it after. */
+  function replaceInDraft(vacated, entry) {
+    const result = placeInRoster(benchMember(context.plan.team, vacated), entry, getRaid(app.data).targets)
+    if (result.error) {
+      showToast(result.error)
+      return false
+    }
     rememberChange(
       app.data,
       setPlan(app.data, weekIso, {
         start: context.plan.start,
         team: result.team,
-        locked: context.plan.locked.filter((id) => id !== replacementTarget),
+        locked: context.plan.locked.filter((id) => id !== vacated),
       }),
     )
-    replacementTarget = null
     showToast('Replacement saved in the draft. Review and publish the change when ready.')
+    return true
   }
+
+  function confirmReplacement(memberId, characterId) {
+    if (replaceInDraft(replacementTarget, { memberId, characterId, role: replacementEntry.role }))
+      replacementTarget = null
+  }
+
+  /** An accepted offer goes in the draft while the vacated player is still there to swap out. */
+  const canPlaceOffer = (offer) => inDraft(offer.vacated_member_id) && !inDraft(offer.member_id)
+  const placeAcceptedOffer = (offer) =>
+    replaceInDraft(offer.vacated_member_id, {
+      memberId: offer.member_id,
+      characterId: offer.character_id,
+      role: offer.role,
+    })
 
   function rememberChange(previous, next) {
     undoChange = {
@@ -931,6 +957,16 @@
             onreplace={replaceMember}
             onrefresh={() => (responsesTick += 1)}
           />
+          {#if standbyOnline()}
+            <StandbyOffersPanel
+              week={weekIso}
+              raidId={app.data.currentRaidId}
+              {published}
+              byMember={responses.byMember}
+              canPlace={canPlaceOffer}
+              onplace={placeAcceptedOffer}
+            />
+          {/if}
         {:else}<p role="status">Loading player responses…</p>{/if}
       {:else}<div class="panel empty-state">
           <h2>{savedPlan?.cancelled ? 'This raid is cancelled' : 'Publish before collecting responses'}</h2>
@@ -1007,7 +1043,10 @@
     {#each replacements as option (option.character.id)}
       <button onclick={() => confirmReplacement(option.player.id, option.character.id)}>
         <strong>{characterById(app.data, option.character.id)?.name}</strong>
-        <small>{memberById(app.data, option.player.id)?.name} · {option.character.role}</small>
+        <small
+          >{option.standby ? 'On standby · ' : ''}{memberById(app.data, option.player.id)?.name} · {option
+            .character.role}</small
+        >
       </button>
     {:else}
       <p class="note">
