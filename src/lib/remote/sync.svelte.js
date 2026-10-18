@@ -7,7 +7,7 @@ import { backupJson, loadState, parseState } from '../storage.js'
 import { downloadText } from '../download.js'
 import { addDays, mondayOf, todayIso } from '../time.js'
 import { showToast } from '../toast.svelte.js'
-import { applyOps, createGuildWithRows, fetchGuild, listGuilds, myDiscordId } from './api.js'
+import { applyOps, createGuildWithRows, fetchGuild, joinFromDiscord, listGuilds, myDiscordId } from './api.js'
 import { isLocalBackend, supabase } from './client.js'
 import { diffRows, mergeRows, newGuildPayload, rowsToState, stateToRows, TABLES } from './rows.js'
 
@@ -372,8 +372,21 @@ async function onSession(session, generation) {
     const discordId = await myDiscordId(supabase)
     if (generation !== sessionGeneration) return
     remote.discordId = discordId
-    const guilds = await listGuilds(supabase)
+    // Joining from Discord runs beside the guild list; only a player with no guild yet waits for it.
+    const joining = joinFromDiscord(supabase).then(
+      (ids) => ({ ids }),
+      (error) => ({ ids: [], error }),
+    )
+    let guilds = await listGuilds(supabase)
     if (generation !== sessionGeneration) return
+    if (guilds.length) void showJoinedGuilds(joining, generation)
+    else {
+      const joined = await joining
+      if (generation !== sessionGeneration) return
+      if (joined.error) showToast(joined.error.message)
+      if (joined.ids.length) guilds = await listGuilds(supabase)
+      if (generation !== sessionGeneration) return
+    }
     remote.guilds = guilds
     const requested = takeRequestedGuild()
     const member = (id) => guilds.some((g) => g.id === id)
@@ -388,6 +401,22 @@ async function onSession(session, generation) {
     if (generation === sessionGeneration) showToast(error.message)
   } finally {
     if (generation === sessionGeneration) remote.ready = true
+  }
+}
+
+/**
+ * A player who already has a guild does not wait for joining from Discord. A guild they just joined
+ * is added to the list once it lands; a new officer role reaches the open guild through its revision
+ * bump. A failed check only delays both until the next page load, so it is not shown.
+ */
+async function showJoinedGuilds(joining, generation) {
+  const { ids } = await joining
+  if (!ids.some((id) => !remote.guilds.some((g) => g.id === id))) return
+  try {
+    const guilds = await listGuilds(supabase)
+    if (generation === sessionGeneration) remote.guilds = guilds
+  } catch {
+    // The next page load lists it.
   }
 }
 

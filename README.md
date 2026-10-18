@@ -92,7 +92,7 @@ The publishable key is public by design. Never put the secret or service-role ke
 5. Deploy the Edge Functions. `raid-dispatch` sends queued Discord posts and reminders, `raid-calendar` serves personal calendar feeds, and `raid-interactions` receives Discord button presses:
 
    ```sh
-   npx supabase functions deploy raid-dispatch raid-calendar raid-interactions discord-connect
+   npx supabase functions deploy raid-dispatch raid-calendar raid-interactions discord-connect discord-join
    npx supabase secrets set RAID_DISPATCH_SECRET=<long random string>
    ```
 
@@ -230,7 +230,7 @@ Online mode (Supabase) covers the following:
 - Officer and player permissions enforced by the database.
 - Invitations by Discord ID.
 
-Officers are marked in the app; they are not yet synced from Discord server roles. The officer role ID field is a note for that future step, which needs a server function to call Discord's API with the `guilds.members.read` scope; the Discord server ID is used to accept roster button presses. Online edits save as they happen. If two viewers edit from the same revision, the second save is rejected and their view reloads; they must review and reapply their change. Online guilds need a connection: offline, the page loads but changes are not saved. Online guilds can post rosters and reminders to Discord (see [Host it](#host-it)); Blizzard import is not implemented. In browser-only mode, stored Discord IDs are used only for @mentions. Do not enter secrets anywhere in the app.
+Once the bot is added to a guild's Discord server, anyone in that server joins the guild as a player when they sign in (the `discord-join` Edge Function asks Discord with the bot token) or press a bot button or run `/raid` (Discord's signed interaction names them). Holding one of the guild's officer role IDs makes them an officer; losing the role does not demote, so officers change that under Guild members. Players an officer removed are not added back automatically. The Discord server ID is also used to accept roster button presses. Online edits save as they happen. If two viewers edit from the same revision, the second save is rejected and their view reloads; they must review and reapply their change. Online guilds need a connection: offline, the page loads but changes are not saved. Online guilds can post rosters and reminders to Discord (see [Host it](#host-it)); Blizzard import is not implemented. In browser-only mode, stored Discord IDs are used only for @mentions. Do not enter secrets anywhere in the app.
 
 The grid is shown in the guild's timezone, within its raid hours (the demo guild uses America/Los_Angeles, noon–midnight). "Act as" stands in for sign-in: anyone using this browser can act as any player. Availability is stored in UTC. Grid columns are always the guild's days; in "show my time" mode only the labels change. There is no multi-night roster optimization. On touch screens, dragging a finger across the availability grid paints cells (swipe the time labels or outside the grid to scroll). Roster cards are moved by pressing and holding, then dragging; the page scrolls when the card nears the top or bottom edge. Touch behavior is verified with Chromium touch emulation, not yet on physical iOS or Android devices.
 

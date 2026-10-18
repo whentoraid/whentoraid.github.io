@@ -394,7 +394,10 @@ describe('sign-up presses', () => {
 
   it('does not look up a standing for tentative or absent answers, and still confirms if the lookup fails', async () => {
     const tentative = await run(press('tentative'), { outcome: 'saved', status: 'tentative', guildId: GUILD })
-    expect(tentative.rpc).toHaveBeenCalledTimes(1)
+    expect(tentative.rpc.mock.calls.map(([name]) => name)).toEqual([
+      'join_from_discord',
+      'signup_from_discord',
+    ])
 
     const work = []
     const followup = vi.fn()

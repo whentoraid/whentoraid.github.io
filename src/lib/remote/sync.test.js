@@ -46,7 +46,12 @@ vi.mock('./client.js', () => ({
 
 vi.mock('./api.js', () => ({
   myDiscordId: async () => mocked.discordId,
-  listGuilds: async () => [{ id: 'guild-test', name: 'Test guild' }],
+  joinFromDiscord: async () => {
+    if (mocked.joinError) throw new Error('Your Discord server could not be checked. Reload to try again.')
+    return mocked.joined ?? []
+  },
+  // Each call takes the next queued list, if any.
+  listGuilds: async () => mocked.guildLists?.shift() ?? [{ id: 'guild-test', name: 'Test guild' }],
   fetchGuild: async () => {
     mocked.fetchAttempts += 1
     if (mocked.fetchError) throw new Error('Offline')
@@ -86,6 +91,43 @@ afterEach(() => {
   sessionStorage.clear()
   mocked.applyHandler = null
   mocked.applied = 0
+  Object.assign(mocked, { joined: null, joinError: false, guildLists: null })
+})
+
+test('a player with no guild yet joins from their Discord server at sign-in', async () => {
+  const state = createSeedState()
+  state.members[1] = { ...state.members[1], discordId: 'discord-newcomer', officer: false }
+  mocked.rows = { ...stateToRows(state, 'guild-test'), revision: 0 }
+  Object.assign(mocked, { fetchError: false, joined: ['guild-test'], guildLists: [[]] })
+  localStorage.setItem('whentoraid-online-guild', 'guild-test')
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-newcomer'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-newcomer' } })
+    await waitFor(() => expect(remote.guildId).toBe('guild-test'))
+    expect(remote.guilds).toEqual([{ id: 'guild-test', name: 'Test guild' }])
+    expect(remote.officer).toBe(false)
+  } finally {
+    await leaveGuild()
+    stop()
+  }
+})
+
+test('a failed Discord check tells a player with no guild, without signing them out', async () => {
+  Object.assign(mocked, { joinError: true, guildLists: [[]] })
+  const { toast } = await import('../toast.svelte.js')
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-unchecked'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-unchecked' } })
+    await waitFor(() => expect(remote.discordId).toBe('discord-unchecked'))
+    await waitFor(() => expect(remote.ready).toBe(true))
+    expect(remote.signedIn).toBe(true)
+    expect(remote.guilds).toEqual([])
+    expect(toast.message).toContain('Discord server could not be checked')
+  } finally {
+    stop()
+  }
 })
 
 async function openConcurrencyGuild(identity) {
