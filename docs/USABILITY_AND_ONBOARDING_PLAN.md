@@ -78,8 +78,8 @@ The delivery tracker below covers all recommendations individually. Proposed lea
 | m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
 | m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
 | m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
-| m06 | Readable week ranges                          | Claude        | Codex             | —                   | Not started (before Nov 4)        |
-| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| m06 | Readable week ranges                          | Claude        | Codex             | Claude              | Ready for review                  |
+| m07 | Visible selected raid and edit scope          | Claude        | Codex             | Claude              | Ready for review                  |
 | m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
 | m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
 | m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
@@ -372,3 +372,5 @@ Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in t
 | Next actor       | User: review and merge the PR                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 **Decision update — October 18, 2026 (user).** Nothing is parked. All remaining items are targeted for before the Nov 4, 2026 release, in the sequence above, as many as can be finished with tests passing. This replaces the earlier park decision; the slice above ships first.
+
+**Handoff — October 18, 2026; Claude; m06, m07; Ready for review.** Branch `feat/week-range-and-scope` (stacked on `feat/pre-nov4-cut`). m06: the week bar shows “This week · Oct 19–25” (Last/Next week, or just the range further out) beside the date picker, in Availability and the planner. m07: the sticky line at the top of the availability editor now reads “Week of Oct 19–25 · applies to all 2 raids” (or the raid's name) above the save status, so a phone user halfway down the form still sees what they are editing. Checks: `npm run check` pass (587 unit tests); `playwright test` 68 passed. Next: ONB stages 3–5 and the rest of the first sequence group.

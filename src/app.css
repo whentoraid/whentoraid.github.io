@@ -509,6 +509,12 @@ footer span {
 .week-nav > button {
   padding-inline: 12px;
 }
+.week-range {
+  margin: 0 0 0 6px;
+  align-self: center;
+  font-size: 13px;
+  color: var(--muted);
+}
 .week-nav .field {
   font-size: 11px;
   gap: 4px;
@@ -1641,6 +1647,11 @@ dialog::backdrop {
   .week-nav {
     gap: 5px;
     width: 100%;
+    flex-wrap: wrap;
+  }
+  .week-range {
+    flex-basis: 100%;
+    margin: 0;
   }
   .week-nav > button {
     padding-inline: 10px;
@@ -1649,7 +1660,7 @@ dialog::backdrop {
     padding-inline: 8px;
     min-height: 44px;
   }
-  .week-nav > button:last-child {
+  .week-nav > button:last-of-type {
     font-size: 12px;
     margin-left: auto;
   }

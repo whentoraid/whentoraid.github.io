@@ -3,9 +3,10 @@
   import { display, displayZone, setLocalTime, viewerZone } from '../lib/display.svelte.js'
   import { formatRowLabel, rowLabelsVary } from '../lib/grid.js'
   import { setCurrentWeek } from '../lib/model.js'
-  import { addDays, formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
+  import { addDays, daysBetween, formatMonthDay, formatWeekRange, mondayOf, todayIso } from '../lib/time.js'
 
   const DAYS_PER_WEEK = 7
+  const RELATIVE = { [-DAYS_PER_WEEK]: 'Last week', 0: 'This week', [DAYS_PER_WEEK]: 'Next week' }
 
   const guild = $derived(app.data.guild)
   const weekIso = $derived(app.data.currentWeek)
@@ -15,6 +16,12 @@
   const hoursLabel = $derived(
     `${formatRowLabel(weekIso, 0, guild, zone)}–${formatRowLabel(weekIso, guild.slotsPerDay, guild, zone)}`,
   )
+
+  /** "This week · Oct 19–25", so nobody has to work out where a Monday-dated week ends. */
+  const weekLabel = $derived.by(() => {
+    const relative = RELATIVE[daysBetween(thisWeek, weekIso)]
+    return relative ? `${relative} · ${formatWeekRange(weekIso)}` : formatWeekRange(weekIso)
+  })
 
   function goTo(dateIso) {
     app.data = setCurrentWeek(app.data, dateIso)
@@ -43,6 +50,7 @@
       onclick={() => goTo(addDays(weekIso, DAYS_PER_WEEK))}>›</button
     >
     <button disabled={weekIso === thisWeek} onclick={() => goTo(thisWeek)}>This week</button>
+    <p class="week-range" aria-live="polite">{weekLabel}</p>
   </div>
   <div class="right">
     {#if viewerZone !== guild.timezone}

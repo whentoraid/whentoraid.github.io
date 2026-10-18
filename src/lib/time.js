@@ -130,6 +130,14 @@ export function formatMonthDay(dateIso) {
   })
 }
 
+/** A Monday-to-Sunday week as "Oct 19–25", or "Oct 26 – Nov 1" when it spans two months. */
+export function formatWeekRange(mondayIso) {
+  const sundayIso = addDays(mondayIso, 6)
+  if (mondayIso.slice(0, 7) === sundayIso.slice(0, 7))
+    return `${formatMonthDay(mondayIso)}–${dayOfMonth(sundayIso)}`
+  return `${formatMonthDay(mondayIso)} – ${formatMonthDay(sundayIso)}`
+}
+
 /** Clock label for minutes after midnight, e.g. 1110 is "6:30 pm". */
 export function formatClock(minutesFromMidnight) {
   const hour = Math.floor(minutesFromMidnight / 60) % 24
