@@ -32,6 +32,24 @@ describe('Availability view', () => {
     )
   })
 
+  test('a first-time player learns their timezone, then sees what their first answer achieved', async () => {
+    app.data = { ...app.data, weeks: {}, templates: {} }
+    render(Availability)
+    expect(screen.getByText(/Either answer completes your setup/)).toBeTruthy()
+    await fireEvent.click(screen.getByRole('button', { name: 'Can’t make it this week' }))
+    const done = screen.getByRole('region', { name: 'Setup complete' })
+    expect(done.textContent).toContain('Absent this week')
+    expect(done.textContent).toContain('doesn’t guarantee a place')
+    await fireEvent.click(screen.getByRole('button', { name: 'Go to My raids' }))
+    expect(app.view).toBe('home')
+  })
+
+  test('a returning player sees neither first-time message', () => {
+    render(Availability)
+    expect(screen.queryByText(/Either answer completes your setup/)).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Setup complete' })).toBeNull()
+  })
+
   test('"Can’t make it this week" records a response with no availability', async () => {
     const { container } = render(Availability)
     await fireEvent.click(screen.getByRole('button', { name: 'Can’t make it this week' }))
