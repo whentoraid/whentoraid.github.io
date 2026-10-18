@@ -181,3 +181,29 @@ test('the Needs you list asks a rostered player to confirm, and clears once they
   await within(next).findByText('You confirmed you’ll be there.')
   await vi.waitFor(() => expect(screen.queryByText('Confirm your place in 20-player Raid')).toBeNull())
 })
+
+test('a player sees their recent raids and how sitting out is counted', async () => {
+  const start = Date.parse('2026-09-21T23:30:00Z')
+  const previous = '2026-09-21'
+  app.data = {
+    ...app.data,
+    weeks: {
+      ...app.data.weeks,
+      [previous]: {
+        checkins: {},
+        plans: {
+          'raid-20': {
+            start,
+            team: [{ memberId: 'm0', characterId: 'c0a', role: 'Tank' }],
+            attendance: { m0: 'attended' },
+          },
+        },
+      },
+    },
+  }
+  render(Home)
+  const record = screen.getByText('Your recent raids').closest('details')
+  expect(within(record).getByText('Played')).toBeTruthy()
+  expect(within(record).getByText(/doesn’t measure skill or effort/)).toBeTruthy()
+  expect(within(record).getAllByText(/no sit-outs in the 4 weeks before this one/)).toHaveLength(3)
+})
