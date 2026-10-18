@@ -9,6 +9,7 @@
  */
 
 import { parseRaidCommand, raidCommandReply } from './discord-commands.js'
+import { interactionJoinArgs } from './discord-join.js'
 
 const SNOWFLAKE = /^\d{17,20}$/
 const UUID = '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
@@ -292,6 +293,28 @@ export async function editOriginalResponse(interaction, message, fetchFn = fetch
 }
 
 /**
+ * `rpc`, after first joining the interaction's sender to the guilds linked to its server, so anyone
+ * in the server can use the bot. The join runs once per interaction; if it fails, the call still
+ * runs and answers as before.
+ */
+function rpcAsServerMember(interaction, rpc, log) {
+  let joined
+  const join = async () => {
+    const args = interactionJoinArgs(interaction)
+    if (!args) return
+    try {
+      await rpc('join_from_discord', args)
+    } catch (error) {
+      log(`interaction ${interaction.id} join failed: ${error.message}`)
+    }
+  }
+  return async (name, args) => {
+    await (joined ??= join())
+    return rpc(name, args)
+  }
+}
+
+/**
  * Handle one interaction request. Valid presses are acknowledged at once (Discord allows three
  * seconds) with a private "thinking" reply, or for a menu choice by updating that menu later;
  * `schedule` keeps the save, the follow-up and the post refresh running.
@@ -304,7 +327,7 @@ export async function editOriginalResponse(interaction, message, fetchFn = fetch
  *   log?: (message: string) => void }} config
  */
 export async function handleDiscordInteraction(request, config) {
-  const { publicKey, applicationId, now = Date.now(), rpc, schedule } = config
+  const { publicKey, applicationId, now = Date.now(), schedule } = config
   const followup = config.followup ?? editOriginalResponse
   const log = config.log ?? (() => {})
   if (request.method !== 'POST') return reply({ error: 'Method not allowed' }, 405)
@@ -326,6 +349,7 @@ export async function handleDiscordInteraction(request, config) {
   }
   if (interaction?.application_id !== applicationId) return reply({ error: 'Wrong application.' }, 401)
   if (interaction.type === PING) return reply({ type: PONG })
+  const rpc = rpcAsServerMember(interaction, config.rpc, log)
   const command = parseRaidCommand(interaction)
   if (command) {
     schedule(
@@ -353,10 +377,16 @@ export async function handleDiscordInteraction(request, config) {
   }
   if (interaction.type !== COMPONENT) return reply({ error: 'Unsupported interaction.' }, 400)
   const signup = parseSignup(interaction, applicationId)
-  if (signup) return handleSignup(interaction, 'signup_from_discord', signup, { ...config, followup, log })
+  if (signup)
+    return handleSignup(interaction, 'signup_from_discord', signup, { ...config, rpc, followup, log })
   const specChange = parseSpecChange(interaction, applicationId)
   if (specChange)
-    return handleSignup(interaction, 'signup_spec_from_discord', specChange, { ...config, followup, log })
+    return handleSignup(interaction, 'signup_spec_from_discord', specChange, {
+      ...config,
+      rpc,
+      followup,
+      log,
+    })
   const args = parseRosterClick(interaction, applicationId)
   if (!args) return reply({ error: 'Unsupported interaction.' }, 400)
 

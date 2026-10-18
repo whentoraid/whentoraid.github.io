@@ -35,6 +35,17 @@ export async function myDiscordId(client) {
   return check(await client.rpc('my_discord_id'))
 }
 
+/**
+ * Join the guilds linked to Discord servers the player is in, and gain officer access where they hold
+ * an officer role (the discord-join Edge Function). @returns {Promise<string[]>} ids of guilds that changed
+ */
+export async function joinFromDiscord(client) {
+  const { data, error } = await client.functions.invoke('discord-join', { body: {} })
+  if (error)
+    throw new Error('Your Discord server could not be checked. Reload to try again.', { cause: error })
+  return Array.isArray(data?.guildIds) ? data.guildIds : []
+}
+
 /** The API returns at most this many rows per request (`max_rows` in supabase/config.toml). */
 const PAGE_ROWS = 1000
 

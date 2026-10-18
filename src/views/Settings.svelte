@@ -321,9 +321,10 @@
           <details class="settings-section">
             <summary><h2>Discord access</h2></summary>
             <p>
-              The server ID lets Confirm and Can’t attend buttons on bot-posted rosters reach this guild. Role
-              IDs are notes for future role syncing. Online access uses the Discord ID saved on each guild
-              member and the officer setting in this app.
+              Once WhenToRaid is added to your Discord server, anyone in the server joins this guild as a
+              player when they sign in or press a bot button. Members with one of the officer roles below join
+              as officers. Removing that role in Discord does not take officer access away; change it under
+              Guild members. Players you remove are not added back automatically.
             </p>
             <div class="settings-grid">
               <label class="field">
@@ -352,7 +353,10 @@
                 The server ID is filled in when you add WhenToRaid to Discord under Connections.
               </p>
             {/if}
-            <p class="note">Changing these IDs does not change who can access this guild.</p>
+            <p class="note">
+              To copy a role ID, turn on Developer Mode in Discord, then right-click the role under Server
+              Settings → Roles.
+            </p>
           </details>
         </fieldset>
         <div class="settings-save">

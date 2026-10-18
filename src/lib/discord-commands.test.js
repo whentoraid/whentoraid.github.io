@@ -98,11 +98,12 @@ describe('raid command boundary', () => {
 
   it('acknowledges privately before the database resolves, then answers with signed identity only', async () => {
     let resolve
-    const rpc = vi.fn(
-      () =>
-        new Promise((done) => {
-          resolve = done
-        }),
+    const rpc = vi.fn((name) =>
+      name === 'join_from_discord'
+        ? Promise.resolve({ guildIds: [] })
+        : new Promise((done) => {
+            resolve = done
+          }),
     )
     const work = [],
       followup = vi.fn()
@@ -117,11 +118,13 @@ describe('raid command boundary', () => {
     })
     expect(await response.json()).toEqual({ type: 5, data: { flags: 64 } })
     expect(followup).not.toHaveBeenCalled()
-    expect(rpc).toHaveBeenCalledWith('discord_raid_overview', {
-      p_discord_id: USER,
-      p_discord_guild_id: SERVER,
-      p_channel_id: CHANNEL,
-    })
+    await vi.waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith('discord_raid_overview', {
+        p_discord_id: USER,
+        p_discord_guild_id: SERVER,
+        p_channel_id: CHANNEL,
+      }),
+    )
     resolve(overview())
     await Promise.all(work)
     expect(textOf(followup.mock.calls[0][1])).toContain('Blackwing Lair')
@@ -143,7 +146,10 @@ describe('raid command boundary', () => {
       })
       await Promise.all(work)
       expect(textOf(followup.mock.calls)).not.toContain('private database detail')
-      expect(rpc).toHaveBeenCalledTimes(name === 'help' ? 0 : 1)
+      // A failed join is logged and the command still runs.
+      expect(rpc.mock.calls.map(([called]) => called)).toEqual(
+        name === 'help' ? [] : ['join_from_discord', 'discord_raid_overview'],
+      )
       expect(textOf(followup.mock.calls)).toContain(name === 'help' ? '/raid next' : 'could not be loaded')
     }
   })

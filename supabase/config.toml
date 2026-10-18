@@ -449,3 +449,8 @@ entrypoint = "./functions/raid-interactions/index.js"
 [functions.discord-connect]
 verify_jwt = false
 entrypoint = "./functions/discord-connect/index.js"
+
+# Checks the caller itself: a signed-in player joins only as themselves.
+[functions.discord-join]
+verify_jwt = false
+entrypoint = "./functions/discord-join/index.js"
