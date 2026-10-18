@@ -179,6 +179,40 @@ describe('signed Discord responses', () => {
     })
     expect(rosterReply({ outcome: 'standby', raidName: 'Raid', character: 'Oak' })).toMatch(/backup/)
   })
+  it('replaces the private standby picker after a character is saved', async () => {
+    const work = []
+    const followup = vi.fn()
+    const refresh = vi.fn()
+    const rpc = vi.fn().mockResolvedValue({
+      outcome: 'standby',
+      raidName: 'Raid',
+      character: 'Oak',
+      guildId: JOB,
+    })
+    const response = await handleDiscordInteraction(
+      await signed(
+        click({
+          data: { component_type: 3, custom_id: `wtb:${JOB}:${MESSAGE}:2`, values: ['c-main'] },
+        }),
+      ),
+      {
+        publicKey,
+        applicationId: APP,
+        now: NOW,
+        rpc,
+        followup,
+        refresh,
+        schedule: (promise) => work.push(promise),
+      },
+    )
+    expect(await response.json()).toEqual({ type: 6 })
+    await Promise.all(work)
+    expect(followup).toHaveBeenCalledWith(expect.any(Object), {
+      content: expect.stringContaining('backup'),
+      components: [],
+    })
+    expect(refresh).toHaveBeenCalledWith(JOB)
+  })
 })
 describe('application-authored roster posts', () => {
   const job = { id: JOB, version: 2, guild_id: JOB, week: '2026-10-12', raid_id: 'raid-20', payload: {} }

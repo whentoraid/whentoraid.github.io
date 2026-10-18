@@ -494,7 +494,13 @@ export async function handleDiscordInteraction(request, config) {
         log(`interaction ${interaction.id} failed: ${error.message}`)
       }
       try {
-        await followup(interaction, rosterReply(result, args, config.appUrl))
+        const message = rosterReply(result, args, config.appUrl)
+        await followup(
+          interaction,
+          interaction.data.component_type === STRING_SELECT && typeof message === 'string'
+            ? { content: message, components: [] }
+            : message,
+        )
       } catch (error) {
         log(`interaction ${interaction.id} reply failed: ${error.message}`)
       }
