@@ -8,6 +8,8 @@
   import ActionInbox from '../components/ActionInbox.svelte'
   import ReminderPreferences from '../components/ReminderPreferences.svelte'
   import RaidRecord from '../components/RaidRecord.svelte'
+  import RecordCorrections from '../components/RecordCorrections.svelte'
+  import { recordFlagsOnline } from '../lib/record-flags.svelte.js'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
@@ -170,6 +172,7 @@
 
 <!-- Officers see their own raid first; the guild's workload follows. -->
 {#if canManage()}<OfficerDashboard {now} />{/if}
+{#if canManage() && recordFlagsOnline()}<RecordCorrections />{/if}
 
 {#if later.length}
   <section class="upcoming" aria-label="Upcoming published raids">

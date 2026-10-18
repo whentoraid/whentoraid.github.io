@@ -17,7 +17,7 @@
   <CollapsibleSection title={`After the raid · ${recorded}/${team.length} recorded`}>
     <div class="section-head">
       <div>
-        <h2 id="attendance-heading">After the raid</h2>
+        <h2 id="attendance-heading" tabindex="-1">After the raid</h2>
         <small>
           {cancelled
             ? 'Marked as cancelled: it will not count toward attendance or bench fairness.'

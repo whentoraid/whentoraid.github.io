@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { setAttendance, setCancelled } from './attendance.js'
 import { getWeek, setPlan } from './model.js'
 import { plannerContext } from './planning.js'
-import { fairnessSummary, personalRecord } from './raid-record.js'
+import { fairnessSummary, latestFlag, personalRecord } from './raid-record.js'
 import { createSeedState, SEED_WEEK } from './seed.js'
 import { addDays } from './time.js'
 
@@ -65,4 +65,14 @@ describe('a player’s raid record', () => {
     const { start } = getWeek(state, SEED_WEEK).plan
     expect(row(personalRecord(state, benched, NEXT_WEEK, start))).toBeUndefined()
   })
+})
+
+test('a raid’s newest correction request is the one shown', () => {
+  const flags = [
+    { id: 'new', week: SEED_WEEK, raid_id: 'raid-20', member_id: 'm1', status: 'open' },
+    { id: 'old', week: SEED_WEEK, raid_id: 'raid-20', member_id: 'm1', status: 'resolved' },
+    { id: 'other', week: SEED_WEEK, raid_id: 'raid-20', member_id: 'm2', status: 'open' },
+  ]
+  expect(latestFlag(flags, SEED_WEEK, 'raid-20', 'm1').id).toBe('new')
+  expect(latestFlag(flags, SEED_WEEK, 'raid-10', 'm1')).toBeNull()
 })

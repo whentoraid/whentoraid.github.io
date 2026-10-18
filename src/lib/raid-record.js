@@ -93,3 +93,10 @@ export function fairnessSummary(state, memberId, thisWeek) {
     priority: raidRules(raid).priority,
   }))
 }
+
+/**
+ * The newest correction a player has asked for on one raid (open or answered), or null.
+ * `flags` are rows from get_raid_record_flags, newest first.
+ */
+export const latestFlag = (flags, weekIso, raidId, memberId) =>
+  flags.find((f) => f.week === weekIso && f.raid_id === raidId && f.member_id === memberId) ?? null
