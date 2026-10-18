@@ -21,7 +21,9 @@
     saveAvailabilityPreference,
   } from '../lib/view-preferences.js'
   import { CLASS_COLORS } from '../lib/constants.js'
-  import { availabilitySource } from '../lib/personal-raids.js'
+  import { availabilitySource, hasGivenAvailability } from '../lib/personal-raids.js'
+  import { weekStatus } from '../lib/raid-status.js'
+  import { untrack } from 'svelte'
   import { slotWindow } from '../lib/grid.js'
   import { addDays, daysBetween, formatMonthDay, formatWeekRange, mondayOf } from '../lib/time.js'
   import {
@@ -59,6 +61,23 @@
   const weekIso = $derived(app.data.currentWeek)
   const checkin = $derived(getCheckin(app.data, weekIso, memberId))
   const myCharacters = $derived(charactersOf(app.data, memberId))
+  /**
+   * A first-time player is told which timezone they are answering in, and after their first answer
+   * sees what it achieved. Captured on arrival so the result stays until they leave the page.
+   */
+  const firstVisit = untrack(
+    () => !hasGivenAvailability(app.data, app.data.currentWeek, app.data.currentMemberId),
+  )
+  const answered = $derived(hasGivenAvailability(app.data, weekIso, memberId))
+  const mainCharacter = $derived(myCharacters.find((c) => c.main) ?? myCharacters[0])
+  const zoneName = $derived(displayZone(app.data.guild).replaceAll('_', ' '))
+  const zoneClock = $derived(
+    new Date(now).toLocaleTimeString('en-US', {
+      timeZone: displayZone(app.data.guild),
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+  )
   const offeringAny = $derived(isOfferingAny(app.data, weekIso, memberId))
   const raid = $derived(getRaid(app.data))
   const participating = $derived(checkin.raids?.[raid.id]?.participating !== false)
@@ -230,6 +249,28 @@
 
 {#if !myCharacters.length}
   <OnboardingChecklist {memberId} {weekIso} />
+{:else if firstVisit && !answered}
+  <p class="note first-answer">
+    Your times are in <strong>{zoneName}</strong>, where it’s {zoneClock} now. Mark when you can raid, or choose
+    <em>Can’t make it this week</em>. Either answer completes your setup.
+  </p>
+{:else if firstVisit && answered}
+  <section class="panel setup-done" aria-label="Setup complete">
+    <h2>You’re set for raid planning</h2>
+    <ul>
+      <li>
+        Character: <strong>{mainCharacter?.name}</strong> · {mainCharacter?.spec}
+        {mainCharacter?.class}
+      </li>
+      <li>Times in: <strong>{zoneName}</strong></li>
+      <li>This week: <strong>{weekStatus(app.data, weekIso, memberId)}</strong></li>
+    </ul>
+    <p>
+      Your officers can now consider you for the roster. Signing up doesn’t guarantee a place: when a roster
+      with you on it is published, it appears on My raids for you to confirm.
+    </p>
+    <button class="primary" onclick={() => (app.view = 'home')}>Go to My raids</button>
+  </section>
 {/if}
 
 {#if closed}
@@ -427,6 +468,10 @@
     z-index: 1;
     background: var(--panel, #1b242b);
     padding: 1px 0;
+  }
+  .setup-done ul {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
   }
   .edit-scope {
     margin: 0.25rem 0;

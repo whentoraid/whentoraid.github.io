@@ -90,3 +90,10 @@ test('a response given before the raid time changed is not shown as current', as
   expect(await within(next).findByRole('button', { name: 'I’ll be there' })).toBeTruthy()
   expect(within(next).queryByText(/Old/)).toBeNull()
 })
+
+test('an officer sees their own next raid before the guild dashboard', () => {
+  render(Home)
+  const mine = screen.getByRole('region', { name: 'Next raid assignment' })
+  const guild = screen.getByRole('region', { name: 'Officer dashboard' })
+  expect(mine.compareDocumentPosition(guild) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

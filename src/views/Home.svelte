@@ -48,8 +48,6 @@
   subtitle={`Your assignments and availability, in ${viewerZone.replaceAll('_', ' ')}.`}
 />
 
-{#if canManage()}<OfficerDashboard {now} />{/if}
-
 <div class="home-priorities">
   <section class="panel next-raid" aria-label="Next raid assignment">
     {#if next}
@@ -111,6 +109,9 @@
 </div>
 
 <OnboardingChecklist {memberId} weekIso={thisWeek} />
+
+<!-- Officers see their own raid first; the guild's workload follows. -->
+{#if canManage()}<OfficerDashboard {now} />{/if}
 
 {#if later.length}
   <section class="upcoming" aria-label="Upcoming published raids">
