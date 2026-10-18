@@ -15,12 +15,13 @@ const ADMINISTRATOR = 1n << 3n
 const VIEW_CHANNEL = 1n << 10n
 const SEND_MESSAGES = 1n << 11n
 const EMBED_LINKS = 1n << 14n
+const ATTACH_FILES = 1n << 15n
 const POST = VIEW_CHANNEL | SEND_MESSAGES
 /**
  * View Channel and Send Messages post and edit the bot's own messages; Embed Links shows sign-up
- * posts as cards. Servers that added the bot before cards existed must grant Embed Links themselves.
+ * posts as cards, and Attach Files carries the colored roster image.
  */
-export const BOT_PERMISSIONS = String(POST | EMBED_LINKS)
+export const BOT_PERMISSIONS = String(POST | EMBED_LINKS | ATTACH_FILES)
 /** Text and announcement channels. */
 const POSTABLE_TYPES = new Set([0, 5])
 const CATEGORY = 4
@@ -176,6 +177,7 @@ export async function checkChannelInServer({
   serverId,
   botToken,
   needEmbeds = false,
+  needAttachments = false,
   fetchFn = fetch,
 }) {
   if (!serverId) throw new Error('Add WhenToRaid to your Discord server in Guild settings → Connections.')
@@ -189,7 +191,7 @@ export async function checkChannelInServer({
     throw new Error(
       'The bot channel is not in your connected Discord server. Choose it again in Guild settings.',
     )
-  if (!needEmbeds) return
+  if (!needEmbeds && !needAttachments) return
   // Without Embed Links Discord drops a card silently, leaving an empty post.
   const bot = await get('/users/@me')
   const [member, roles] = await Promise.all([
@@ -200,6 +202,10 @@ export async function checkChannelInServer({
   if (!hasChannelPermissions(self, POST | EMBED_LINKS))
     throw new Error(
       'Sign-up cards need the Embed Links permission. In Discord, give the WhenToRaid bot (or its role) Embed Links in the bot channel, then post the sign-up again.',
+    )
+  if (needAttachments && !hasChannelPermissions(self, POST | ATTACH_FILES))
+    throw new Error(
+      'Colored roster names need the Attach Files permission. In Discord, give the WhenToRaid bot (or its role) Attach Files in the bot channel, then post the roster again.',
     )
 }
 

@@ -69,9 +69,10 @@ async function targetFor(job, { botToken, appUrl, checkChannel, checked }) {
   if (!botToken || !appUrl) throw new Error('The WhenToRaid Discord bot is not configured on this server.')
   // Sign-up and roster cards are embeds, which need one more channel permission than text posts.
   const needEmbeds = job.kind === 'signup' || job.kind === 'roster'
-  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}`
+  const needAttachments = job.kind === 'roster'
+  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}/${needAttachments}`
   if (!checked.has(key)) {
-    await checkChannel(job.guild_id, job.channel_id, { needEmbeds })
+    await checkChannel(job.guild_id, job.channel_id, { needEmbeds, needAttachments })
     checked.add(key)
   }
   return { type: 'bot', channelId: job.channel_id, token: botToken }
@@ -159,13 +160,19 @@ export async function deliverQueued({
 
 /** The production channel check: the channel must be in the Discord server the guild connected. */
 export function connectedChannelCheck(admin, botToken) {
-  return async (guildId, channelId, { needEmbeds = false } = {}) => {
+  return async (guildId, channelId, { needEmbeds = false, needAttachments = false } = {}) => {
     const { data, error } = await admin
       .from('guild_discord_servers')
       .select('server_id')
       .eq('guild_id', guildId)
       .maybeSingle()
     if (error) throw new Error(`guild_discord_servers: ${error.message}`)
-    await checkChannelInServer({ channelId, serverId: data?.server_id, botToken, needEmbeds })
+    await checkChannelInServer({
+      channelId,
+      serverId: data?.server_id,
+      botToken,
+      needEmbeds,
+      needAttachments,
+    })
   }
 }
