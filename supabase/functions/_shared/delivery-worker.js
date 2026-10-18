@@ -3,7 +3,7 @@
  * (the scheduler and officers' browsers) and raid-interactions (which refreshes a sign-up post right
  * after a press). Storage, the channel check and network calls are injected, so Vitest runs it too.
  */
-import { deliverMessages, reminderMessages } from './raid-service-core.js'
+import { deliverMessages, reminderMentionIds, reminderMessages } from './raid-service-core.js'
 import { rosterMessages, rosterImageModel } from './roster-post.js'
 import { signupMessages } from './signup-post.js'
 import { rosterComponents, signupComponents } from './discord-interactions.js'
@@ -56,7 +56,8 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage
   if (!payload) return null
   const messages = reminderMessages(payload)
   if (!messages.length) return null
-  return { messages, mentionIds: payload.recipients.map((r) => r.discordId).filter(Boolean), components: [] }
+  // Everyone is named; only those who want it are pinged.
+  return { messages, mentionIds: reminderMentionIds(payload), components: [] }
 }
 
 /**

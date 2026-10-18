@@ -104,6 +104,19 @@ export const getReminderSettings = (client, guildId) =>
 export const setReminderSettings = (client, guildId, settings) =>
   rpc(client, 'set_raid_reminders', { p_guild_id: guildId, p_settings: settings })
 
+/** The signed-in player's own reminder pings and quiet hours (M06). */
+export const getMyReminderPrefs = (client, guildId) =>
+  rpc(client, 'get_my_reminder_prefs', { p_guild_id: guildId })
+
+export const setMyReminderPrefs = (client, guildId, { ping, quietStart, quietEnd, timezone }) =>
+  rpc(client, 'set_my_reminder_prefs', {
+    p_guild_id: guildId,
+    p_ping: ping,
+    p_quiet_start: quietStart,
+    p_quiet_end: quietEnd,
+    p_timezone: timezone,
+  })
+
 export const queueDiscordDelivery = (client, guildId, week, raidId, action = 'post') =>
   rpc(client, 'queue_discord_delivery', {
     p_guild_id: guildId,

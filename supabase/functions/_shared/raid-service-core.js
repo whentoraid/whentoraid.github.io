@@ -65,6 +65,10 @@ export const escapeDiscord = (value) =>
     .replace(/:\/\//g, ':\u200b//')
     .replace(/\./g, '.\u200b')
     .replace(/[\r\n]/g, ' ')
+/** Players a reminder pings: linked to Discord and not opted out or in their quiet hours. */
+export const reminderMentionIds = (payload) =>
+  (payload.recipients ?? []).filter((r) => r.mention !== false && r.discordId).map((r) => r.discordId)
+
 export function reminderMessages(payload) {
   const targets = (payload.recipients ?? []).map((member) =>
     /^\d{17,20}$/.test(member.discordId) ? `<@${member.discordId}>` : escapeDiscord(member.name),
