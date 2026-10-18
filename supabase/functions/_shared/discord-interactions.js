@@ -16,6 +16,8 @@ const UUID = '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
 const SIGNUP_STATUS = '(signed|late|tentative|absent)'
 /** `wtr:<delivery id>:<delivery version>:<status>`, at most 100 characters as Discord requires. */
 const CUSTOM_ID = new RegExp(`^wtr:${UUID}:(\\d{1,15}):(confirmed|tentative|unavailable)$`)
+/** `wtb:<delivery id>:<post message id>:<version>` on a private standby character menu. */
+const STANDBY_MENU_ID = new RegExp(`^wtb:${UUID}:(\\d{17,20}):(\\d{1,15})$`)
 /** `wts:<delivery id>:<status>` on a sign-up post. Not versioned: every sign-up edits the post. */
 const SIGNUP_BUTTON_ID = new RegExp(`^wts:${UUID}:${SIGNUP_STATUS}$`)
 /** `wtc:<delivery id>:<post message id>:<status>` on the private character menu. */
@@ -103,6 +105,24 @@ export function parseRosterClick(interaction, applicationId) {
   }
 }
 
+/** A character chosen privately for an off-roster Confirm press. */
+export function parseStandbyChoice(interaction, applicationId) {
+  const context = signedContext(interaction, applicationId)
+  const { data } = interaction
+  if (!context || data?.component_type !== STRING_SELECT) return null
+  const match = STANDBY_MENU_ID.exec(data.custom_id ?? '')
+  const [characterId] = Array.isArray(data.values) && data.values.length === 1 ? data.values : []
+  if (!match || typeof characterId !== 'string' || !/^.{1,64}$/.test(characterId)) return null
+  return {
+    ...context,
+    p_message_id: match[2],
+    p_delivery_id: match[1],
+    p_version: Number(match[3]),
+    p_status: 'confirmed',
+    p_character_id: characterId,
+  }
+}
+
 /**
  * The RPC arguments for a sign-up button on the post, or a character chosen from the private menu
  * (which names the post it came from), or null for anything else.
@@ -157,7 +177,7 @@ export function parseSpecChange(interaction, applicationId) {
 
 const OUTCOME_MESSAGES = {
   'not-member': 'Your Discord account is not a member of this guild in WhenToRaid.',
-  'not-rostered': 'You are not on this published roster.',
+  'not-rostered': 'You are not on this published roster. Confirm to offer yourself as a backup.',
   stale: 'This roster just changed. Use the updated post, or open the roster in WhenToRaid.',
   duplicate: 'That press was already recorded.',
   closed: 'This raid has started, was cancelled, or is no longer published.',
@@ -166,6 +186,8 @@ const OUTCOME_MESSAGES = {
 
 /** The private reply for an outcome returned by respond_to_discord_raid. */
 export function outcomeMessage(result) {
+  if (result?.outcome === 'standby')
+    return `You offered to fill a place in ${result.raidName || 'this raid'} as ${result.character}. Your officers can see you as a backup; you are not on the published roster yet.`
   if (result?.outcome === 'saved') {
     const raid = result.raidName ? ` for ${result.raidName}` : ''
     if (result.status === 'tentative')
@@ -175,6 +197,72 @@ export function outcomeMessage(result) {
       : `Your officers can see you can't attend${raid}.`
   }
   return OUTCOME_MESSAGES[result?.outcome] ?? 'Your response could not be saved. Try again in WhenToRaid.'
+}
+
+function charactersLink(appUrl, guildId) {
+  if (!appUrl) return null
+  const base = new URL(appUrl)
+  if (base.protocol !== 'https:') return null
+  return `${base.origin}${base.pathname}${guildId ? `?guild=${guildId}` : ''}#/characters`
+}
+
+function onboardingReply(content, appUrl, guildId) {
+  const url = charactersLink(appUrl, guildId)
+  return {
+    content,
+    components: url
+      ? [
+          {
+            type: ACTION_ROW,
+            components: [{ type: BUTTON, style: STYLE_LINK, label: 'Set up characters', url }],
+          },
+        ]
+      : [],
+  }
+}
+
+export function rosterReply(result, args = {}, appUrl) {
+  if (result?.outcome === 'choose') {
+    const options = (result.characters ?? []).slice(0, MAX_OPTIONS).map((c) => ({
+      label: `${c.name} — ${[c.spec, c.class].filter(Boolean).join(' ')}`.slice(0, MAX_LABEL),
+      value: c.id,
+      ...(c.role ? { description: c.role } : {}),
+    }))
+    return {
+      content: 'You are not on the published roster. Which character could you bring as a backup?',
+      components: [
+        {
+          type: ACTION_ROW,
+          components: [
+            {
+              type: STRING_SELECT,
+              custom_id: `wtb:${args.p_delivery_id}:${args.p_message_id}:${args.p_version}`,
+              placeholder: 'Choose a backup character',
+              options,
+            },
+          ],
+        },
+      ],
+    }
+  }
+  if (result?.outcome === 'no-characters')
+    return onboardingReply(
+      'Add a character in WhenToRaid, then press Confirm again. Sign in with this Discord account; your guild will appear automatically.',
+      appUrl,
+      result.guildId,
+    )
+  if (result?.outcome === 'not-member')
+    return onboardingReply(
+      'Sign in to WhenToRaid with this Discord account, then return and press Confirm again. If your guild is missing, ask an officer for an invite.',
+      appUrl,
+      result.guildId,
+    )
+  if (result?.outcome === 'bad-character')
+    return {
+      content: 'That character is no longer available. Press Confirm again to choose another.',
+      components: [],
+    }
+  return outcomeMessage(result)
 }
 
 const SIGNUP_OUTCOMES = {
@@ -238,7 +326,7 @@ function specMenu(result, args) {
  * or (`choose`) a menu of the player's characters bound to the post that was pressed. `components`
  * is always set, so choosing from a menu replaces it.
  */
-export function signupReply(result, args = {}) {
+export function signupReply(result, args = {}, appUrl) {
   if (result?.outcome === 'choose') {
     const options = (result.characters ?? []).slice(0, MAX_OPTIONS).map((c) => ({
       label: `${c.name} — ${[c.spec, c.class].filter(Boolean).join(' ')}`.slice(0, MAX_LABEL),
@@ -264,11 +352,18 @@ export function signupReply(result, args = {}) {
   }
   if (result?.outcome === 'not-member') {
     const guild = result.guildName ? ` in ${result.guildName}` : ''
-    return {
-      content: `Your Discord account isn't a member${guild} on WhenToRaid yet. Ask an officer for an invite link.`,
-      components: [],
-    }
+    return onboardingReply(
+      `Your Discord account isn't a member${guild} on WhenToRaid yet. Sign in with this Discord account; if the guild is missing, ask an officer for an invite.`,
+      appUrl,
+      result.guildId,
+    )
   }
+  if (result?.outcome === 'no-characters')
+    return onboardingReply(
+      'Add a character in WhenToRaid, then press Sign up again. Sign in with this Discord account.',
+      appUrl,
+      result.guildId,
+    )
   const saved = result?.outcome === 'saved' && savedSignup(result)
   if (saved) return { content: saved, components: specMenu(result, args) }
   const content =
@@ -387,30 +482,39 @@ export async function handleDiscordInteraction(request, config) {
       followup,
       log,
     })
-  const args = parseRosterClick(interaction, applicationId)
+  const args = parseRosterClick(interaction, applicationId) ?? parseStandbyChoice(interaction, applicationId)
   if (!args) return reply({ error: 'Unsupported interaction.' }, 400)
 
   schedule(
     (async () => {
-      let content
+      let result = null
       try {
-        content = outcomeMessage(await rpc('respond_to_discord_raid', args))
+        result = await rpc('respond_to_discord_raid', args)
       } catch (error) {
         log(`interaction ${interaction.id} failed: ${error.message}`)
-        content = outcomeMessage(null)
       }
       try {
-        await followup(interaction, content)
+        await followup(interaction, rosterReply(result, args, config.appUrl))
       } catch (error) {
         log(`interaction ${interaction.id} reply failed: ${error.message}`)
       }
+      if ((result?.outcome === 'saved' || result?.outcome === 'standby') && config.refresh)
+        try {
+          await config.refresh(result.guildId)
+        } catch (error) {
+          log(`interaction ${interaction.id} post refresh failed: ${error.message}`)
+        }
     })(),
   )
-  return reply({ type: DEFERRED_MESSAGE, data: { flags: EPHEMERAL } })
+  return reply(
+    interaction.data.component_type === STRING_SELECT
+      ? { type: DEFERRED_UPDATE }
+      : { type: DEFERRED_MESSAGE, data: { flags: EPHEMERAL } },
+  )
 }
 
 /** Save a sign-up (or its spec), answer the player privately, then bring the public post up to date. */
-function handleSignup(interaction, rpcName, args, { rpc, schedule, followup, refresh, log }) {
+function handleSignup(interaction, rpcName, args, { rpc, schedule, followup, refresh, log, appUrl }) {
   schedule(
     (async () => {
       let result = null
@@ -432,7 +536,7 @@ function handleSignup(interaction, rpcName, args, { rpc, schedule, followup, ref
         }
       }
       try {
-        await followup(interaction, signupReply(result, args))
+        await followup(interaction, signupReply(result, args, appUrl))
       } catch (error) {
         log(`sign-up ${interaction.id} reply failed: ${error.message}`)
       }

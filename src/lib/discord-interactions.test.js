@@ -4,7 +4,10 @@ import { Buffer } from 'node:buffer'
 import { webcrypto } from 'node:crypto'
 import {
   handleDiscordInteraction,
+  parseStandbyChoice,
   rosterComponents,
+  rosterReply,
+  signupReply,
   verifyDiscordSignature,
 } from '../../supabase/functions/_shared/discord-interactions.js'
 import { deliverMessages } from '../../supabase/functions/_shared/raid-service-core.js'
@@ -134,6 +137,47 @@ describe('signed Discord responses', () => {
     }
     expect(rpc).not.toHaveBeenCalled()
     expect(schedule).not.toHaveBeenCalled()
+  })
+  it('offers character setup privately when a member has no characters', () => {
+    const message = rosterReply(
+      { outcome: 'no-characters', guildId: JOB },
+      {},
+      'https://whentoraid.example/app/',
+    )
+    expect(message.content).toMatch(/Add a character/)
+    expect(message.components[0].components[0].url).toBe(
+      `https://whentoraid.example/app/?guild=${JOB}#/characters`,
+    )
+    expect(
+      signupReply({ outcome: 'no-characters' }, {}, 'https://whentoraid.example/app/').components[0]
+        .components[0].url,
+    ).toBe('https://whentoraid.example/app/#/characters')
+  })
+  it('binds a private standby character choice to the signed post', () => {
+    const args = { p_delivery_id: JOB, p_message_id: MESSAGE, p_version: 2 }
+    const message = rosterReply(
+      {
+        outcome: 'choose',
+        characters: [{ id: 'c-main', name: 'Oak', class: 'Warrior', spec: 'Protection' }],
+      },
+      args,
+    )
+    expect(message.components[0].components[0].custom_id).toBe(`wtb:${JOB}:${MESSAGE}:2`)
+    expect(
+      parseStandbyChoice(
+        click({
+          data: { component_type: 3, custom_id: `wtb:${JOB}:${MESSAGE}:2`, values: ['c-main'] },
+        }),
+        APP,
+      ),
+    ).toMatchObject({
+      p_message_id: MESSAGE,
+      p_delivery_id: JOB,
+      p_version: 2,
+      p_status: 'confirmed',
+      p_character_id: 'c-main',
+    })
+    expect(rosterReply({ outcome: 'standby', raidName: 'Raid', character: 'Oak' })).toMatch(/backup/)
   })
 })
 describe('application-authored roster posts', () => {

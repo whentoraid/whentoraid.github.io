@@ -16,12 +16,14 @@ export const MAX_DELIVERIES = 10
 async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
   if (job.kind === 'roster') {
     if (job.action === 'delete') return { messages: [], mentionIds: [], components: [] }
-    const quiet = job.payload.cancelled || job.payload.withdrawn || !job.mention_players
-    const mentionIds = quiet ? [] : job.payload.team.map((entry) => entry.discordId).filter(Boolean)
+    const payload =
+      (await rpc('raid_roster_live_payload', { p_id: job.id, p_lease: job.lease_token })) ?? job.payload
+    const quiet = payload.cancelled || payload.withdrawn || !job.mention_players || job.message_ids?.length
+    const mentionIds = quiet ? [] : payload.team.map((entry) => entry.discordId).filter(Boolean)
     const components = job.channel_id ? rosterComponents(job, appUrl) : []
     const specEmojis =
-      job.channel_id && !job.payload.cancelled && !job.payload.withdrawn ? await loadSpecEmojis() : {}
-    return { messages: rosterMessages(job.payload, mentionIds, { specEmojis }), mentionIds, components }
+      job.channel_id && !payload.cancelled && !payload.withdrawn ? await loadSpecEmojis() : {}
+    return { messages: rosterMessages(payload, mentionIds, { specEmojis }), mentionIds, components }
   }
   if (job.kind === 'signup') {
     // Sign-ups are read now, so the post shows every press made before this send.

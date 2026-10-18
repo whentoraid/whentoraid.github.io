@@ -83,6 +83,19 @@ describe('application spec emojis', () => {
     expect(fetchFn).toHaveBeenCalledTimes(3)
   })
 
+  it('repairs missing application emojis during bot delivery', async () => {
+    const missing = 'wtr_priest_shadow'
+    const fetchFn = vi.fn(async (url, init = {}) => {
+      if (url.startsWith('https://wow.zamimg.com/'))
+        return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]))
+      if (init.method === 'POST') return new Response(JSON.stringify({ id: ID }))
+      return reply(items.filter(({ name }) => name !== missing))
+    })
+    const icons = await createSpecEmojiLoader({ applicationId: APP, botToken: 'secret', fetchFn })()
+    expect(icons[missing]).toBe(ID)
+    expect(fetchFn).toHaveBeenCalledTimes(3)
+  })
+
   it('does not upload anything when already installed and refuses invalid images', async () => {
     const installed = vi.fn(async () => reply(items))
     await installSpecEmojis({ applicationId: APP, botToken: 'secret', fetchFn: installed })

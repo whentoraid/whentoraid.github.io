@@ -65,21 +65,19 @@ function describe(payload, { budgetRoles, total }) {
 }
 
 function rosterFields({ roles, other }, specEmojis) {
+  const rosterLine = (entry) => {
+    const line = entryLine(entry, { specEmojis })
+    return entry.response === 'confirmed' ? `🟦 ${line}` : line
+  }
   const fields = roles.flatMap(({ role, target, members }) =>
     listFields(
       `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
-      members.map((entry) => entryLine(entry, { specEmojis })),
+      members.map(rosterLine),
       { joiner: '\n\n' },
     ),
   )
   if (other.length)
-    fields.push(
-      ...listFields(
-        `❔ No role (${other.length})`,
-        other.map((entry) => entryLine(entry, { specEmojis })),
-        { joiner: '\n\n' },
-      ),
-    )
+    fields.push(...listFields(`❔ No role (${other.length})`, other.map(rosterLine), { joiner: '\n\n' }))
   return fields
 }
 
@@ -112,7 +110,18 @@ export function rosterMessages(payload, mentionIds = [], { specEmojis = {} } = {
   }
   if (status !== 'published') return [{ content: '', embeds: [{ ...embed, description: CLOSED[status] }] }]
   const groups = lineup(payload)
-  const pages = fieldPages(rosterFields(groups, specEmojis))
+  const fields = rosterFields(groups, specEmojis)
+  if (payload.standby?.length)
+    fields.push(
+      ...listFields(
+        `🟨 Available as backup (${payload.standby.length})`,
+        payload.standby.map(
+          (entry, index) => `🟨 ${entryLine({ ...entry, number: index + 1 }, { specEmojis })}`,
+        ),
+        { joiner: '\n\n' },
+      ),
+    )
+  const pages = fieldPages(fields)
   return pages.map((fields, index) => ({
     content: index ? '' : pingLine(mentionIds),
     embeds: [

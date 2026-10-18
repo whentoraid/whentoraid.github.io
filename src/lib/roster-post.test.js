@@ -135,4 +135,18 @@ describe('roster card', () => {
     )
     expect(field.value).not.toContain('⬜')
   })
+  it('marks confirmed roster places blue and off-roster volunteers yellow', () => {
+    const [message] = rosterMessages(
+      roster({
+        team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
+        standby: [{ name: 'Oak', class: 'Priest', spec: 'Shadow', role: 'DPS' }],
+      }),
+    )
+    const values = message.embeds[0].fields.map((field) => field.value).join('\n')
+    expect(values).toContain('🟦 `1`')
+    expect(values).toContain('🟨 `1`')
+    expect(message.embeds[0].fields.some((field) => field.name.includes('Available as backup (1)'))).toBe(
+      true,
+    )
+  })
 })
