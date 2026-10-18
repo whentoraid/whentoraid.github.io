@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/svelte'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { app } from '../lib/app.svelte.js'
+import { deadlineUtc, formatDeadline } from '../lib/checkins.js'
+import { viewerZone } from '../lib/display.svelte.js'
 import { setCurrentWeek } from '../lib/model.js'
 import { createSeedState } from '../lib/seed.js'
 import Availability from './Availability.svelte'
@@ -35,7 +37,9 @@ test('a week whose deadline is ahead stays editable', () => {
   const { container } = render(Availability)
   expect(screen.queryByText(/closed at the deadline/)).toBeNull()
   expect(screen.getByText(/Week of Oct 12–18 · applies to/)).toBeTruthy()
-  expect(screen.getByText(/Answer by/).textContent).toMatch(/Wed, Oct 14, 6:00\sPM PDT/)
+  // Players read the deadline in their own timezone by default.
+  const due = formatDeadline(deadlineUtc(app.data, OPEN_WEEK), viewerZone)
+  expect(screen.getByText(/Answer by/).textContent).toContain(due)
   expect(container.querySelector('.availability-layout > .panel').inert).toBeFalsy()
   expect(container.querySelector('fieldset').disabled).toBe(false)
 })

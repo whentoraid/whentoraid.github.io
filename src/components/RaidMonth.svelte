@@ -3,15 +3,16 @@
   import { DAYS } from '../lib/constants.js'
   import { raidMonthEntries } from '../lib/raid-series.js'
   import { canManage } from '../lib/remote/sync.svelte.js'
+  import { displayZone } from '../lib/display.svelte.js'
   import { addDays, dayOfMonth, formatClock, todayIso, wallTime, weekdayIndex } from '../lib/time.js'
 
   /**
-   * A month of raids in the guild timezone. Officers see drafts and scheduled dates too; players see
+   * A month of raids in the viewer's display timezone. Officers see drafts and scheduled dates too; players see
    * only published rosters, at their published times.
    */
-  const zone = $derived(app.data.guild.timezone)
+  const zone = $derived(displayZone(app.data.guild))
   const today = $derived(todayIso(zone))
-  let month = $state(todayIso(app.data.guild.timezone).slice(0, 7))
+  let month = $state(todayIso(displayZone(app.data.guild)).slice(0, 7))
 
   const STATUS_LABELS = {
     published: 'Published',
@@ -20,7 +21,7 @@
     cancelled: 'Cancelled',
   }
 
-  const entries = $derived(raidMonthEntries(app.data, month, { publishedOnly: !canManage() }))
+  const entries = $derived(raidMonthEntries(app.data, month, { publishedOnly: !canManage(), zone }))
   const firstDay = $derived(`${month}-01`)
   const days = $derived.by(() => {
     const list = []
@@ -58,7 +59,11 @@
     </div>
   </div>
   <p class="note">
-    Times in {zone.replaceAll('_', ' ')}.{canManage() ? ' Scheduled dates have no draft yet.' : ''}
+    Times in {zone.replaceAll('_', ' ')}{zone === app.data.guild.timezone
+      ? ''
+      : ` (guild time: ${app.data.guild.timezone.replaceAll('_', ' ')})`}.{canManage()
+      ? ' Scheduled dates have no draft yet.'
+      : ''}
   </p>
   <div class="month-grid">
     {#each DAYS as name (name)}<div class="weekday" aria-hidden="true">{name}</div>{/each}
