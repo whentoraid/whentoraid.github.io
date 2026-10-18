@@ -5,6 +5,8 @@
   import RaidResponse from '../components/RaidResponse.svelte'
   import RaidQuickAnswer from '../components/RaidQuickAnswer.svelte'
   import StandbyOffer from '../components/StandbyOffer.svelte'
+  import ActionInbox from '../components/ActionInbox.svelte'
+  import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
   import RaidMonth from '../components/RaidMonth.svelte'
@@ -70,8 +72,14 @@
   subtitle={`Your assignments and availability, in ${viewerZone.replaceAll('_', ' ')}.`}
 />
 
+<ActionInbox {memberId} {thisWeek} {now} onavailability={checkIn} />
+
 <div class="home-priorities">
-  <section class="panel next-raid" aria-label="Next raid assignment">
+  <section
+    class="panel next-raid"
+    aria-label="Next raid assignment"
+    id={next ? raidAnchor(next.weekIso, next.raidId) : undefined}
+  >
     {#if next}
       <div class="next-raid-heading">
         <div class="raid-date" aria-hidden="true">
@@ -133,7 +141,12 @@
             : 'You have let officers know you can’t make it this week.'}
     </p>
     {#if reviewDue}
-      <div class="schedule-review" role="group" aria-label="Review your usual schedule">
+      <div
+        class="schedule-review"
+        id={SCHEDULE_REVIEW_ANCHOR}
+        role="group"
+        aria-label="Review your usual schedule"
+      >
         <p>
           Is your usual schedule still right? You last confirmed it {formatMonthDay(
             templateConfirmedOn(template),
@@ -161,7 +174,7 @@
     <h2>Upcoming published raids</h2>
     <ul>
       {#each later as item (`${item.weekIso}:${item.raidId}`)}
-        <li>
+        <li id={raidAnchor(item.weekIso, item.raidId)}>
           <div class="upcoming-date">
             <strong>{datePart(item.session.start, { month: 'short', day: 'numeric' })}</strong><small
               >{datePart(item.session.start, { weekday: 'long' })}</small
