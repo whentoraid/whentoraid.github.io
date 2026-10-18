@@ -13,7 +13,12 @@
   import { changesClosedWeek, checkinsClosed } from '../lib/checkins.js'
   import { own } from '../lib/ids.js'
   import { stableJson } from '../lib/remote/rows.js'
-  import { canManage } from '../lib/remote/sync.svelte.js'
+  import { canManage, remote } from '../lib/remote/sync.svelte.js'
+  import {
+    availabilityPreferenceScope,
+    readAvailabilityPreferences,
+    saveAvailabilityPreference,
+  } from '../lib/view-preferences.js'
   import { CLASS_COLORS } from '../lib/constants.js'
   import { availabilitySource } from '../lib/personal-raids.js'
   import { slotWindow } from '../lib/grid.js'
@@ -38,8 +43,17 @@
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
 
   const memberId = $derived(app.data.currentMemberId)
-  let editor = $state(globalThis.matchMedia?.('(max-width: 600px)').matches ? 'ranges' : 'grid')
-  let mobileSection = $state('times')
+  const defaultEditor = globalThis.matchMedia?.('(max-width: 600px)').matches ? 'ranges' : 'grid'
+  const preferenceScope = $derived(availabilityPreferenceScope(app.data, remote))
+  let preferences = $derived(
+    readAvailabilityPreferences(preferenceScope, { editor: defaultEditor, section: 'times' }),
+  )
+  const editor = $derived(preferences.editor)
+  const mobileSection = $derived(preferences.section)
+  function chooseView(key, value) {
+    preferences = { ...preferences, [key]: value }
+    saveAvailabilityPreference(preferenceScope, key, value)
+  }
   let beforeEdit = null
   const weekIso = $derived(app.data.currentWeek)
   const checkin = $derived(getCheckin(app.data, weekIso, memberId))
@@ -211,7 +225,7 @@
 
 <WeekBar />
 
-{#if !myCharacters.length || !checkin.checkedIn}
+{#if !myCharacters.length}
   <OnboardingChecklist {memberId} {weekIso} />
 {/if}
 
@@ -230,7 +244,7 @@
       { id: 'characters', label: 'Raid & characters' },
     ]}
     value={mobileSection}
-    onselect={(value) => (mobileSection = value)}
+    onselect={(value) => chooseView('section', value)}
   />
 </div>
 <div class="availability-layout" data-mobile-section={mobileSection}>
@@ -242,6 +256,7 @@
     inert={closed}
   >
     <h2>Weekly availability</h2>
+    <div class="availability-save"><InlineSaveStatus /></div>
     <p>
       Your times apply to {app.data.settings.raids.length === 1
         ? 'your raid'
@@ -298,8 +313,11 @@
       </p>
     {/if}
     <div class="buttons editor-choice" role="group" aria-label="Availability editor">
-      <button aria-pressed={editor === 'ranges'} onclick={() => (editor = 'ranges')}>Time ranges</button>
-      <button aria-pressed={editor === 'grid'} onclick={() => (editor = 'grid')}>Paint grid</button>
+      <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
+        >Time ranges</button
+      >
+      <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}>Paint grid</button
+      >
     </div>
     <div class="buttons kind-choice" role="group" aria-label="Mark times as">
       <span>Mark as:</span>
@@ -340,7 +358,6 @@
       <button onclick={cantMakeIt}>Can’t make it this week</button>
       <small role="status">{status}</small>
     </div>
-    <InlineSaveStatus />
   </div>
 
   <div
@@ -393,6 +410,13 @@
 </div>
 
 <style>
+  .availability-save {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel, #1b242b);
+    padding: 1px 0;
+  }
   .editor-choice {
     margin: 1rem 0;
   }

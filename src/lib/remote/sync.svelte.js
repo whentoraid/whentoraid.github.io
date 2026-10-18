@@ -7,6 +7,7 @@ import { backupJson, loadState, parseState } from '../storage.js'
 import { downloadText } from '../download.js'
 import { addDays, mondayOf, todayIso } from '../time.js'
 import { showToast } from '../toast.svelte.js'
+import { welcomeNewMember } from '../welcome.js'
 import { applyOps, createGuildWithRows, fetchGuild, joinFromDiscord, listGuilds, myDiscordId } from './api.js'
 import { isLocalBackend, supabase } from './client.js'
 import { diffRows, mergeRows, newGuildPayload, rowsToState, stateToRows, TABLES } from './rows.js'
@@ -379,6 +380,7 @@ async function onSession(session, generation) {
     )
     let guilds = await listGuilds(supabase)
     if (generation !== sessionGeneration) return
+    let joinedNow = []
     if (guilds.length) void showJoinedGuilds(joining, generation)
     else {
       const joined = await joining
@@ -386,16 +388,21 @@ async function onSession(session, generation) {
       if (joined.error) showToast(joined.error.message)
       if (joined.ids.length) guilds = await listGuilds(supabase)
       if (generation !== sessionGeneration) return
+      joinedNow = joined.ids
     }
     remote.guilds = guilds
     const requested = takeRequestedGuild()
     const member = (id) => guilds.some((g) => g.id === id)
     if (requested && !member(requested.guildId))
       showToast('That roster link is for a guild you have not joined. Ask an officer for an invite.')
-    const chosen = requested && member(requested.guildId) ? requested.guildId : saved
-    if (chosen && member(chosen)) {
+    // With nothing saved, a player in exactly one guild opens it, so a Discord newcomer lands inside.
+    const fallback = member(saved) ? saved : guilds.length === 1 ? guilds[0].id : null
+    const chosen = requested && member(requested.guildId) ? requested.guildId : fallback
+    if (chosen) {
       await openGuild(chosen, generation)
-      if (chosen === requested?.guildId && generation === sessionGeneration) showLinkedRoster(requested.hash)
+      if (generation !== sessionGeneration) return
+      if (chosen === requested?.guildId) showLinkedRoster(requested.hash)
+      else if (joinedNow.includes(chosen)) welcomeNewMember(app.data.guild.name)
     } else if (saved) storeGuildId(null)
   } catch (error) {
     if (generation === sessionGeneration) showToast(error.message)

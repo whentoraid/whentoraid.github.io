@@ -1,0 +1,360 @@
+**WhenToRaid: usability and member onboarding plan**
+
+Prepared October 17, 2026. Status: implementation authorized. Claude reviewed the plan (P07) and recommended changes rather than approving it as written; the findings are recorded at the end of this document. Planning achievements and implementation progress are tracked separately below.
+
+This combines the original usability assessment and onboarding proposal with all 30 improvements: **15 major and 15 minor**. M01–M05 and m01–m05 preserve the original recommendations. M06–M15 and m06–m15 are the ten additional recommendations in each category. Onboarding is a separate proposal and is not counted again among the 30 improvements.
+
+**Codex–Claude cooperation and progress tracking live in this file.** Both agents should read the current plan and tracker before starting, retain the existing IDs, and update their own progress with evidence. Claude's plan review (P07) and code review of Codex's first batch are recorded at the end of this document. Proposed ownership remains adjustable through explicit claims.
+
+**Current implementation handoff — Claude, October 17, 2026.** At the user's direction, Claude took over Codex's in-progress claim on `feat/member-onboarding-foundation` (ONB initial routing and guided next actions, m03–m05, m08–m10, m12–m14), fixed the review blockers, and added `src/lib/welcome.js`, `src/lib/personal-raids.js` (+ test), `src/lib/remote/sync.svelte.js` (+ test), and `src/views/Home.test.js` to the owned files for those fixes. Status: Ready for review. See the dated handoff entry at the end.
+
+_Original Codex claim, retained for history:_ Branch: `feat/member-onboarding-foundation`. Codex claims ONB (initial routing and guided next actions only), m03–m05, m08–m10, and m12–m14. Status: In progress. Claude is the proposed reviewer; do not concurrently edit the claimed files until this claim is released.
+
+Owned files: `src/App.svelte`; `src/views/Characters.svelte`, `Characters.test.js`, `Availability.svelte`, `Availability.test.js`; `src/components/CharacterDialog.svelte`, `CharacterFields.svelte`, `JoinGuildDialog.svelte`, `JoinGuildDialog.test.js`, `OnboardingChecklist.svelte`, `SignupsPanel.svelte`, `SignupsPanel.test.js`, `ReminderSettings.svelte`, new `ReminderSettings.test.js`, `Toast.svelte`, new `Toast.test.js`; `src/lib/remote/invite.svelte.js`, `src/lib/toast.svelte.js`, new `view-preferences.js` and its test; `e2e/onboarding-foundation.spec.js`; and this document. Only add other files after recording the reason and ownership here.
+
+The initial batch preserves existing authorization, publication, and storage behavior. It does not complete permanent cross-device onboarding progress, event-based signup entry, the member/officer workspace split, or timezone restructuring. Those remain open. Application work will be marked Ready for review after validation; Claude's approval of the plan does not count as review of new code.
+
+| Coordination field                                 | Current value                                                                                                                |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Current phase                                      | Implementation; first batch Ready for review                                                                                 |
+| Last updated by                                    | Claude, October 17, 2026                                                                                                     |
+| Planning work completed                            | P01–P07                                                                                                                      |
+| Application improvements completed under this plan | 9 of 30 Ready for review (m03–m05, m08–m10, m12–m14) plus ONB initial routing; none Done or deployed                        |
+| Active implementation claims                       | Claude: first batch on `feat/member-onboarding-foundation` (taken over from Codex)                                           |
+| Next proposed handoff                              | User decides the pre–Nov 4 cut (see P07 findings); then commit/PR the first batch                                            |
+| Claude participation                               | P07 done; first batch review fixes done; code review of Codex's work recorded below                                          |
+
+Codex is the proposed lead for data behavior, shared raid-state rules, timezone logic, persistence, sync/recovery, Discord/server behavior, and integration checks. Claude is the proposed lead for interaction design, screen hierarchy, copy, responsive layouts, and member-facing UI. For a change spanning both areas, agree the behavior and data contract first, then give each agent explicit file ownership. The item lead coordinates the complete outcome; it does not grant both agents permission to edit the same files concurrently. Each agent reviews the other's work within the actual capabilities of its session.
+
+Use this working agreement for later cooperative work:
+
+1. Read the current tracker, repository instructions, and working-tree changes before claiming a task. Treat existing edits as another contributor's work unless their origin is known. Do not revert them to simplify a task.
+2. While the planning-only instruction is active, work on review, designs, acceptance criteria, and documentation. A planned lead is not authorization to implement, publish, deploy, or contact guild members.
+3. Before implementation begins on an authorized item, record its ID, actual claimant, exact file/module ownership, branch or worktree, dependencies, and expected next handoff. One agent owns a given file at a time. In separate checkouts, transfer work through an identified commit or patch.
+4. Settle shared contracts before parallel edits: signup/selection/confirmation meanings, local versus guild time, published versus draft visibility, permissions, and error behavior. Sequence overlapping changes to App, Home, Availability, navigation, and shared styles rather than editing them simultaneously.
+5. The implementing agent records what changed, relevant validation, known limitations, and a precise review request. The other agent records actual findings and resolution. Do not describe another agent as having reviewed something without its recorded response.
+6. Mark an implemented item Ready for review after its acceptance checks pass. Mark it Done only after the named reviewer has reviewed that version and required findings are resolved. If reviewer access is unavailable, leave it Ready for review and state what is pending. Deployed is a separate status and requires actual deployment evidence within authorized scope.
+7. Update the tracker and append a dated handoff entry at the end of each meaningful work session. Preserve previous achievement records; correct mistaken claims explicitly. Mark only the completed scope, and leave incomplete parts visible.
+
+Use these status meanings consistently: **Not started** means no delivery work has begun; **Claimed** names an actual owner and files; **In progress** records ongoing work; **Ready for review** means implementation and its checks are available; **Blocked** names a concrete dependency; **Done** means the acceptance checks and peer review are complete. Planning deliverables use **Done (planning)** so writing a proposal cannot be confused with shipping it.
+
+Codex's completed planning work is recorded here:
+
+| ID  | Deliverable                                      | Completed by      | Status          | Evidence and limits                                                                                                             |
+| --- | ------------------------------------------------ | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| P01 | Audit member and officer usability               | Codex             | Done (planning) | Current source review and October 16 saved desktop/mobile screenshots; no fresh browser walkthrough or real-user test           |
+| P02 | Propose resumable member onboarding              | Codex             | Done (planning) | Five-stage onboarding flow and exception cases in this document; no prototype or implementation                                 |
+| P03 | Consolidate all requested improvements           | Codex             | Done (planning) | M01–M15 and m01–m15 below; 15 major and 15 minor IDs verified                                                                   |
+| P04 | Define priorities and success measures           | Codex             | Done (planning) | Sequence, dependencies, formative-test scenarios, and proposed targets below; targets are not observed results                  |
+| P05 | Create and validate the combined document        | Codex             | Done (planning) | Markdown formatting and local file references checked; only this planning document changed                                      |
+| P06 | Establish Codex–Claude cooperation tracker       | Codex             | Done (planning) | Proposed leads, reciprocal reviewers, claim rules, delivery statuses, and next handoff recorded here; Claude acceptance pending |
+| P07 | Independently review the combined plan           | Claude            | Done (planning) | Findings at the end of this document; source claims spot-checked against code; no browser walkthrough                           |
+| P08 | Draft the member journey and screen designs      | Claude (proposed) | Not started     | Start with onboarding and M01–M04; include mobile, empty, late, error, and existing-member states                               |
+| P09 | Review design feasibility and behavior contracts | Codex (proposed)  | Not started     | Depends on P07/P08 output; identify data/permission/timezone implications and record decisions                                  |
+| P10 | Validate designs with members and officers       | Not assigned      | Not started     | Prototype and participant sessions still required; no user testing or outreach has been performed                               |
+
+The delivery tracker below covers all recommendations individually. Proposed leads and reviewers can change during handoff; **Claimed by** stays empty until an agent actually claims the work. Every item currently has a written proposal, but none has been implemented under this plan.
+
+| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by | Delivery status |
+| --- | --------------------------------------------- | ------------- | ----------------- | ---------- | --------------- |
+| ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude (from Codex) | In progress: routing done |
+| M01 | Separate member and officer workspaces        | Claude        | Codex             | —          | Not started     |
+| M02 | Quicker routine participation                 | Claude        | Codex             | —          | Not started     |
+| M03 | Consistent app/Discord raid status            | Codex         | Claude            | —          | Not started     |
+| M04 | Coherent timezone experience                  | Codex         | Claude            | —          | Not started     |
+| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | —          | Not started     |
+| M06 | Member reminders and action inbox             | Codex         | Claude            | —          | Not started     |
+| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | —          | Not started     |
+| M08 | Personal participation record and corrections | Claude        | Codex             | —          | Not started     |
+| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —          | Not started     |
+| M10 | Participation limits and raid preferences     | Codex         | Claude            | —          | Not started     |
+| M11 | Recurring availability renewal and pause      | Codex         | Claude            | —          | Not started     |
+| M12 | Task-level sync recovery                      | Codex         | Claude            | —          | Not started     |
+| M13 | Attributable history and draft restoration    | Codex         | Claude            | —          | Not started     |
+| M14 | Recurring schedule impact preview             | Claude        | Codex             | —          | Not started     |
+| M15 | Raid-day briefing                             | Claude        | Codex             | —          | Not started     |
+| m01 | Deadline beside the availability answer       | Claude        | Codex             | —          | Not started     |
+| m02 | Compact routine date strings                  | Claude        | Codex             | —          | Not started     |
+| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review |
+| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review |
+| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review |
+| m06 | Readable week ranges                          | Claude        | Codex             | —          | Not started     |
+| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —          | Not started     |
+| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review |
+| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review |
+| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review |
+| m11 | Calendar-provider guidance                    | Claude        | Codex             | —          | Not started     |
+| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review |
+| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review |
+| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review |
+| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | —          | Not started     |
+
+For a claimed item, append a handoff entry using: **date; agent; item IDs; status; owned files; branch/worktree or patch; work achieved; checks and results; remaining limitations; reviewer findings; next actor and action**. Use explicit Not run or Pending when evidence does not exist. Record implementation, review, and deployment separately.
+
+The initial handoff record is:
+
+| Field               | Recorded handoff                                                                                                                                                                                                                   |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date / author       | October 17, 2026 / Codex                                                                                                                                                                                                           |
+| Items completed     | P01–P06, planning only                                                                                                                                                                                                             |
+| Owned file          | `docs/USABILITY_AND_ONBOARDING_PLAN.md`                                                                                                                                                                                            |
+| Work location       | Current shared working tree; document is uncommitted; no implementation branch or patch created                                                                                                                                    |
+| Work achieved       | Combined audit, onboarding, all 30 improvements, priorities, validation approach, and cooperation tracker                                                                                                                          |
+| Checks              | Markdown formatting; recommendation ID counts; local reference validation; tracker coverage checked                                                                                                                                |
+| Remaining limits    | No implementation, fresh live walkthrough, prototype, participant research, Claude review, or deployment                                                                                                                           |
+| Next proposed actor | Claude                                                                                                                                                                                                                             |
+| Next action         | Read this document and current source; complete P07, then draft P08. Claim documentation/design files before editing, preserve the 30 IDs, and record findings here. Hand the design and open behavior questions to Codex for P09. |
+
+The primary audience is an ordinary guild member joining, giving availability, learning whether they have a place, and responding to changes. Officer workflows are included where they affect the quality of that experience.
+
+**The assessment is that members must understand too much of the planning system to participate confidently.** The product should make three answers unmistakable: What do I need to do? Am I playing? When should I show up?
+
+The review uses current application code and the saved desktop/mobile screenshots reviewed in the preceding audit, captured October 16, 2026. Live browser control was unavailable. Hosted sign-in, real Discord delivery, physical-device behavior, and actual user completion times were not verified. Observations below describe inspected interfaces; expected user effects are hypotheses to validate, not measured failure rates.
+
+Keep the Warcraft visual identity, personal assignment cards, mobile navigation, alternative availability controls, Undo, and separation of draft and published rosters. The next design effort should improve hierarchy, wording, and continuity between tasks.
+
+The main findings from the original review remain:
+
+| Area               | Observed friction                                                                                                           | Expected user effect                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| First visit        | The entry page leads with “Set up your guild,” alongside sign-in, demo, and browser-only creation.                          | Members arriving without an invite may think they are in the wrong place. |
+| Joining            | Accepting an invite opens Availability and tells members to add characters afterward; the checklist lists characters first. | Competing instructions make the next step uncertain.                      |
+| Onboarding         | “Get ready for your first raid” depends on the selected/current week's check-in.                                            | Established members can encounter first-time guidance again.              |
+| Participation      | Availability, participation, character offers, Discord signups, roster selection, and confirmation are separate concepts.   | Completing one action can feel like completing the whole task.            |
+| Time display       | Personal assignments use viewer time; availability defaults to guild time; the month calendar uses guild time.              | Members must recognize different time conventions across screens.         |
+| Mobile             | Availability presents several choices before the day controls.                                                              | A recurring answer can feel like configuring a tool.                      |
+| Officer navigation | Dashboard issues mostly lead through a generic Open action.                                                                 | Officers must find the relevant correction after opening the planner.     |
+
+Several capabilities already exist: guild-level reminders, calendar subscriptions, usual schedules, away dates, recurring raid schedules and exceptions, bench-fairness calculations, roster explanations, attendance recording, concurrent-edit merging, and unsaved-edit recovery. Recommendations involving these capabilities explicitly extend their usability or scope. They are not proposals to build them again.
+
+The organizing principle is to show the decision relevant to the current person and moment, then reveal additional controls when needed. Members should not need to learn the optimizer, every availability type, or the publication model before giving a useful answer. Each screen should expose a primary next action and explain the result of completing it.
+
+The proposed onboarding performs useful work in a short, resumable sequence. Contextual instruction fits this approach: explain a control when the person can immediately use it, rather than requiring them to remember a tour. See [NN/g's guidance on onboarding and contextual help](https://www.nngroup.com/articles/onboarding-tutorials/).
+
+1. **Arrive in the right guild.** An invitation or recognized Discord membership leads to “Welcome to [Guild].” Show the guild and signed-in identity. If no guild is found, explain how to obtain an invite or resolve access; keep guild creation secondary for members. Preserve the requested raid destination through sign-in.
+2. **Confirm one character.** Reuse an existing linked profile when available. Otherwise collect one character's name, realm, class, and specialization, using the existing role suggestion. Defer alternate characters. Saving advances to the next step without making the member rediscover it in navigation.
+3. **Give a first availability answer.** Confirm the detected timezone with a readable example. If a raid has an announced time, ask about that raid. If officers are choosing a time, collect simple day/time ranges. “I'm unavailable this week” is a valid completion. Do not expose an unannounced officer draft as a scheduled event.
+4. **Explain the result.** Show a compact review of character, time basis, and answer. Example: “Your character and availability are saved. Officers can now consider you for the roster.” Make clear that availability does not guarantee a place. Offer Go to My raids.
+5. **Teach confirmation when assigned.** At the first roster assignment, explain the confirmation action beside the assignment itself. Offer calendar subscription after there is a useful raid to follow.
+
+Completed setup steps should persist across weeks and devices for the signed-in member. Resume unfinished steps, recognize work already done through Discord, and separate permanent profile readiness from weekly participation. A missing weekly response should produce a weekly reminder, not restart the first-raid checklist. Members can leave and return without losing progress; optional education remains skippable.
+
+Handle common exceptions explicitly: an existing character profile, joining after the deadline, no announced raid yet, an expired invite, no availability this week, and membership in more than one guild. An unavailable member can finish setup; a member without a character can browse permitted information but should understand why they cannot yet receive a playable assignment.
+
+The five original major improvements follow. Each includes a proposed outcome that can later be tested.
+
+**M01 — Give members and officers distinct workspaces. Original; first priority.**
+
+The current navigation exposes Raid planner and Guild settings to members even when their controls are restricted. For officers, the operational dashboard appears above the personal assignment on Home. Make My raids, Availability, and Characters the ordinary member destinations, with a simple route to guild information and published rosters. Give officers an explicit management destination and an easy switch back to personal responsibilities.
+
+Success: a member completes a routine response without entering an administrative screen. An officer can find their own assignment without scrolling through the guild's operational workload. Permission checks remain enforced independently of navigation.
+
+**M02 — Make routine participation much quicker. Original; first priority.**
+
+For announced times, offer a direct answer: available, tentative, unavailable, or arriving late, with a character choice. Preserve weekly availability for guilds choosing flexible times. Build on the existing usual schedule and range controls; put preferred times, alternate offers, and grid editing behind relevant secondary actions. Explain whether an action changes one raid or broader weekly availability.
+
+Success: a returning member with unchanged circumstances finishes in seconds, while someone with a complicated schedule retains sufficient control. Answering one raid never silently changes participation in another. This improves answer entry; M10 separately addresses the number of raids a member wants to play.
+
+**M03 — Make raid status consistent across the app and Discord. Original; first priority.**
+
+The app emphasizes published assignments while Discord also exposes signups and provisional bench positions. Present the same underlying facts in both places. Keep the member's answer separate from their assigned place: “Signed up · awaiting roster,” “Selected · confirmation needed,” “Confirmed,” and “Standby.” These are examples, not a single mandatory linear path. Tentative and unavailable responses must remain distinguishable from selection.
+
+Show meaningful changes, including a moved time, changed character, or withdrawn place, alongside the required action. Keep cancelled or withdrawn commitments understandable rather than allowing their disappearance to be the only signal. Preserve private drafts.
+
+Success: members correctly explain whether they volunteered, were selected, or confirmed after using either channel. M06 governs how they are notified; M13 records the history behind changes.
+
+**M04 — Use one coherent timezone experience. Original; first priority.**
+
+Default member-facing dates and times to the member's timezone throughout Home, Availability, Calendar, and raid details. Offer guild time as secondary context. Correct day grouping as well as clock labels, including sessions crossing midnight and differing daylight-saving transitions. Preserve the guild-local meaning of recurring raid schedules.
+
+Success: the same session appears on the correct local date in every member view. A person can compare local and guild time without mental conversion. This is a cross-screen behavior change, not simply a date-formatting edit.
+
+**M05 — Turn officer warnings into direct routes to resolution. Original; next priority.**
+
+Readiness checks, response views, replacements, and publication review already exist. Connect dashboard issues to those tools: Missing healer opens relevant candidates; confirmations missing opens the filtered response list; a publication conflict opens its correction. Preserve raid, week, and draft/published context throughout.
+
+Success: an officer resolves a specific issue without hunting through planner tabs. Return navigation restores the original issue list and its updated state. M09 improves the evidence used to choose between alternatives after arriving at the relevant tool.
+
+The following ten major improvements are additional recommendations.
+
+**M06 — Give members control over reminders and a durable action inbox. New; next priority.**
+
+Guild-level targeted reminders already exist. Add member-level preferences for supported delivery channels, reminder timing, quiet hours, and optional digests. Keep a compact in-app list of outstanding actions so an important change does not depend on finding a transient message. Resolve an item after the relevant action is completed in either the app or Discord. Distinguish reminders from informational updates.
+
+Explain which preferences control direct notifications or mentions; do not imply that a member preference hides messages in a shared Discord channel. Start with the channels the product already supports.
+
+Success: a member understands why they received a reminder, can change that preference, and is not repeatedly prompted for a completed task. This extends existing targeting and deduplication rather than replacing them.
+
+**M07 — Turn standby into an explicit offer-and-accept workflow. New; next priority.**
+
+Bench visibility and replacement suggestions exist, but a bench position alone does not establish whether the member will remain reachable or accept a last-minute place. Let members opt into standby for an event, specify how long they are available, and withdraw without implying they missed a confirmed raid. Let an officer offer a vacated place with a clear response deadline.
+
+Revalidate the available slot, character, and other commitments at acceptance. Do not silently promote someone into a confirmed commitment, or allow two members to accept the same place. Officers retain control of publication.
+
+Success: both parties know who currently holds a place, who has an outstanding offer, and when an unanswered offer expires. M03 supplies the labels; this recommendation supplies the actual handoff behavior.
+
+**M08 — Give members an understandable participation record and correction route. New; next priority.**
+
+Attendance records, recent sit-out counts, and fairness logic already exist. Assemble a personal history explaining attended raids, recorded lateness, no-shows, and eligible sit-outs in context. Separate volunteering from selection and actual attendance. Explain the active fairness policy without claiming the optimizer measures skill, effort, or entitlement to a place.
+
+Allow members to flag a factual mistake for officer review. An officer's correction should be attributable; member disputes should not automatically rewrite attendance. Keep comparison with other people's records limited to the guild's intentional visibility policy.
+
+Success: a member can understand a recorded absence or fairness count and request correction without reconstructing weeks of Discord messages. M13 supplies the underlying change history, while this item supplies the member-facing review workflow.
+
+**M09 — Explain planning recommendations through side-by-side tradeoffs. New; next priority.**
+
+The app already ranks sessions and offers a Why this roster explanation. Extend that into a comparison: choosing Friday instead of Thursday gains a healer but loses two available players; changing a lineup improves a required utility but increases recent sit-outs. Show the actual configured priority, constraints, and tie-breakers used for that recommendation.
+
+Separate algorithmic reasoning from officer overrides. Base explanations on the real computation and saved decision context, rather than generic prose that could describe any roster. Keep advanced details expandable.
+
+Success: an officer can explain why one suggestion is preferred and identify what would change by choosing another. Members receive only the explanation appropriate to their own assignment and the guild's visibility policy.
+
+**M10 — Let members express participation limits and raid preferences. New; next priority.**
+
+Being free for three nights does not necessarily mean wanting to raid three nights. Per-raid participation and character offers exist, but the inspected member flow does not express a weekly commitment budget or ranked raid preferences. Add optional limits such as “At most two raids this week,” preferred raids, and “Ask before adding another night.” Clearly distinguish a hard limit from a soft preference.
+
+Show the effect on suggestions and review any officer override explicitly. Apply the first version within the current guild; cross-guild aggregation is a separate product decision and should not be assumed.
+
+Success: a member can offer broad availability without accidentally signaling unlimited commitment. The planner distinguishes an unavailable player from an available player whose agreed weekly limit has been reached.
+
+**M11 — Add renewal and pause controls to recurring availability. New; next priority.**
+
+Usual schedules, effective start weeks, and away dates already exist. Extend them with optional end dates, a clear pause/resume action, and a lightweight review after a member-defined interval or an extended absence. Show when recurring availability was last reaffirmed, while preserving the existing distinction between an inherited schedule and an explicit weekly response.
+
+Do not silently convert an old schedule into unavailable, and do not make everyone re-enter stable availability each week. Preview the future weeks affected by pausing or changing a schedule. Keep confirmed assignments visible and route changes to them through the appropriate response workflow.
+
+Success: a member can take a break and return with their settings intact. Officers can judge the freshness of inherited availability without confusing it with a newly submitted answer.
+
+**M12 — Make sync failures recoverable in the language of the task. New; first priority for design validation.**
+
+The app already merges independent edits and preserves unsaved work. Its recovery interface still asks users to reason about a reloaded guild, an unsaved edit, and reapplying changes. Translate recovery into concrete differences: “Your Friday availability was not saved. The online version is 7–10 PM; your attempted change was 8–10 PM.” Preserve the existing merge and conflict protections.
+
+Offer retry, review, or discard for the affected task, subject to current permissions and deadlines. Distinguish a saved answer from one waiting to sync and from a stale view. Revalidate roster-dependent responses before retrying after reconnection. Explain when a change can no longer be applied.
+
+Success: a member can resolve an interrupted availability edit without understanding backups or the whole guild state. Never show a confirmation as successful until the server accepts it. m03 addresses ordinary save-feedback placement; this item addresses failed and conflicting edits.
+
+**M13 — Provide attributable raid history and safe draft restoration. New; next priority.**
+
+Published snapshots and current change summaries already exist. Add a readable event history recording who changed a time, roster, character assignment, cancellation, or attendance record, when it changed, and an optional explanation. Separate officer-only draft activity from changes members are allowed to see.
+
+Offer restoration of a prior roster as a new draft with a preview and current validation. Restoring must not overwrite newer responses, other officers' unrelated work, or historical attendance. Publishing that draft remains an explicit action. Old confirmations are reused only if the existing assignment-validity rules permit it.
+
+Success: officers can answer “What changed and why?” and recover from a mistaken roster edit. Members see the changes relevant to their own published commitment. This is distinct from transient Undo and from the current-status presentation in M03.
+
+**M14 — Preview the impact of recurring schedule changes before applying them. New; next priority.**
+
+The schedule editor already supports this occurrence and this-and-following changes, and preserves published rosters. Add an impact preview showing affected dates, draft changes, preserved published commitments, daylight-saving effects, and any follow-up publication work. The current post-action explanation about skipped published rosters should become an understandable pre-action review as well.
+
+Keep series timing, generated drafts, and published commitments visibly distinct. After saving, provide direct links to the specific published raids requiring separate review; do not automatically republish them.
+
+Success: an officer can predict which dates will change before confirming, and members receive no accidental schedule changes. This improves the safety of an existing recurring workflow rather than adding recurrence from scratch.
+
+**M15 — Give raid day a focused briefing view. New; later, after validating demand.**
+
+The current assignment card explains time, character, and response. Extend an announced raid with optional officer-authored logistics: assembly time versus raid start, meeting location, voice-channel link, concise preparation notes, and the contact for last-minute problems. On raid day, show a compact view of those details, the member's current assignment, and the existing late-change actions.
+
+Use safe, clearly labeled links. Preserve a readable summary in Discord so the app does not become a mandatory detour for basic logistics. Do not let notes silently change roster commitments or confirmation rules. Guilds that need no briefing can leave these fields empty.
+
+Success: a member opening the app shortly before the raid can find when and where to join, which character to use, and how to report a problem without searching old messages. This adds preparation context; it does not duplicate the status system in M03.
+
+The five original minor improvements follow. These are narrow interface changes, not substitutes for the larger workflow work.
+
+**m01 — Put the availability deadline where members answer. Original.** Show the exact local deadline on the availability screen before it closes, with the relevant late-change route afterward. The explicit deadline currently lives in the planner's check-in panel. Success: a member can identify the deadline without entering the planner.
+
+**m02 — Shorten routine date strings. Original.** Use a compact same-day label such as “Fri, Oct 23 · 7–10 PM PDT.” Retain full dates when crossing midnight or when extra detail matters. Success: routine cards are easier to scan without losing timezone or date accuracy.
+
+**m03 — Put existing save feedback beside the action. Original.** Keep saving, saved, and failure feedback visible near availability controls instead of only below the editor, particularly on phones. Success: members can verify a save without scrolling. This relocates existing feedback rather than proposing an additional submission requirement.
+
+**m04 — Give the account control a stable name. Original.** Replace shifting entry labels such as Discord connection and Online · saved with a recognizable account/guild control. Present synchronization status separately. Success: sign-out and guild switching remain discoverable regardless of save state.
+
+**m05 — Make the empty Characters page useful. Original.** Lead with “Add the character you want to raid with” and the action. Move the unverified character-import API note out of the main task flow. Success: someone with no characters immediately understands what to do and why.
+
+The following ten minor improvements are additional recommendations.
+
+**m06 — Show a readable week range beside week navigation. New.** Supplement the Monday date picker with “This week · Oct 19–25” or an equivalent label. Make adjacent-week destinations clear. Follow M04's timezone convention and retain an exact date picker. Success: members can tell which week they are editing without calculating its end date.
+
+**m07 — Keep the selected raid and edit scope visible while scrolling. New.** Use a compact context line on long mobile forms: raid name, date/week, and whether the action affects this raid or all weekly times. Do not duplicate the entire header or cover focused controls. Success: a member making an edit halfway down a screen can identify its scope.
+
+**m08 — Suggest a previously used realm when adding an alt. New.** Prefill from the member's own existing character where appropriate, keep it editable, and avoid assuming that all characters share a realm. Preserve the existing specialization-to-role suggestion. Success: adding another character requires less repeated typing without creating silent realm mistakes.
+
+**m09 — Add an explicit Cancel beside Save in character forms. New.** The modal already supports its close button and Escape. Add a visible form-level Cancel and return focus to the control that opened the form. Success: members can abandon an edit confidently with touch or keyboard, without searching for the modal close control.
+
+**m10 — Give invitation errors a useful next action. New.** Distinguish an expired invite, a link for a different profile, and a temporary lookup failure. Offer retry for a transient failure, account review when relevant, or clear instructions to request a replacement invite. Do not expose another person's profile or let users bypass profile-claim restrictions. Success: the error explains a recoverable next step rather than only offering Close.
+
+**m11 — Add provider-specific guidance to the existing calendar link. New.** Explain the difference between downloading one event and subscribing to future changes. Offer concise instructions for supported calendar apps and state that regenerating a subscription link disables the old one before the action. Do not claim the calendar client is connected merely because a URL was copied. Verify provider instructions when implemented; [Google's current guidance](https://support.google.com/calendar/answer/37100?hl=en) describes adding a URL through Other calendars → From URL on a computer. Success: a member can complete the subscription and understands how renewal affects it.
+
+**m12 — Offer local Retry actions on failed information panels. New.** Signup and reminder settings panels currently show loading errors without an equally clear panel-level retry. Add Retry beside the error and preserve relevant context. Where previously loaded information remains visible, mark it as potentially outdated. Success: a temporary read failure can be resolved without reloading the whole app. Failed edit recovery remains M12.
+
+**m13 — Remember harmless display preferences. New.** Preserve the chosen availability editor and useful view choices across visits, scoped appropriately to the viewer and guild. A shared raid link should still open its intended destination. Never restore a previous member's identity or apply remembered choices as availability answers. Success: returning members avoid repeatedly configuring presentation.
+
+**m14 — Make the existing Undo notification easier to use. New.** Pause its dismissal timer while hovered or keyboard-focused and provide a clear dismissal action. Keep the existing protection against undoing over newer changes. Success: members have a fair chance to use Undo without racing a timer. Historical restoration remains M13.
+
+**m15 — Enlarge compact mobile controls without losing readable text. New.** Review small roster actions, close controls, and date arrows for comfortable touch targets; use a 44-by-44 CSS-pixel design target where practical. Check text zoom and focus visibility around sticky navigation. This is a proposed comfort target, not a claim of a newly measured accessibility failure or a complete compliance audit. Success: the named controls remain usable on a small phone and with enlarged text.
+
+These recommendations form a prioritized set of options, not a commitment to ship all 30. The added scope is substantial; onboarding should not wait for every later capability.
+
+| Proposed sequence                                 | Items                                                            | Reason and dependency                                                                                                                                       |
+| ------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First: establish the member journey               | Onboarding, M01–M04; design validation of M12; m01–m07, m09, m10 | Resolve entry, responsibility, time, and save-state confusion before adding more choices.                                                                   |
+| Next: reduce coordination work                    | M05–M07, M10–M11; m08, m11–m15                                   | Build on the agreed participation states and existing reminder/schedule capabilities. M07 depends on M03's state definitions and explicit acceptance rules. |
+| Next: improve decision quality and accountability | M08–M09, M13–M14                                                 | Use truthful planning explanations and attributable history. M08 benefits from M13; M14 can first ship as a bounded preview.                                |
+| Later: improve preparation                        | M15                                                              | Validate that logistics are a recurring problem before introducing additional event fields.                                                                 |
+
+Keep cosmetic and bounded interaction changes small. Features involving new persistent preferences, standby offers, participation limits, history, and reminder policies need separate product and technical design before estimation. No delivery dates or effort estimates have been validated here.
+
+Before implementation, test a lightweight prototype with five ordinary guild members on their phones. Include a new member, someone returning after a break, a member in a different timezone, and someone comfortable using Discord but unfamiliar with the app. Add separate officer sessions for the management workflows. This is formative research, not a statistically representative study.
+
+Ask members to join, confirm a character, give availability, explain their roster status, and report a late change. Observe without teaching the interface. Record completion time, wrong turns, requests for help, and the participant's own explanation of what their action accomplished. Add scenarios for an expired invite, a closed deadline, an interrupted save, and a rostered raid whose time changes.
+
+| Proposed measure      | Initial target                                                                     | How to assess it                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| First setup           | Within three minutes after sign-in                                                 | Time from successful sign-in to a saved character and first valid availability answer; include unavailable answers. |
+| Routine participation | Within thirty seconds                                                              | Time to review or update an existing answer, using an unchanged-profile scenario.                                   |
+| Status comprehension  | Every formative-test participant distinguishes signup, selection, and confirmation | Ask “Do you have a place, and is any action still needed?” after app and Discord scenarios.                         |
+| Time comprehension    | No local-day or start-time mistakes in the tested scenarios                        | Include a midnight crossing and differing daylight-saving transitions.                                              |
+| Error recovery        | Recover without abandoning or re-entering the whole task                           | Interrupt a save and observe retry/review behavior.                                                                 |
+| Officer resolution    | Fewer navigation detours than the current flow                                     | Compare the same missing-role and missing-confirmation tasks before and after the prototype.                        |
+
+These are proposed design targets, not current results. Record baselines before claiming improvement. After any later release, track join-to-first-answer completion, repeated setup prompts, unanswered confirmations, correction requests, and recovery success. Collect only the operational events needed to assess these outcomes; private notes and sensitive account details are unnecessary.
+
+The code evidence supporting the review is available in these existing files:
+
+| Observation or existing foundation                      | Relevant files                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry choices, invitation handoff, first-raid checklist | [Setup](../src/views/Setup.svelte), [invite flow](../src/lib/remote/invite.svelte.js), [checklist](../src/components/OnboardingChecklist.svelte), [readiness rules](../src/lib/personal-raids.js)                                                                                            |
+| Member navigation, home priorities, time conventions    | [Sidebar](../src/components/Sidebar.svelte), [Home](../src/views/Home.svelte), [display preferences](../src/lib/display.svelte.js), [month calendar](../src/components/RaidMonth.svelte)                                                                                                     |
+| Availability, character creation, schedules             | [Availability](../src/views/Availability.svelte), [CharacterDialog](../src/components/CharacterDialog.svelte), [CharacterFields](../src/components/CharacterFields.svelte), [availability templates](../src/lib/availability-template.js)                                                    |
+| Existing planning, fairness, attendance, and recurrence | [OfficerDashboard](../src/components/OfficerDashboard.svelte), [SuggestionCards](../src/components/SuggestionCards.svelte), [PlayerDialog](../src/components/PlayerDialog.svelte), [attendance](../src/lib/attendance.js), [RaidScheduleEditor](../src/components/RaidScheduleEditor.svelte) |
+| Existing reminders, subscriptions, recovery, and Undo   | [ReminderSettings](../src/components/ReminderSettings.svelte), [CalendarSubscription](../src/components/CalendarSubscription.svelte), [sync](../src/lib/remote/sync.svelte.js), [App recovery UI](../src/App.svelte), [toast behavior](../src/lib/toast.svelte.js)                           |
+| Existing delivered work to preserve                     | [UI overhaul](UI_OVERHAUL.md), [raid workflow improvements](IMPROVEMENT_PLAN.md), [coordination improvements](COORDINATION_IMPROVEMENTS.md), [Discord overhaul](DISCORD_OVERHAUL.md)                                                                                                         |
+
+The recommendations are product judgments grounded in this application. General principles of visible status, user control, consistency, and understandable recovery are also described in [NN/g's usability heuristics](https://www.nngroup.com/articles/ten-usability-heuristics/). Those principles support the review method; they do not establish that these particular changes will improve WhenToRaid without validation.
+
+**P07 plan review — Claude, October 17, 2026.**
+
+Source claims spot-checked and confirmed: the entry page leads with “Set up your guild” (`Setup.svelte`); the invite toast contradicted the checklist order; the checklist's availability step depended on this week's check-in (`personal-raids.js`); Raid planner and Guild settings appear in More for every member (`Sidebar.svelte`).
+
+| Finding                                        | Recommendation                                                                                                                                                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No release cut for the Nov 4, 2026 release     | Add a “before Nov 4” slice; keep the Discord acceptance run (resume at step C) and the real webhook test ahead of most items.                                           |
+| Discord auto-join (PR #36) missing             | Treat it as the main member entry path, alongside invites, in the findings, evidence, and onboarding stage 1.                                                           |
+| App treated as the primary surface             | Many members will only use Discord sign-up posts. Promote M03 ahead of M01/M02; make “recognize work done through Discord” a hard onboarding requirement.                |
+| Scope that doesn't fit a one-group guild       | Park M07–M10, M13, M15 until a real problem appears; the guild runs one fixed group per night and rejected per-boss planning.                                           |
+| Overlapping items                              | Merge into workstreams: save state (m03, m04, m12, M12); time display (M04, m02, m06); edit scope (m07 with M02).                                                       |
+| Heavy coordination protocol                    | Move the tracker to its own file or GitHub issues so this document reads as a product plan.                                                                             |
+| Research plan heavier than needed              | Observe two or three guildmates using the real app during a real raid week instead of a prototype study. Release metrics would need analytics and a privacy-page update. |
+| Missing states                                 | Officers using “Editing as” (onboarding must follow the signed-in person); existing beta members must not be pushed through new onboarding; member-and-officer landing.  |
+
+Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in this batch), hide officer screens from members (M01 first step), m01, m02, m05, m09, and an M03 first slice so the app and Discord use the same signed-up/selected/confirmed labels.
+
+**Handoff — October 17, 2026; Claude; ONB (routing), m03–m05, m08–m10, m12–m14; Ready for review.**
+
+| Field             | Recorded handoff                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Work location     | `feat/member-onboarding-foundation`, uncommitted working tree                                                                                                                                                                                                                                                                                                                 |
+| Codex batch       | Invite error kinds and Retry (m10); invite routes to Characters first; panel Retry for reminders and sign-ups (m12); Undo toast pauses on hover/focus with Dismiss (m14); remembered availability editor and section (m13); “Account & guilds” control with separate sync status (m04); save status at the top of the availability editor (m03); first-character panel (m05); realm suggestion (m08); form Cancel (m09) |
+| Claude code review | Blockers: setup prompt still reappeared weekly on Home and on the new Characters banner; `Home.test.js` expected the old heading; the new e2e spec failed (label selector matched option text); Discord auto-join still landed new members on the setup page. Minor: dismissing the toast lost keyboard focus; `CharacterDialog` duplicates `CharacterFields`' default draft (left as is) |
+| Claude fixes      | `hasGivenAvailability` makes setup permanent once any week is answered or a usual schedule exists (Home, Characters, checklist); shared `welcomeNewMember` routes invites and Discord joins the same way; a signed-in player with exactly one guild and no saved choice opens it; toast actions return focus to the page; updated Home test and e2e selector                         |
+| Checks            | `vitest run`: 582 passed. `eslint .`: clean. `playwright test`: 68 passed (desktop and mobile). Not run: integration tests, hosted Discord sign-in                                                                                                                                                                                                                            |
+| Remaining limits  | Onboarding stages 3–5, cross-device progress, member/officer workspace split, and timezone work not started. No peer review of Claude's fixes yet; not committed or deployed                                                                                                                                                                                                 |
+| Next actor        | User: choose the pre–Nov 4 cut and approve a commit/PR. Reviewer (Codex or user) for this batch                                                                                                                                                                                                                                                                              |

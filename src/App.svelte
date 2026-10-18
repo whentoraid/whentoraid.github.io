@@ -178,9 +178,11 @@
         {app.data.guild.name.toUpperCase()} <span class="slash">/</span>
         {VIEW_TITLES[app.view]}
       </span>
-      <button class="discord" onclick={() => (discordOpen = true)}>
-        {remote.guildId ? ONLINE_LABELS[remote.status] : remote.signedIn ? 'Signed in' : 'Discord connection'}
-      </button>
+      <div class="account-controls">
+        {#if remote.guildId}<span class="account-sync" role="status">{ONLINE_LABELS[remote.status]}</span
+          >{/if}
+        <button class="discord" onclick={() => (discordOpen = true)}>Account & guilds</button>
+      </div>
     </header>
 
     <div id="content" tabindex="-1">
@@ -255,11 +257,21 @@
 
 <JoinGuildDialog />
 
-<Modal
-  open={discordOpen}
-  onclose={() => (discordOpen = false)}
-  label={remote.guildId ? 'Online guild' : 'Connect your guild'}
->
-  <h2>{remote.guildId ? 'Online guild' : 'Connect your guild'}</h2>
+<Modal open={discordOpen} onclose={() => (discordOpen = false)} label="Account & guilds">
+  <h2>Account & guilds</h2>
   <OnlineAccount />
 </Modal>
+
+<style>
+  .account-controls {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .account-sync {
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>

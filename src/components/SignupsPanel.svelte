@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte'
   import { app } from '../lib/app.svelte.js'
   import { discordChannel } from '../lib/discord-channel.svelte.js'
   import { sendQueued } from '../lib/discord-delivery.svelte.js'
@@ -18,6 +19,11 @@
   let signups = $state({ key: null, rows: [], error: '' })
   let post = $state(null)
   let busy = $state(false)
+  let loading = $state(false)
+  let retry = $state(0)
+  let postError = $state('')
+  let postLoading = $state(false)
+  let postRequest = 0
 
   const key = $derived(JSON.stringify([remote.guildId, week, raidId]))
   // A sign-up changes the player's check-in, so a live reload of this week's check-ins means
@@ -26,21 +32,53 @@
 
   async function loadPost() {
     if (!canManage) return
-    const rows = await getSignupPost(supabase, remote.guildId, week, raidId)
-    post = rows?.[0] ?? null
+    const current = key
+    const request = ++postRequest
+    postLoading = true
+    postError = ''
+    try {
+      const rows = await getSignupPost(supabase, remote.guildId, week, raidId)
+      if (current === key && request === postRequest) post = rows?.[0] ?? null
+    } catch (error) {
+      if (current === key && request === postRequest) postError = error.message
+    } finally {
+      if (current === key && request === postRequest) postLoading = false
+    }
   }
 
   $effect(() => {
     const current = key
     void weekCheckins
+    void retry
+    let active = true
+    loading = true
+    const previous = untrack(() => signups)
+    signups = {
+      key: previous.key === current ? current : null,
+      rows: previous.key === current ? previous.rows : [],
+      error: '',
+    }
     listRaidSignups(supabase, remote.guildId, week)
       .then((rows) => {
-        if (current === key) signups = { key: current, rows: rows ?? [], error: '' }
+        if (active && current === key) signups = { key: current, rows: rows ?? [], error: '' }
       })
       .catch((error) => {
-        if (current === key) signups = { ...signups, error: error.message }
+        if (active && current === key)
+          signups = {
+            key: signups.key === current ? current : null,
+            rows: signups.key === current ? signups.rows : [],
+            error: error.message,
+          }
       })
-    loadPost().catch(() => (post = null))
+      .finally(() => {
+        if (active && current === key) loading = false
+      })
+    post = null
+    void loadPost()
+    return () => {
+      active = false
+      postRequest += 1
+    }
   })
 
   const characterOf = (row) => app.data.characters.find((c) => c.id === row.character_id)
@@ -80,13 +118,17 @@
 
   const hasBot = $derived(Boolean(discordChannel.channelId))
   const postStatus = $derived(
-    !post
-      ? 'Not posted in Discord yet.'
-      : post.status === 'failed' || post.status === 'uncertain'
-        ? `The Discord post needs attention: ${post.last_error ?? 'it could not be sent.'}`
-        : post.status === 'sent' && post.posted
-          ? 'Posted in Discord. It updates as players answer.'
-          : 'Queued for Discord…',
+    postLoading
+      ? 'Checking the Discord post…'
+      : postError
+        ? 'The Discord post status could not be checked.'
+        : !post
+          ? 'Not posted in Discord yet.'
+          : post.status === 'failed' || post.status === 'uncertain'
+            ? `The Discord post needs attention: ${post.last_error ?? 'it could not be sent.'}`
+            : post.status === 'sent' && post.posted
+              ? 'Posted in Discord. It updates as players answer.'
+              : 'Queued for Discord…',
   )
 
   async function postSignup() {
@@ -98,7 +140,7 @@
       showToast(error.message)
     } finally {
       busy = false
-      await loadPost().catch(() => {})
+      await loadPost()
     }
   }
 </script>
@@ -106,10 +148,15 @@
 <section class="panel spaced-top" aria-label="Discord sign-ups">
   <h2>Discord sign-ups</h2>
   {#if signups.error}
-    <p class="warning">Sign-ups could not be loaded: {signups.error}</p>
-  {:else if signups.key !== key}
-    <p role="status">Loading sign-ups…</p>
-  {:else}
+    <p class="warning" role="alert">Sign-ups could not be loaded: {signups.error}</p>
+    <button disabled={loading} onclick={() => (retry += 1)}>{loading ? 'Retrying…' : 'Retry sign-ups'}</button
+    >
+    {#if signups.key === key}<p class="note">
+        These are the last loaded answers and may be out of date.
+      </p>{/if}
+  {/if}
+  {#if loading}<p role="status">Loading sign-ups…</p>{/if}
+  {#if signups.key === key}
     <p>
       {coming.length} coming{lineup.bench.length ? ` · ${lineup.bench.length} on the bench` : ''} · {lineup
         .tentative.length} tentative · {lineup.absent.length} absent
@@ -144,6 +191,8 @@
   {#if canManage}
     {#if hasBot}
       <p class="note" role="status">{postStatus}</p>
+      {#if postError}<p class="warning" role="alert">{postError}</p>
+        <button disabled={postLoading} onclick={loadPost}>Retry post status</button>{/if}
       <div class="buttons">
         <button disabled={busy} onclick={postSignup}
           >{post?.posted ? 'Update sign-up post' : 'Post sign-up in Discord'}</button

@@ -28,6 +28,8 @@ const api = await import('../lib/remote/api.js')
 const sync = await import('../lib/remote/sync.svelte.js')
 const { captureInvite, invite, loadInvite } = await import('../lib/remote/invite.svelte.js')
 const { default: JoinGuildDialog } = await import('./JoinGuildDialog.svelte')
+const { app } = await import('../lib/app.svelte.js')
+const { createSeedState } = await import('../lib/seed.js')
 
 function openInviteLink() {
   history.replaceState(null, '', `/?join=${CODE}#/planner`)
@@ -38,6 +40,7 @@ describe('joining from an invite link', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionStorage.clear()
+    app.data = createSeedState()
     Object.assign(sync.remote, { ready: true, signedIn: true, guildId: null })
     api.inviteDetails.mockResolvedValue({
       guildId: 'guild-1',
@@ -64,7 +67,11 @@ describe('joining from an invite link', () => {
     expect(sync.signIn).toHaveBeenCalled()
   })
 
-  test('a new player joins under their Discord name and lands on their availability', async () => {
+  test('a new player joins under their Discord name and starts with their first character', async () => {
+    app.data = {
+      ...app.data,
+      characters: app.data.characters.filter((c) => c.memberId !== app.data.currentMemberId),
+    }
     openInviteLink()
     render(JoinGuildDialog)
     await loadInvite()
@@ -76,6 +83,7 @@ describe('joining from an invite link', () => {
     expect(api.joinGuild).toHaveBeenCalledWith(expect.anything(), CODE, { memberId: null, name: 'Wren' })
     expect(invite.code).toBeNull()
     expect(sessionStorage.getItem('whentoraid-invite')).toBeNull()
+    expect(app.view).toBe('characters')
   })
 
   test('a personal link claims only its named player without a profile picker', async () => {
@@ -98,6 +106,7 @@ describe('joining from an invite link', () => {
         name: 'Wren',
       }),
     )
+    expect(app.view).toBe('availability')
   })
 
   test('a refused join is shown in the dialog, which stays open', async () => {
@@ -125,10 +134,43 @@ describe('joining from an invite link', () => {
   })
 
   test('a dead link explains itself', async () => {
-    api.inviteDetails.mockRejectedValue(new Error('This invite link no longer works.'))
+    api.inviteDetails.mockRejectedValueOnce(
+      Object.assign(new Error('This invite link no longer works.'), { code: 'P0002' }),
+    )
     openInviteLink()
     render(JoinGuildDialog)
     await loadInvite()
     expect(await screen.findByText('This invite link no longer works.')).toBeTruthy()
+    expect(screen.getByText(/Ask a guild officer for a new invite link/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Retry invite' })).toBeNull()
+  })
+
+  test('a temporary lookup failure can be retried without losing the invite', async () => {
+    api.inviteDetails.mockRejectedValueOnce(new Error('Failed to fetch'))
+    openInviteLink()
+    render(JoinGuildDialog)
+    await loadInvite()
+    await fireEvent.click(await screen.findByRole('button', { name: 'Retry invite' }))
+    expect(await screen.findByRole('heading', { name: 'Join The After Hours' })).toBeTruthy()
+    expect(invite.code).toBe(CODE)
+    expect(api.inviteDetails).toHaveBeenCalledTimes(2)
+  })
+
+  test('closing an invitation discards a delayed lookup result', async () => {
+    let resolve
+    api.inviteDetails.mockReturnValueOnce(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    openInviteLink()
+    render(JoinGuildDialog)
+    const pending = loadInvite()
+    const { dismissInvite } = await import('../lib/remote/invite.svelte.js')
+    dismissInvite()
+    resolve({ guildId: 'guild-1', alreadyMember: true })
+    await pending
+    expect(sync.openGuild).not.toHaveBeenCalled()
+    expect(invite.details).toBeNull()
   })
 })
