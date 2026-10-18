@@ -1942,6 +1942,39 @@ dialog::backdrop {
     padding: 22px;
   }
 }
+/*
+ * Phone touch targets: 44 by 44 CSS pixels where practical. Only the hit area grows; text keeps its
+ * size, so compact controls stay compact to read. Later than the phone rules above so it wins.
+ */
+@media (max-width: 760px) {
+  button,
+  .button-like,
+  select,
+  .segmented button,
+  .discord {
+    min-height: 44px;
+  }
+  button,
+  .button-like,
+  .player .edit,
+  .player .lock {
+    min-width: 44px;
+  }
+  summary {
+    min-height: 44px;
+  }
+  /* Keyboard focus and in-page jumps stop clear of the fixed bottom nav and sticky save lines. */
+  html {
+    scroll-padding-top: 72px;
+    scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  /* Small-type disclosures keep their triangle (a flex summary would lose it); padding centres them. */
+  .time-details summary,
+  .publication-options > summary,
+  .usual-schedule > summary {
+    padding-block: 12px;
+  }
+}
 @media (max-width: 360px) {
   .publication-toolbar > .buttons {
     align-items: stretch;

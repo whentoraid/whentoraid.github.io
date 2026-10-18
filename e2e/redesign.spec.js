@@ -113,3 +113,23 @@ test('narrow layouts with long guild and character names do not overflow', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
   await other.close()
 })
+
+test('compact phone controls keep a 44 by 44 pixel touch target', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Touch targets are enlarged on phones')
+  await page.goto('./#/planner')
+  await page.getByRole('tab', { name: /^Roster/ }).click()
+  const controls = [
+    page.getByRole('button', { name: /^Previous week/ }),
+    page.getByRole('button', { name: /^Next week/ }),
+    page.getByRole('button', { name: /^Lock / }).first(),
+    page.getByRole('button', { name: /^Edit / }).first(),
+    page.getByRole('button', { name: 'Edit draft' }),
+    page.getByText('Publication & sharing options'),
+    page.getByRole('button', { name: 'Account & guilds' }),
+  ]
+  for (const control of controls) {
+    const box = await control.boundingBox()
+    expect(Math.round(box.width), await control.textContent()).toBeGreaterThanOrEqual(44)
+    expect(Math.round(box.height), await control.textContent()).toBeGreaterThanOrEqual(44)
+  }
+})
