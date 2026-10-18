@@ -16,6 +16,19 @@ export function deadlineUtc(state, weekIso) {
   return zonedTimeToUtc(addDays(weekIso, deadline.day), deadline.minutes, state.guild.timezone)
 }
 
+/** A deadline instant as "Fri, Oct 23, 7:00 PM PDT" in `zone`; the zone name keeps it unambiguous. */
+export function formatDeadline(deadline, zone) {
+  return new Date(deadline).toLocaleString('en-US', {
+    timeZone: zone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
 /**
  * Whether the week's check-ins have closed (its deadline has passed). Online, only officers change
  * a closed week's check-ins; the database enforces this too (enforce_checkin_deadline).

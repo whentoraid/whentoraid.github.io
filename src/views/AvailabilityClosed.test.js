@@ -34,6 +34,7 @@ test('a week whose deadline is ahead stays editable', () => {
   app.data = setCurrentWeek(createSeedState(), OPEN_WEEK)
   const { container } = render(Availability)
   expect(screen.queryByText(/closed at the deadline/)).toBeNull()
+  expect(screen.getByText(/Answer by/).textContent).toMatch(/Wed, Oct 14, 6:00\sPM PDT/)
   expect(container.querySelector('.availability-layout > .panel').inert).toBeFalsy()
   expect(container.querySelector('fieldset').disabled).toBe(false)
 })

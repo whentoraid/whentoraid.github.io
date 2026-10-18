@@ -72,6 +72,28 @@ export function onboardingSteps(state, memberId, weekIso = state.currentWeek) {
   ]
 }
 
+/**
+ * "Fri, Oct 23 · 7:00 – 10:00 PM PDT" for a session that starts and ends on the same local day;
+ * the exact label when it crosses midnight, where the second date matters.
+ */
+export function compactSessionLabel({ start, end }, zone) {
+  const day = (instant) => new Date(instant).toLocaleDateString('en-CA', { timeZone: zone })
+  if (day(start) !== day(end)) return exactSessionLabel({ start, end }, zone)
+  const date = new Date(start).toLocaleDateString('en-US', {
+    timeZone: zone,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  const times = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).formatRange(start, end)
+  return `${date} · ${times}`
+}
+
 /** Full dates on both ends remove ambiguity across midnight, timezones and DST transitions. */
 export function exactSessionLabel({ start, end }, zone) {
   const formatter = new Intl.DateTimeFormat('en-US', {

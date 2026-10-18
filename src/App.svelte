@@ -6,6 +6,7 @@
   import { DEFAULT_RAID_ID, setCurrentRaid } from './lib/raids.js'
   import { formatHash, parseHash } from './lib/route.js'
   import {
+    canManage,
     dismissUnsavedDraft,
     downloadUnsavedDraft,
     initRemote,
@@ -40,6 +41,9 @@
     members: 'Guild members',
     settings: 'Guild settings',
   }
+
+  /** Players only see published rosters there, so it is not a planner to them. */
+  const viewTitle = $derived(app.view === 'planner' && !canManage() ? 'Guild rosters' : VIEW_TITLES[app.view])
 
   const ONLINE_LABELS = { saved: 'Online · saved', saving: 'Online · saving…', error: 'Online · not saved' }
 
@@ -156,9 +160,7 @@
 <svelte:window onpopstate={followUrl} onhashchange={followUrl} />
 
 <svelte:head>
-  <title
-    >{app.data ? `${VIEW_TITLES[app.view]} · ${app.data.guild.name}` : 'Set up your guild'} · WhenToRaid</title
-  >
+  <title>{app.data ? `${viewTitle} · ${app.data.guild.name}` : 'Set up your guild'} · WhenToRaid</title>
 </svelte:head>
 
 {#if app.data}
@@ -176,7 +178,7 @@
     <header>
       <span>
         {app.data.guild.name.toUpperCase()} <span class="slash">/</span>
-        {VIEW_TITLES[app.view]}
+        {viewTitle}
       </span>
       <div class="account-controls">
         {#if remote.guildId}<span class="account-sync" role="status">{ONLINE_LABELS[remote.status]}</span

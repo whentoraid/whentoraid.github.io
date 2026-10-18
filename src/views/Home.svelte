@@ -10,7 +10,8 @@
   import { app } from '../lib/app.svelte.js'
   import { viewerZone } from '../lib/display.svelte.js'
   import { getCheckin, memberById } from '../lib/model.js'
-  import { personalRaids, availabilitySource, exactSessionLabel } from '../lib/personal-raids.js'
+  import { personalRaids, availabilitySource, compactSessionLabel } from '../lib/personal-raids.js'
+  import { weekStatus } from '../lib/raid-status.js'
   import { mondayOf, todayIso } from '../lib/time.js'
 
   let now = $state(Date.now())
@@ -59,11 +60,11 @@
           ><span>{datePart(next.session.start, { month: 'short' })}</span>
         </div>
         <div>
-          <span class="badge published">{next.session.start <= now ? 'IN PROGRESS' : 'YOU’RE ROSTERED'}</span>
+          <span class="badge published">{next.session.start <= now ? 'IN PROGRESS' : 'SELECTED'}</span>
           <h2>{next.raid.name}</h2>
         </div>
       </div>
-      <p class="raid-time">{exactSessionLabel(next.session, viewerZone)}</p>
+      <p class="raid-time">{compactSessionLabel(next.session, viewerZone)}</p>
       <div class="assignment">
         <span class="eyebrow">YOUR CHARACTER</span>
         <p>
@@ -81,6 +82,7 @@
     {:else}
       <span class="eyebrow">UP NEXT</span>
       <h2>No upcoming assignment yet</h2>
+      <span class="badge">{weekStatus(app.data, thisWeek, memberId)}</span>
       <p>When an officer publishes a roster with you on it, your raid and character will appear here.</p>
       <p class="empty-guidance">
         {checkin.checkedIn
@@ -123,7 +125,7 @@
           </div>
           <div>
             <h3>{item.raid.name}</h3>
-            <p>{exactSessionLabel(item.session, viewerZone)}</p>
+            <p>{compactSessionLabel(item.session, viewerZone)}</p>
             <p>
               {item.assignment
                 ? `${item.character?.name ?? 'Assigned character'} · ${item.assignment.role}`

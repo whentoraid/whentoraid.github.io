@@ -1,5 +1,6 @@
 <script>
   import { MAX_RESPONSE_NOTE } from '../lib/raid-services.js'
+  import { placeStatus } from '../lib/raid-status.js'
   import {
     canRespondAs,
     loadRaidResponses,
@@ -67,7 +68,12 @@
 </script>
 
 <div class="raid-response">
-  {#if current?.status === 'confirmed'}
+  {#if loadedKey === key}
+    <span class="badge" class:success={current?.status === 'confirmed'}>{placeStatus(current)}</span>
+  {/if}
+  {#if loadedKey === key && !current && canRespond}
+    <p class="status">Your officers picked you. Let them know you’ll be there.</p>
+  {:else if current?.status === 'confirmed'}
     <p class="status confirmed">
       {canRespond ? 'You' : 'This player'} confirmed {canRespond ? 'you’ll' : 'they’ll'} be there.
     </p>
@@ -121,7 +127,7 @@
     margin-top: 1rem;
   }
   .status {
-    margin: 0 0 0.5rem;
+    margin: 0.5rem 0;
   }
   .confirmed {
     color: var(--green, #92c892);

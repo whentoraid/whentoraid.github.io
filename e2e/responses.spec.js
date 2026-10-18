@@ -17,7 +17,7 @@ test('a player marks tentative, confirms, then reports a problem for an officer 
   // As the player (the fixture's current member is on the roster).
   await page.getByRole('button', { name: /My raids/ }).click()
   const next = page.getByRole('region', { name: 'Next raid assignment' })
-  await expect(next.getByText('YOU’RE ROSTERED')).toBeVisible()
+  await expect(next.getByText('SELECTED', { exact: true })).toBeVisible()
   await next.getByRole('button', { name: 'Tentative' }).click()
   await expect(next.getByText(/You’re tentative/)).toBeVisible()
 

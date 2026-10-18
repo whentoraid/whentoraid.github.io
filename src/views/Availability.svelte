@@ -10,7 +10,8 @@
   import { getRaid } from '../lib/raids.js'
   import { app } from '../lib/app.svelte.js'
   import { templateFor } from '../lib/availability-template.js'
-  import { changesClosedWeek, checkinsClosed } from '../lib/checkins.js'
+  import { changesClosedWeek, checkinsClosed, deadlineUtc, formatDeadline } from '../lib/checkins.js'
+  import { displayZone } from '../lib/display.svelte.js'
   import { own } from '../lib/ids.js'
   import { stableJson } from '../lib/remote/rows.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
@@ -75,6 +76,8 @@
   })
   /** Online players cannot change a week after its check-in deadline; officers still can. */
   const closed = $derived(!canManage() && checkinsClosed(app.data, weekIso, now))
+  const deadline = $derived(deadlineUtc(app.data, weekIso))
+  const deadlineAhead = $derived(deadline !== null && now < deadline)
 
   function changeTemplate(action) {
     const previous = app.data
@@ -232,6 +235,11 @@
 {#if closed}
   <p class="note warning" role="status">
     Check-ins for this week closed at the deadline. Ask an officer if your times or characters need to change.
+  </p>
+{:else if deadlineAhead}
+  <p class="note checkin-deadline">
+    Answer by <strong>{formatDeadline(deadline, displayZone(app.data.guild))}</strong>.
+    {canManage() ? '' : 'After that, ask an officer to change your times.'}
   </p>
 {/if}
 

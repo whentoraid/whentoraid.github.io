@@ -21,7 +21,7 @@ The initial batch preserves existing authorization, publication, and storage beh
 | Planning work completed                            | P01–P07                                                                                              |
 | Application improvements completed under this plan | 9 of 30 Ready for review (m03–m05, m08–m10, m12–m14) plus ONB initial routing; none Done or deployed |
 | Active implementation claims                       | Claude: first batch on `feat/member-onboarding-foundation` (taken over from Codex)                   |
-| Next proposed handoff                              | User decides the pre–Nov 4 cut (see P07 findings); then commit/PR the first batch                    |
+| Next proposed handoff                              | First pre–Nov 4 slice in review; all remaining items targeted before Nov 4                           |
 | Claude participation                               | P07 done; first batch review fixes done; code review of Codex's work recorded below                  |
 
 Codex is the proposed lead for data behavior, shared raid-state rules, timezone logic, persistence, sync/recovery, Discord/server behavior, and integration checks. Claude is the proposed lead for interaction design, screen hierarchy, copy, responsive layouts, and member-facing UI. For a change spanning both areas, agree the behavior and data contract first, then give each agent explicit file ownership. The item lead coordinates the complete outcome; it does not grant both agents permission to edit the same files concurrently. Each agent reviews the other's work within the actual capabilities of its session.
@@ -55,39 +55,39 @@ Codex's completed planning work is recorded here:
 
 The delivery tracker below covers all recommendations individually. Proposed leads and reviewers can change during handoff; **Claimed by** stays empty until an agent actually claims the work. Every item currently has a written proposal, but none has been implemented under this plan.
 
-| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by          | Delivery status           |
-| --- | --------------------------------------------- | ------------- | ----------------- | ------------------- | ------------------------- |
-| ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude (from Codex) | In progress: routing done |
-| M01 | Separate member and officer workspaces        | Claude        | Codex             | —                   | Not started               |
-| M02 | Quicker routine participation                 | Claude        | Codex             | —                   | Not started               |
-| M03 | Consistent app/Discord raid status            | Codex         | Claude            | —                   | Not started               |
-| M04 | Coherent timezone experience                  | Codex         | Claude            | —                   | Not started               |
-| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | —                   | Not started               |
-| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started               |
-| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | —                   | Not started               |
-| M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started               |
-| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started               |
-| M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | Not started               |
-| M11 | Recurring availability renewal and pause      | Codex         | Claude            | —                   | Not started               |
-| M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started               |
-| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started               |
-| M14 | Recurring schedule impact preview             | Claude        | Codex             | —                   | Not started               |
-| M15 | Raid-day briefing                             | Claude        | Codex             | —                   | Not started               |
-| m01 | Deadline beside the availability answer       | Claude        | Codex             | —                   | Not started               |
-| m02 | Compact routine date strings                  | Claude        | Codex             | —                   | Not started               |
-| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review          |
-| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review          |
-| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review          |
-| m06 | Readable week ranges                          | Claude        | Codex             | —                   | Not started               |
-| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —                   | Not started               |
-| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review          |
-| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review          |
-| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review          |
-| m11 | Calendar-provider guidance                    | Claude        | Codex             | —                   | Not started               |
-| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review          |
-| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review          |
-| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review          |
-| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | —                   | Not started               |
+| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by          | Delivery status                   |
+| --- | --------------------------------------------- | ------------- | ----------------- | ------------------- | --------------------------------- |
+| ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude (from Codex) | In progress: routing done         |
+| M01 | Separate member and officer workspaces        | Claude        | Codex             | Claude              | Ready for review: player nav only |
+| M02 | Quicker routine participation                 | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| M03 | Consistent app/Discord raid status            | Codex         | Claude            | Claude              | Ready for review: app labels only |
+| M04 | Coherent timezone experience                  | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M11 | Recurring availability renewal and pause      | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started (before Nov 4)        |
+| M14 | Recurring schedule impact preview             | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| M15 | Raid-day briefing                             | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| m01 | Deadline beside the availability answer       | Claude        | Codex             | Claude              | Ready for review                  |
+| m02 | Compact routine date strings                  | Claude        | Codex             | Claude              | Ready for review                  |
+| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
+| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
+| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
+| m06 | Readable week ranges                          | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
+| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review                  |
+| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
+| m11 | Calendar-provider guidance                    | Claude        | Codex             | —                   | Not started (before Nov 4)        |
+| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
+| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
+| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review                  |
+| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | —                   | Not started (before Nov 4)        |
 
 For a claimed item, append a handoff entry using: **date; agent; item IDs; status; owned files; branch/worktree or patch; work achieved; checks and results; remaining limitations; reviewer findings; next actor and action**. Use explicit Not run or Pending when evidence does not exist. Record implementation, review, and deployment separately.
 
@@ -358,3 +358,17 @@ Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in t
 | Checks             | `vitest run`: 582 passed. `eslint .`: clean. `playwright test`: 68 passed (desktop and mobile). Not run: integration tests, hosted Discord sign-in                                                                                                                                                                                                                                                                      |
 | Remaining limits   | Onboarding stages 3–5, cross-device progress, member/officer workspace split, and timezone work not started. No peer review of Claude's fixes yet; not committed or deployed                                                                                                                                                                                                                                            |
 | Next actor         | User: choose the pre–Nov 4 cut and approve a commit/PR. Reviewer (Codex or user) for this batch                                                                                                                                                                                                                                                                                                                         |
+
+**Decision — October 18, 2026 (user).** Ship the pre–Nov 4 cut recommended in P07 and (superseded below) park everything else. The first slice is: M01 first step (player navigation), M03 first slice (shared status vocabulary in the app), m01, m02, plus the already merged m03–m05, m08–m10, m12–m14 and ONB routing.
+
+**Handoff — October 18, 2026; Claude; M01 (first step), M03 (first slice), m01, m02; Ready for review.**
+
+| Field            | Recorded handoff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Work location    | `feat/pre-nov4-cut`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Work achieved    | M01: players in an online guild see “Guild rosters” (read-only published rosters) and Guild members, and no Guild settings; officers and browser-only guilds are unchanged; server permissions untouched. m01: “Answer by …” deadline on the availability page while check-ins are open, in the page's display timezone with the zone name. m02: Home cards use “Fri, Oct 23 · 7:00 – 10:00 PM PDT”, with full dates when a session crosses midnight. M03: `src/lib/raid-status.js` defines the status vocabulary (No answer yet; Signed up · awaiting roster; Absent this week; Selected · confirmation needed; Confirmed; Selected · tentative; Selected · can’t make it); Home and the response card use it |
+| Checks           | `npm run check` (format, lint, 586 unit tests, build): pass. `playwright test`: 68 passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Remaining limits | M03 does not yet change Discord wording or show Discord's provisional bench in the app (needs an Edge Function deploy). M01 does not yet move the officer dashboard off Home. Not deployed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Next actor       | User: review and merge the PR                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+**Decision update — October 18, 2026 (user).** Nothing is parked. All remaining items are targeted for before the Nov 4, 2026 release, in the sequence above, as many as can be finished with tests passing. This replaces the earlier park decision; the slice above ships first.
