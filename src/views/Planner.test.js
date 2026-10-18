@@ -51,6 +51,29 @@ describe('Planner locks', () => {
     const top = screen.getAllByRole('button').find((b) => b.textContent.includes('TOP SUGGESTION'))
     expect(top.textContent).toMatch(/Backups: \d+ T · \d+ H · \d+ D/)
   })
+
+  test('Compare windows explains why the top suggestion ranks first, rule by rule', () => {
+    render(Planner)
+    const compare = screen.getByText('Compare windows').closest('details')
+    expect(within(compare).getByText(/ranks first because of/)).toBeTruthy()
+    expect(within(compare).getByRole('rowheader', { name: /Places filled/ })).toBeTruthy()
+    expect(within(compare).getAllByText('decides')).toHaveLength(1)
+    expect(within(compare).getByText(/players who sat out recently/)).toBeTruthy()
+  })
+
+  test('an officer’s hand edits are shown apart from the suggestion', () => {
+    const { plan } = plannerContext(app.data)
+    const [dropped, ...rest] = plan.team
+    app.data = setPlan(app.data, SEED_WEEK, { start: plan.start, team: rest })
+    render(Planner)
+    const compare = screen.getByText('Compare windows').closest('details')
+    expect(within(compare).getByText('Your changes to the suggestion')).toBeTruthy()
+    expect(
+      within(compare).getByText(
+        new RegExp(`Left off by hand: ${memberById(app.data, dropped.memberId).name}`),
+      ),
+    ).toBeTruthy()
+  })
 })
 
 describe('Planner roster cards', () => {

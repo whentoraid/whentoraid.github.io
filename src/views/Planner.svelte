@@ -2,6 +2,8 @@
   import SectionTabs from '../components/SectionTabs.svelte'
   import AddPlayerDialog from '../components/AddPlayerDialog.svelte'
   import AttendancePanel from '../components/AttendancePanel.svelte'
+  import TradeoffComparison from '../components/TradeoffComparison.svelte'
+  import { PRIORITY_LABELS } from '../lib/tradeoffs.js'
   import CheckinPanel from '../components/CheckinPanel.svelte'
   import Heatmap from '../components/Heatmap.svelte'
   import Modal from '../components/Modal.svelte'
@@ -64,7 +66,7 @@
     postKey,
     rememberPost,
   } from '../lib/discord-channel.svelte.js'
-  import { compositionIssues } from '../lib/composition-rules.js'
+  import { compositionIssues, raidRules } from '../lib/composition-rules.js'
   import { publishedRosterUrl } from '../lib/route.js'
   import { deleteFromWebhook, postToWebhook } from '../lib/discord-webhook.js'
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
@@ -818,6 +820,14 @@
             selectedStart={plan.start}
             {zone}
             onchoose={chooseSuggestion}
+          />
+          <TradeoffComparison
+            suggestions={topDays}
+            all={context.suggestions}
+            {savedPlan}
+            {players}
+            {zone}
+            priorityLabel={PRIORITY_LABELS[raidRules(getRaid(app.data)).priority]}
           />
           <div class="schedule-next">
             <span>Selected: <strong>{sessionLabel}</strong></span><button
