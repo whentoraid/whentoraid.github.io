@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   deliverMessages,
   personalCalendar,
+  reminderMentionIds,
   reminderMessages,
 } from '../../supabase/functions/_shared/raid-service-core.js'
 import { rosterMessages } from '../../supabase/functions/_shared/roster-post.js'
@@ -77,6 +78,21 @@ describe('raid delivery worker core', () => {
     expect(message).toContain('<@522222222222222222>')
     expect(message).not.toContain('@everyone')
     expect(reminderMessages({ kind: 'checkin', week: '2026-10-12', recipients: [] })).toEqual([])
+  })
+  it('names every reminded player but pings only those who want it', () => {
+    const payload = {
+      kind: 'checkin',
+      week: '2026-10-12',
+      recipients: [
+        { name: 'Nova', discordId: '522222222222222222', mention: true },
+        { name: 'Quiet', discordId: '533333333333333333', mention: false },
+        { name: 'Older', discordId: '544444444444444444' },
+        { name: 'Unlinked', discordId: '', mention: true },
+      ],
+    }
+    const [message] = reminderMessages(payload)
+    expect(message).toContain('<@533333333333333333>')
+    expect(reminderMentionIds(payload)).toEqual(['522222222222222222', '544444444444444444'])
   })
   it('deletes extra old messages when a roster gets shorter', async () => {
     const calls = []

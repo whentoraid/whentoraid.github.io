@@ -6,6 +6,7 @@
   import RaidQuickAnswer from '../components/RaidQuickAnswer.svelte'
   import StandbyOffer from '../components/StandbyOffer.svelte'
   import ActionInbox from '../components/ActionInbox.svelte'
+  import ReminderPreferences from '../components/ReminderPreferences.svelte'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
@@ -217,6 +218,10 @@
     </p>
     <CalendarSubscription />
   </details>
+{/if}
+
+{#if online}
+  <div class="spaced-top"><ReminderPreferences discordLinked={Boolean(member?.discordId)} /></div>
 {/if}
 
 <style>
