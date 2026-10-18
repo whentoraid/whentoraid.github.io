@@ -234,7 +234,7 @@ export function raidCommandReply(command, data, appUrl) {
         '`/raid roster` — every roster, bench, tentative, and absent name. Use `raid` from /raid upcoming and `page` for long lists.',
         '`/raid readiness` — officer report on role gaps and confirmations.',
         'Use **Sign up**, **Late**, **Tentative**, or **Absent** on a signup post. Pick your character, then change spec for that raid if needed.',
-        'A signup is provisional. Officers publish the final roster; use **Confirm** or **Can’t attend** on its post.',
+        'A signup is provisional. Officers publish the final roster. **Confirm** on its post confirms your roster place, or offers you as a backup if you are not rostered. The bot links you to character setup if needed.',
         'Times display in your Discord timezone. These command replies are visible only to you.',
       ].join('\n'),
     )

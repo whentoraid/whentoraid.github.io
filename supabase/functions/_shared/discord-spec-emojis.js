@@ -47,9 +47,16 @@ export function createSpecEmojiLoader({
     pending = (async () => {
       try {
         icons = await listEmojis(applicationId, botToken, fetchFn)
-        expires = now() + CACHE_MS
-        if (Object.keys(icons).length < NAMES.size)
-          log('Some Discord spec icons are missing. Run npm run discord:spec-icons to install them.')
+        if (Object.keys(icons).length < NAMES.size) {
+          // Provision missing application emojis on the first delivery. An interrupted run keeps
+          // the icons it installed and retries the remainder on the next delivery.
+          try {
+            await installSpecEmojis({ applicationId, botToken, fetchFn, existingIcons: icons })
+          } catch (error) {
+            log(`Discord spec icon setup: ${error.message}`)
+          }
+        }
+        expires = now() + (Object.keys(icons).length === NAMES.size ? CACHE_MS : RETRY_MS)
       } catch (error) {
         expires = now() + RETRY_MS
         log(error.message)
@@ -63,8 +70,14 @@ export function createSpecEmojiLoader({
 }
 
 /** Explicit setup action: add missing artwork to the application, never overwrite or delete emojis. */
-export async function installSpecEmojis({ applicationId, botToken, fetchFn = fetch, progress = () => {} }) {
-  const icons = await listEmojis(applicationId, botToken, fetchFn)
+export async function installSpecEmojis({
+  applicationId,
+  botToken,
+  fetchFn = fetch,
+  progress = () => {},
+  existingIcons = null,
+}) {
+  const icons = existingIcons ?? (await listEmojis(applicationId, botToken, fetchFn))
   for (const { name, url } of SPEC_EMOJI_CATALOG) {
     if (icons[name]) continue
     // Only catalog URLs are fetched; the bot credential is never sent to the image host.
@@ -82,8 +95,17 @@ export async function installSpecEmojis({ applicationId, botToken, fetchFn = fet
       signal: AbortSignal.timeout(10000),
     })
     // A rerun lists existing names first, so even an interrupted upload resumes without duplication.
-    if (!response.ok)
+    if (!response.ok) {
+      // Two cold workers may try to create the same name. Keep the ID if the other one won.
+      if (response.status === 400 || response.status === 409) {
+        const current = await listEmojis(applicationId, botToken, fetchFn)
+        if (current[name]) {
+          icons[name] = current[name]
+          continue
+        }
+      }
       throw new Error(`Uploading ${name} returned ${response.status}. Rerun setup later to resume.`)
+    }
     const emoji = await response.json()
     if (!SNOWFLAKE.test(emoji.id ?? '')) throw new Error(`Discord returned an invalid ID for ${name}.`)
     icons[name] = emoji.id

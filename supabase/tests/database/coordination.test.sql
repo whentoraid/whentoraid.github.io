@@ -1,7 +1,7 @@
 -- Availability kinds, raid rules and schedules, and Discord response buttons. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(39);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000000a2', 'officer2@example.test', '{}'),
@@ -154,7 +154,24 @@ select is((select status from public.raid_responses where guild_id = (select gui
 select is(pg_temp.press('622222222222222222', '744444444444444444', '733333333333333333', '755555555555555555', 1, 'confirmed') ->> 'outcome',
   'duplicate', 'the same signed press cannot be applied twice');
 select is(pg_temp.press('611111111111111111', '744444444444444444', '733333333333333333', '755555555555555555', 1, 'confirmed') ->> 'outcome',
-  'not-rostered', 'an officer who is not rostered cannot respond');
+  'no-characters', 'an off-roster player is guided to add a character');
+insert into public.characters(guild_id,id,member_id,name,realm,class,spec,role,main,retired,position)
+  values((select guild from t),'c-officer','m-officer','Samwise','Whitemane','Warrior','Protection','Tank',true,false,0);
+select is(public.respond_to_discord_raid('766666666666666668','611111111111111111',
+  '744444444444444444','733333333333333333','755555555555555555',
+  (select (job->>'id')::uuid from t),1,'confirmed') ->> 'outcome',
+  'standby', 'an off-roster Confirm offers the player as standby');
+select is((select character_id from public.raid_standby where guild_id=(select guild from t)
+  and member_id='m-officer'), 'c-officer', 'the backup character is saved');
+select is((select count(*)::int from public.raid_responses where guild_id=(select guild from t)),
+  1, 'standby does not create a published-roster confirmation');
+update t set job=public.claim_discord_delivery((select guild from t));
+select is(jsonb_array_length(public.raid_roster_live_payload(
+  (select (job->>'id')::uuid from t),(select (job->>'lease_token')::uuid from t))->'standby'),
+  1, 'the refreshed Discord roster includes the backup');
+select is(public.raid_roster_live_payload(
+  (select (job->>'id')::uuid from t),(select (job->>'lease_token')::uuid from t))->'team'->0->>'response',
+  'confirmed', 'the refreshed Discord roster marks the published confirmation');
 select is(pg_temp.press('699999999999999999', '744444444444444444', '733333333333333333', '755555555555555555', 1, 'confirmed') ->> 'outcome',
   'not-member', 'a stranger cannot respond');
 select is(pg_temp.press('622222222222222222', '744444444444444444', '733333333333333333', '755555555555555555', 0, 'unavailable') ->> 'outcome',
@@ -168,6 +185,10 @@ select is(public.respond_to_discord_raid('766666666666666667', '6222222222222222
   'saved', 'a rostered player can answer tentative from Discord');
 select is((select status from public.raid_responses where guild_id = (select guild from t)), 'tentative',
   'the Discord tentative response replaces the earlier confirmation');
+select public.finish_discord_delivery((select (job->>'id')::uuid from t),
+  (select (job->>'lease_token')::uuid from t),(select (job->>'version')::bigint from t));
+select is((select status from public.discord_deliveries where id=(select (job->>'id')::uuid from t)),
+  'pending', 'a response during delivery queues another roster refresh');
 
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
 select throws_ok($$ select pg_temp.press('622222222222222222', '744444444444444444', '733333333333333333', '755555555555555555', 1, 'confirmed') $$,

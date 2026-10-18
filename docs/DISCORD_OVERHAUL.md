@@ -40,13 +40,28 @@ each server's emoji slots. The catalog is shared with the web app's talent-tree 
 cache the installed emoji IDs for five minutes. A failed lookup keeps cached IDs; an unknown spec
 or missing emoji falls back to the existing class marker so delivery still works.
 
+The delivery worker now installs missing application emojis when it first encounters them, using
+the bot's configured application ID and token. It retains successful uploads if setup is interrupted
+and retries missing icons on a later delivery. The `npm run discord:spec-icons` command remains a
+way to provision all icons ahead of the first post.
+
+## Roster Confirm and onboarding
+
+Apply `20261029120000_discord_roster_standby.sql` before deploying `raid-interactions` and
+`raid-dispatch`. A member with no character gets a private link to the Characters page from either
+Sign up or Confirm. A member outside the published roster who presses Confirm chooses a character
+and appears in the existing standby list; this does not grant a roster place. The bot edits the
+roster post to show confirmed roster members with a blue square and backups with a yellow square.
+Discord embeds do not support individual text colors, so the squares carry that distinction.
+The reply says clearly whether the player confirmed a published place or offered to be a backup.
+
 To roll out this polish:
 
 1. Apply `20261022120000_tentative_roster_response.sql` before deploying the code.
-2. In a trusted terminal with `DISCORD_APPLICATION_ID` and `DISCORD_BOT_TOKEN` set, run
-   `npm run discord:spec-icons`. This installs the 27 Classic spec icons from the existing Wowhead
-   artwork catalog into the Discord application. It adds only missing names, is safe to rerun after
-   interruption, and sends no channel messages. Do not commit the credentials.
+2. Optionally, in a trusted terminal with `DISCORD_APPLICATION_ID` and `DISCORD_BOT_TOKEN` set, run
+   `npm run discord:spec-icons` to install all 27 Classic spec icons before the first bot delivery.
+   It adds only missing names, is safe to rerun after interruption, and sends no channel messages.
+   Do not commit the credentials.
 3. Deploy `raid-dispatch`, `raid-interactions`, and the frontend. Both workers need the existing
    `DISCORD_APPLICATION_ID` and `DISCORD_BOT_TOKEN` secrets. No command re-registration is required.
 4. Refresh an existing roster through the normal posting action. Verify its four buttons, Shadow
@@ -62,7 +77,7 @@ References: [Discord embeds](https://docs.discord.com/developers/resources/messa
 - Ed25519 signature verification and immediate private acknowledgement happen before background database work.
 - The database resolves the requesting Discord user through guild membership and an OAuth-verified server connection. A manually entered server ID is insufficient.
 - Multiple memberships in one server resolve by the configured bot channel. Ambiguous connections return an explanation rather than picking a guild.
-- Members never receive officer confirmation aggregates or unannounced drafts. Announced signup lists and published roster names are visible to fellow guild members; individual roster confirmations remain private to their owner and officers.
+- Members never receive officer confirmation aggregates or unannounced drafts. Announced signup lists and published roster names are visible to fellow guild members. Confirmed roster places and available backups are marked on the public Discord roster post; detailed responses remain available to their owner and officers.
 - Confirmation validity follows the current character, role, start, and end assignment. Changing any of these makes the old response count as unanswered.
 - Message links must belong to the current connected channel. Confirmation links are withheld while a roster edit is awaiting delivery.
 - Reads do not create drafts, sign anyone up, publish rosters, or send reminders. No privileged Discord gateway intents are required.
