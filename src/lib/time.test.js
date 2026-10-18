@@ -3,6 +3,7 @@ import { clampStartSlot, formatSession, sessionWindows, slotWindow } from './gri
 import {
   addDays,
   formatClock,
+  formatWeekRange,
   isIsoDate,
   isValidTimeZone,
   mondayOf,
@@ -96,4 +97,9 @@ describe('guild grid', () => {
   test('formatSession describes the window', () => {
     expect(formatSession(4, 13, 6, GRID)).toBe('Fri · 6:30 pm–9:30 pm')
   })
+})
+
+test('week ranges read as one month or span two', () => {
+  expect(formatWeekRange('2026-10-19')).toBe('Oct 19–25')
+  expect(formatWeekRange('2026-10-26')).toBe('Oct 26 – Nov 1')
 })

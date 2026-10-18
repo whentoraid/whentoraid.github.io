@@ -23,7 +23,7 @@
   import { CLASS_COLORS } from '../lib/constants.js'
   import { availabilitySource } from '../lib/personal-raids.js'
   import { slotWindow } from '../lib/grid.js'
-  import { addDays, daysBetween, formatMonthDay, mondayOf } from '../lib/time.js'
+  import { addDays, daysBetween, formatMonthDay, formatWeekRange, mondayOf } from '../lib/time.js'
   import {
     charactersOf,
     getCheckin,
@@ -264,12 +264,15 @@
     inert={closed}
   >
     <h2>Weekly availability</h2>
-    <div class="availability-save"><InlineSaveStatus /></div>
-    <p>
-      Your times apply to {app.data.settings.raids.length === 1
-        ? 'your raid'
-        : `all ${app.data.settings.raids.length} raids`}.
-    </p>
+    <!-- Stays in view on long phone forms: which week this edits, what it covers, and whether it saved. -->
+    <div class="availability-save">
+      <p class="edit-scope">
+        Week of {formatWeekRange(weekIso)} · applies to {app.data.settings.raids.length === 1
+          ? app.data.settings.raids[0].name
+          : `all ${app.data.settings.raids.length} raids`}
+      </p>
+      <InlineSaveStatus />
+    </div>
     <span class="badge">{availabilitySource(app.data, weekIso, memberId)}</span>
     <details class="usual-schedule">
       <summary>Usual schedule</summary>
@@ -424,6 +427,11 @@
     z-index: 1;
     background: var(--panel, #1b242b);
     padding: 1px 0;
+  }
+  .edit-scope {
+    margin: 0.25rem 0;
+    font-size: 13px;
+    color: var(--muted);
   }
   .editor-choice {
     margin: 1rem 0;
