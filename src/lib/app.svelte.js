@@ -25,8 +25,18 @@ export const app = $state({
   /** @type {import('./model.js').AppState | null} */
   data: initialData(saved.state, route),
   view: route.view,
-  /** One-time navigation intent from a personal assignment or roster link; never saved with guild data. */
+  /**
+   * One-time navigation intent, never saved with guild data: 'published' from a personal assignment or
+   * roster link, or an officer-dashboard issue's tool (see PlannerIntent in officer-dashboard.js).
+   * @type {'published' | import('./officer-dashboard.js').PlannerIntent | null}
+   */
   plannerIntent: route.published ? 'published' : null,
+  /** The dashboard row an officer left from, so the planner can lead back to it. */
+  /** @type {string | null} */
+  returnTo: null,
+  /** The dashboard row to bring into view on return; Home clears it once shown. */
+  /** @type {string | null} */
+  dashboardFocus: null,
   /** @type {string | null} */
   unreadable: saved.unreadable,
 })

@@ -110,3 +110,24 @@ test('a player answers a raid in one tap, and only that raid changes', async () 
     'true',
   )
 })
+
+test('a dashboard issue opens the planner at the tool that resolves it', async () => {
+  render(Home)
+  const dashboard = screen.getByRole('region', { name: 'Officer dashboard' })
+  await fireEvent.click(
+    within(dashboard).getByRole('button', { name: /^Find Tank candidates: 20-player Raid/ }),
+  )
+  expect(app.view).toBe('planner')
+  expect(app.plannerIntent).toEqual({ section: 'roster', focus: 'add', role: 'Tank' })
+  expect(app.returnTo).toBe(`${SEED_WEEK}/raid-20`)
+  expect(app.data.currentRaidId).toBe('raid-20')
+})
+
+test('returning from the planner brings the raid the officer left from back into focus', () => {
+  app.dashboardFocus = `${SEED_WEEK}/raid-20`
+  render(Home)
+  const dashboard = screen.getByRole('region', { name: 'Officer dashboard' })
+  const row = dashboard.querySelector(`[data-row="${SEED_WEEK}/raid-20"]`)
+  expect(row.contains(document.activeElement)).toBe(true)
+  expect(app.dashboardFocus).toBeNull()
+})

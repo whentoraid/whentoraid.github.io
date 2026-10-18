@@ -399,3 +399,45 @@ test('workspace tabs expose one task at a time and support arrow keys', async ()
   expect(screen.getByRole('button', { name: 'Lock Frostbyte' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: /TOP SUGGESTION/ })).toBeNull()
 })
+
+describe('Planner opened from an officer-dashboard issue', () => {
+  beforeEach(() => {
+    app.data = createSeedState()
+    app.returnTo = null
+  })
+
+  test('an open-slot issue opens the add dialog for the short role', async () => {
+    app.plannerIntent = { section: 'roster', focus: 'add', role: 'Healer' }
+    render(Planner)
+    expect(await screen.findByRole('dialog', { name: 'Add a healer' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /^Roster/ }).getAttribute('aria-selected')).toBe('true')
+    expect(app.plannerIntent).toBeNull()
+  })
+
+  test('a player issue lists what to resolve before publishing', async () => {
+    app.data = setPlan(app.data, SEED_WEEK, {
+      start: plannerContext(app.data).plan.start,
+      team: [{ memberId: 'm0', characterId: 'c0a', role: 'Tank' }],
+      locked: [],
+    })
+    app.data.weeks[SEED_WEEK].checkins.m0 = { checkedIn: true, ranges: [], declined: [] }
+    app.plannerIntent = { section: 'roster', focus: 'publish' }
+    render(Planner)
+    const heading = await screen.findByRole('heading', { name: 'Resolve before publishing' })
+    expect(document.activeElement).toBe(heading)
+  })
+
+  test('Back to officer dashboard returns Home to the row the officer came from', async () => {
+    app.returnTo = `${SEED_WEEK}/raid-20`
+    app.view = 'planner'
+    render(Planner)
+    await fireEvent.click(screen.getByRole('button', { name: /Back to officer dashboard/ }))
+    expect(app.view).toBe('home')
+    expect(app.dashboardFocus).toBe(`${SEED_WEEK}/raid-20`)
+  })
+
+  test('without a dashboard return, there is no back link', () => {
+    render(Planner)
+    expect(screen.queryByRole('button', { name: /Back to officer dashboard/ })).toBeNull()
+  })
+})

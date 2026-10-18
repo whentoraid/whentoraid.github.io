@@ -16,6 +16,7 @@
   import RaidResponsesPanel from '../components/RaidResponsesPanel.svelte'
   import SignupsPanel from '../components/SignupsPanel.svelte'
   import WeeklyOverview from '../components/WeeklyOverview.svelte'
+  import { tick } from 'svelte'
   import {
     copyPreviousRoster,
     hasDraftChanges,
@@ -85,13 +86,43 @@
   const section = $derived(
     !canManage() || (viewPublished && activeSection === 'schedule') ? 'roster' : activeSection,
   )
-  // A personal assignment or shared roster link opens the published roster, even if already here.
+  // A personal assignment or shared roster link opens the published roster, even if already here;
+  // an officer-dashboard issue opens the tool that resolves it.
   $effect(() => {
-    if (app.plannerIntent !== 'published') return
-    showPublished = true
-    activeSection = 'roster'
+    const intent = app.plannerIntent
+    if (!intent) return
     app.plannerIntent = null
+    if (intent === 'published') {
+      showPublished = true
+      activeSection = 'roster'
+    } else void openTool(intent)
   })
+  // Leaving the planner forgets the dashboard return, so a later visit does not offer it.
+  $effect(() => () => (app.returnTo = null))
+
+  /** @param {import('../lib/officer-dashboard.js').PlannerIntent} intent */
+  async function openTool({ section, focus, role }) {
+    showPublished = false
+    activeSection = section
+    if (focus === 'publish') showIssues = true
+    if (focus === 'changes') reviewOpen = true
+    if (focus === 'add') dialog = { kind: 'add', role }
+    await tick()
+    // The first of these on the page: problems to resolve come before the Publish button.
+    const targets = {
+      publish: ['#publish-check', '#publish-roster'],
+      changes: ['#publication-review'],
+      checkins: ['#checkin-heading'],
+    }[focus]
+    const element = targets?.map((id) => document.querySelector(id)).find(Boolean)
+    element?.scrollIntoView?.({ block: 'center' })
+    if (element instanceof HTMLElement) element.focus({ preventScroll: true })
+  }
+
+  function backToDashboard() {
+    app.dashboardFocus = app.returnTo
+    app.view = 'home'
+  }
   const tabs = $derived([
     ...(!viewPublished ? [{ id: 'schedule', label: 'Schedule' }] : []),
     { id: 'roster', label: 'Roster', count: plan.team.length },
@@ -122,6 +153,7 @@
   const changes = $derived(publicationChanges(app.data, context.plan))
   const issues = $derived(publicationIssues(app.data, context.plan, players))
   let showIssues = $state(false)
+  let reviewOpen = $state(false)
   let replacementTarget = $state(null)
   const replacementEntry = $derived(context.plan.team.find((entry) => entry.memberId === replacementTarget))
   const replacements = $derived(
@@ -577,6 +609,10 @@
       : formatSessionHeading(plan, guild.timezone, viewerZone)}
   />
 
+  {#if app.returnTo}<button class="text-button back-link" onclick={backToDashboard}
+      ><span aria-hidden="true">←</span> Back to officer dashboard</button
+    >{/if}
+
   <div class="planning-context"><RaidSelector /><WeekBar /></div>
 
   <section class="publication-bar" aria-label="Roster publication">
@@ -598,8 +634,11 @@
               >View published roster</button
             >
           </div>
-          {#if !viewPublished}<button class="primary" disabled={published && !draftChanged} onclick={publish}
-              >{published ? 'Publish draft changes' : 'Publish roster'}</button
+          {#if !viewPublished}<button
+              id="publish-roster"
+              class="primary"
+              disabled={published && !draftChanged}
+              onclick={publish}>{published ? 'Publish draft changes' : 'Publish roster'}</button
             >{/if}
           {#if !viewPublished && hasDiscordChannel() && !postedIds.length}<label class="checkbox-row"
               ><input type="checkbox" bind:checked={postOnPublish} />Also post to Discord</label
@@ -657,8 +696,8 @@
     {/if}
     {#if savedPlan?.cancelled}<p class="warning" role="status">This raid is cancelled.</p>{/if}
     {#if canManage() && !viewPublished && published && draftChanged}
-      <details class="publication-review">
-        <summary>Review changes to publish</summary>
+      <details class="publication-review" bind:open={reviewOpen}>
+        <summary id="publication-review" tabindex="-1">Review changes to publish</summary>
         <section aria-label="Changes to publish">
           <h3>Changes to publish</h3>
           <ul>
@@ -675,7 +714,7 @@
     {/if}
     {#if canManage() && !viewPublished && showIssues && issues.length}
       <section role="alert" class="publication-review">
-        <h3>Resolve before publishing</h3>
+        <h3 id="publish-check" tabindex="-1">Resolve before publishing</h3>
         <ul>
           {#each issues as issue, i (i)}
             <li>
@@ -990,6 +1029,9 @@
   }
   .publication-review li button {
     margin: 0.25rem;
+  }
+  .back-link {
+    margin-bottom: 0.5rem;
   }
   .rule-issues {
     margin: 0.75rem 0;
