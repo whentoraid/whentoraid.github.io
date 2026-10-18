@@ -70,7 +70,7 @@ insert into public.discord_deliveries (guild_id, delivery_key, week, kind, paylo
   select guild, 'checkin:test', week, 'checkin', '{}', 'test', 'sending', lease from t;
 update t set delivery = (select id from public.discord_deliveries where delivery_key = 'checkin:test' and guild_id = t.guild);
 
-select is((select array_agg(r ->> 'name' order by r ->> 'name') from jsonb_array_elements(
+select is((select array_agg(r ->> 'name' order by r ->> 'name' collate "C") from jsonb_array_elements(
     public.raid_reminder_payload((select delivery from t), (select lease from t)) -> 'recipients') r),
   array['Sam', 'm-ended', 'm-none', 'm-override'],
   'members whose usual schedule answers the week, paused included, are not reminded');
