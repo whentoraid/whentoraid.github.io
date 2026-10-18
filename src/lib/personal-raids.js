@@ -1,7 +1,7 @@
 import { SLOT_MINUTES } from './constants.js'
 import { templateFor } from './availability-template.js'
 import { own } from './ids.js'
-import { charactersOf, getCheckin } from './model.js'
+import { charactersOf } from './model.js'
 
 /** Only a published snapshot is a promise to players; draft edits never change this list. */
 export function personalRaids(state, memberId, now = Date.now()) {
@@ -39,7 +39,16 @@ export function availabilitySource(state, weekIso, memberId) {
   return 'No response yet'
 }
 
-/** Setup readiness is personal, and explicitly answering unavailable still completes a check-in. */
+/**
+ * Setup is done once: any week's answer (unavailable counts) or a usual schedule completes it.
+ * A missing answer for this week is a weekly nudge on Home, not a reason to restart setup.
+ */
+export function hasGivenAvailability(state, weekIso, memberId) {
+  if (templateFor(own(state.templates, memberId), weekIso)) return true
+  return Object.values(state.weeks).some((week) => own(week.checkins, memberId)?.checkedIn)
+}
+
+/** Setup readiness is personal. */
 export function onboardingSteps(state, memberId, weekIso = state.currentWeek) {
   return [
     {
@@ -57,7 +66,7 @@ export function onboardingSteps(state, memberId, weekIso = state.currentWeek) {
     {
       id: 'availability',
       label: 'Set your availability',
-      complete: getCheckin(state, weekIso, memberId).checkedIn,
+      complete: hasGivenAvailability(state, weekIso, memberId),
       view: 'availability',
     },
   ]

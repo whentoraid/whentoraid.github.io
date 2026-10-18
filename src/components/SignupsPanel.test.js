@@ -138,4 +138,41 @@ describe('Discord sign-ups panel', () => {
     expect(screen.queryByRole('button', { name: /sign-up/i })).toBeNull()
     expect(services.getSignupPost).not.toHaveBeenCalled()
   })
+
+  test('a failed read retries in place without posting anything to Discord', async () => {
+    services.listRaidSignups.mockRejectedValueOnce(new Error('Connection interrupted'))
+    render(SignupsPanel, { week: WEEK, raidId: 'raid-20', canManage: false })
+    expect((await screen.findByRole('alert')).textContent).toMatch(/Connection interrupted/)
+    await fireEvent.click(screen.getByRole('button', { name: 'Retry sign-ups' }))
+    expect(await screen.findByText(/2 coming/)).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(services.listRaidSignups).toHaveBeenCalledTimes(2)
+    expect(services.queueSignupPost).not.toHaveBeenCalled()
+  })
+
+  test('a late response for another week cannot replace the current answers', async () => {
+    let rejectOld
+    services.listRaidSignups.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectOld = reject
+      }),
+    )
+    const { rerender } = render(SignupsPanel, { week: WEEK, raidId: 'raid-20', canManage: false })
+    await rerender({ week: '2026-11-02', raidId: 'raid-20', canManage: false })
+    expect(await screen.findByText(/2 coming/)).toBeTruthy()
+    rejectOld(new Error('Old week failed'))
+    await waitFor(() => expect(screen.queryByText(/Old week failed/)).toBeNull())
+    expect(screen.getByText(/2 coming/)).toBeTruthy()
+  })
+
+  test('a failed post-status lookup is not presented as an unposted raid', async () => {
+    services.getSignupPost.mockRejectedValueOnce(new Error('Post status unavailable'))
+    render(SignupsPanel, { week: WEEK, raidId: 'raid-20', canManage: true })
+    await screen.findByRole('button', { name: 'Retry post status' })
+    expect(screen.queryByText('Not posted in Discord yet.')).toBeNull()
+    services.getSignupPost.mockResolvedValueOnce([{ status: 'sent', posted: true }])
+    await fireEvent.click(screen.getByRole('button', { name: 'Retry post status' }))
+    expect(await screen.findByText(/Posted in Discord. It updates/)).toBeTruthy()
+    expect(services.queueSignupPost).not.toHaveBeenCalled()
+  })
 })

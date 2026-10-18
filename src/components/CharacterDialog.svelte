@@ -1,7 +1,7 @@
 <script>
   import { app } from '../lib/app.svelte.js'
   import { readCharacterFields } from '../lib/forms.js'
-  import { retireCharacter, saveCharacter } from '../lib/model.js'
+  import { charactersOf, retireCharacter, saveCharacter } from '../lib/model.js'
   import { offerUndo, showToast } from '../lib/toast.svelte.js'
   import CharacterFields from './CharacterFields.svelte'
   import Modal from './Modal.svelte'
@@ -12,6 +12,10 @@
   /** Delete takes two clicks; the second one confirms. Resets whenever the dialog opens. */
   let confirmingDelete = $state(false)
   let error = $state('')
+  const suggestedRealm = $derived.by(() => {
+    const mine = charactersOf(app.data, app.data.currentMemberId)
+    return (mine.find((item) => item.main) ?? mine[0])?.realm ?? ''
+  })
   $effect(() => {
     if (open) {
       confirmingDelete = false
@@ -57,11 +61,14 @@
   <h2>{character ? 'Edit' : 'Add'} character</h2>
   <form onsubmit={submit}>
     <div class="settings-grid">
-      <CharacterFields draft={character ?? undefined} />
+      <CharacterFields
+        draft={character ?? { name: '', realm: suggestedRealm, class: 'Warrior', spec: '', role: 'DPS' }}
+      />
     </div>
     {#if error}<p class="warning" role="alert">{error}</p>{/if}
     <div class="buttons">
       <button class="primary">Save character</button>
+      <button type="button" onclick={onclose}>Cancel</button>
       {#if character}
         <button type="button" class:danger={confirmingDelete} onclick={remove}>
           {confirmingDelete ? 'Click again to delete' : 'Delete character'}

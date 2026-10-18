@@ -10,7 +10,7 @@
   <p class="onboarding-complete"><span aria-hidden="true">✓</span> You’re ready for planning</p>
 {:else}
   <section class="panel onboarding" aria-label="Getting ready to raid">
-    <h2>{complete ? 'You’re ready for planning' : 'Get ready for your first raid'}</h2>
+    <h2>Get ready for raid planning</h2>
     <p>
       {complete
         ? 'Your character and availability are ready for the officers.'

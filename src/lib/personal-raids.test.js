@@ -46,11 +46,21 @@ describe('personal raid dashboard', () => {
   })
 
   test('onboarding requires an active character and accepts an unavailable response', () => {
-    let state = setCurrentWeek(createSeedState(), '2026-10-05')
+    let state = { ...setCurrentWeek(createSeedState(), '2026-10-05'), weeks: {}, templates: {} }
     state.characters = state.characters.map((c) => (c.memberId === 'm0' ? { ...c, retired: true } : c))
     expect(onboardingSteps(state, 'm0').map((step) => step.complete)).toEqual([true, false, false])
     state = markUnavailable(state, state.currentWeek, 'm0')
     expect(onboardingSteps(state, 'm0').map((step) => step.complete)).toEqual([true, false, true])
+  })
+
+  test('setup stays complete in later weeks once the player has answered or saved a usual schedule', () => {
+    const fresh = { ...createSeedState(), weeks: {}, templates: {} }
+    const availabilityDone = (state) => onboardingSteps(state, 'm0', '2026-10-19')[2].complete
+    expect(availabilityDone(fresh)).toBe(false)
+    expect(availabilityDone(markUnavailable(fresh, '2026-10-05', 'm0'))).toBe(true)
+    const seeded = { ...createSeedState(), templates: {} }
+    const withSchedule = { ...saveAvailabilityTemplate(seeded, SEED_WEEK, 'm0', 0), weeks: {} }
+    expect(availabilityDone(withSchedule)).toBe(true)
   })
 
   test('exact labels include both dates when a local session crosses midnight', () => {

@@ -113,6 +113,26 @@ test('a player with no guild yet joins from their Discord server at sign-in', as
   }
 })
 
+test('a Discord newcomer with no saved guild lands in it and starts with their first character', async () => {
+  const state = createSeedState()
+  state.members[1] = { ...state.members[1], discordId: 'discord-fresh', officer: false }
+  state.characters = state.characters.filter((c) => c.memberId !== state.members[1].id)
+  mocked.rows = { ...stateToRows(state, 'guild-test'), revision: 0 }
+  Object.assign(mocked, { fetchError: false, joined: ['guild-test'], guildLists: [[]] })
+  const { toast } = await import('../toast.svelte.js')
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-fresh'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-fresh' } })
+    await waitFor(() => expect(remote.guildId).toBe('guild-test'))
+    await waitFor(() => expect(app.view).toBe('characters'))
+    expect(toast.message).toContain('Add your first character')
+  } finally {
+    await leaveGuild()
+    stop()
+  }
+})
+
 test('a failed Discord check tells a player with no guild, without signing them out', async () => {
   Object.assign(mocked, { joinError: true, guildLists: [[]] })
   const { toast } = await import('../toast.svelte.js')

@@ -1,5 +1,5 @@
-import { app } from '../app.svelte.js'
 import { showToast } from '../toast.svelte.js'
+import { welcomeNewMember } from '../welcome.js'
 import { inviteDetails, joinGuild, listGuilds } from './api.js'
 import { supabase } from './client.js'
 import { openGuild, remote } from './sync.svelte.js'
@@ -12,6 +12,7 @@ import { openGuild, remote } from './sync.svelte.js'
 const INVITE_KEY = 'whentoraid-invite'
 const CODE = /^[a-f0-9]{32}$/
 const MAX_NAME = 30
+let lookupGeneration = 0
 
 export const invite = $state({
   code: null,
@@ -20,6 +21,7 @@ export const invite = $state({
   /** @type {{ guildId: string, guildName: string, openPlayers: { id: string, name: string }[] } | null} */
   details: null,
   error: null,
+  errorKind: null,
   /** The player's Discord display name, offered as their name in the guild. */
   suggestedName: '',
 })
@@ -56,7 +58,7 @@ export function captureInvite() {
   if (fromUrl && CODE.test(fromUrl)) store(fromUrl)
   const code = fromUrl && CODE.test(fromUrl) ? fromUrl : stored()
   if (!code || !CODE.test(code)) return
-  Object.assign(invite, { code, status: 'idle', details: null, error: null })
+  Object.assign(invite, { code, status: 'idle', details: null, error: null, errorKind: null })
 }
 
 async function discordName() {
@@ -69,9 +71,14 @@ async function discordName() {
 /** Look up the invite for the signed-in player; a guild they already belong to just opens. */
 export async function loadInvite() {
   if (!invite.code || invite.status !== 'idle') return
+  const code = invite.code
+  const generation = ++lookupGeneration
   invite.status = 'loading'
+  invite.error = null
+  invite.errorKind = null
   try {
-    const [details, name] = await Promise.all([inviteDetails(supabase, invite.code), discordName()])
+    const [details, name] = await Promise.all([inviteDetails(supabase, code), discordName()])
+    if (generation !== lookupGeneration || invite.code !== code || invite.status !== 'loading') return
     if (details.alreadyMember) {
       dismissInvite()
       if (remote.guildId !== details.guildId) await openGuild(details.guildId)
@@ -80,8 +87,27 @@ export async function loadInvite() {
     }
     Object.assign(invite, { status: 'ready', details, suggestedName: name })
   } catch (error) {
-    Object.assign(invite, { status: 'error', error: error.message })
+    if (generation !== lookupGeneration || invite.code !== code || invite.status !== 'loading') return
+    Object.assign(invite, { status: 'error', error: error.message, errorKind: inviteErrorKind(error) })
   }
+}
+
+/** Stable database codes take precedence; text fallback supports older servers. */
+export function inviteErrorKind(error) {
+  if (error?.code === 'P0002' || /no longer works|expired|revoked/i.test(error?.message ?? ''))
+    return 'expired'
+  if (
+    error?.code === '42501' ||
+    /already claimed|personal invite|another profile/i.test(error?.message ?? '')
+  )
+    return 'access'
+  return 'temporary'
+}
+
+export async function retryInvite() {
+  if (!invite.code || invite.status !== 'error') return
+  invite.status = 'idle'
+  await loadInvite()
 }
 
 /**
@@ -107,11 +133,11 @@ export async function acceptInvite({ memberId = null, name = '' }) {
     throw error
   }
   dismissInvite()
-  app.view = 'availability'
-  showToast(`Welcome to ${details.guildName}! Mark when you can raid, then add your characters.`)
+  welcomeNewMember(details.guildName)
 }
 
 export function dismissInvite() {
+  lookupGeneration += 1
   store(null)
-  Object.assign(invite, { code: null, status: 'idle', details: null, error: null })
+  Object.assign(invite, { code: null, status: 'idle', details: null, error: null, errorKind: null })
 }

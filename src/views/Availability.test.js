@@ -11,6 +11,7 @@ const NEW_WEEK = '2026-10-05'
 
 describe('Availability view', () => {
   beforeEach(() => {
+    localStorage.clear()
     app.data = setCurrentWeek(createSeedState(), NEW_WEEK)
   })
 
@@ -95,10 +96,21 @@ describe('Availability view', () => {
     runToastAction()
     expect(getCheckin(app.data, NEW_WEEK, 'm0').ranges).toEqual([interval])
   })
+
+  test('the chosen editor survives reopening without changing availability', async () => {
+    const before = app.data
+    const first = render(Availability)
+    await fireEvent.click(screen.getByRole('button', { name: 'Time ranges' }))
+    first.unmount()
+    render(Availability)
+    expect(screen.getByRole('button', { name: 'Time ranges' }).getAttribute('aria-pressed')).toBe('true')
+    expect(app.data).toBe(before)
+  })
 })
 
 describe('Availability undo with other people editing', () => {
   beforeEach(() => {
+    localStorage.clear()
     app.data = setCurrentWeek(createSeedState(), NEW_WEEK)
   })
 

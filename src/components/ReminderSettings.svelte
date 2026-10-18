@@ -23,16 +23,28 @@
   let saved = $state(null)
   let error = $state('')
   let busy = $state(false)
+  let retry = $state(0)
 
   $effect(() => {
     const guildId = remote.guildId
+    void retry
+    let active = true
+    settings = null
+    saved = null
+    error = ''
+    busy = false
     getReminderSettings(supabase, guildId)
       .then((value) => {
-        if (guildId !== remote.guildId) return
+        if (!active || guildId !== remote.guildId) return
         settings = { ...value }
         saved = { ...value }
       })
-      .catch((e) => (error = e.message))
+      .catch((e) => {
+        if (active && guildId === remote.guildId) error = e.message
+      })
+    return () => {
+      active = false
+    }
   })
 
   const changed = $derived(settings && JSON.stringify(settings) !== JSON.stringify(saved))
@@ -45,16 +57,18 @@
       return
     }
     busy = true
+    const guildId = remote.guildId
     try {
       const next = { ...settings, lead_hours: lead }
-      await setReminderSettings(supabase, remote.guildId, next)
+      await setReminderSettings(supabase, guildId, next)
+      if (guildId !== remote.guildId) return
       settings = { ...next }
       saved = { ...next }
       showToast('Reminder settings saved.')
     } catch (e) {
-      showToast(e.message)
+      if (guildId === remote.guildId) showToast(e.message)
     } finally {
-      busy = false
+      if (guildId === remote.guildId) busy = false
     }
   }
 </script>
@@ -62,59 +76,62 @@
 <h2>Discord reminders</h2>
 <p>Post a nudge in your Discord channel that names only the players who still need to act.</p>
 {#if error}
-  <p class="warning">{error}</p>
+  <p class="warning" role="alert">Reminder settings could not be loaded: {error}</p>
+  <button onclick={() => (retry += 1)}>Retry reminder settings</button>
 {:else if !settings}
-  <p class="note">Loading…</p>
+  <p class="note" role="status">Loading reminder settings…</p>
 {:else}
   <form onsubmit={save}>
-    <label class="checkbox-row">
-      <input type="checkbox" bind:checked={settings.checkin_enabled} />
-      Remind players who haven’t checked in this week
-    </label>
-    {#if settings.checkin_enabled}
-      <label class="field">
-        How often
-        <select bind:value={settings.interval_hours}>
-          {#each INTERVALS as [hours, label] (hours)}<option value={hours}>{label}</option>{/each}
-        </select>
-      </label>
-      <p class="note">Stops at the check-in deadline.</p>
-    {/if}
-    <label class="checkbox-row">
-      <input type="checkbox" bind:checked={settings.upcoming_enabled} />
-      Remind rostered players before a published raid
-    </label>
-    {#if settings.upcoming_enabled}
-      <label class="field">
-        Hours before the raid
-        <input type="number" min="1" max={MAX_LEAD_HOURS} bind:value={settings.lead_hours} />
-      </label>
+    <fieldset class="plain" disabled={busy}>
       <label class="checkbox-row">
-        <input type="checkbox" bind:checked={settings.only_unconfirmed} />
-        Only players who haven’t confirmed yet
+        <input type="checkbox" bind:checked={settings.checkin_enabled} />
+        Remind players who haven’t checked in this week
       </label>
-      <p class="note">Players who said they can’t make it are never reminded.</p>
-    {/if}
-    <label class="checkbox-row">
-      <input type="checkbox" bind:checked={settings.signup_enabled} />
-      Post sign-ups for upcoming raids
-    </label>
-    {#if settings.signup_enabled}
-      <label class="field">
-        Days before the raid
-        <select bind:value={settings.signup_lead_days}>
-          {#each SIGNUP_LEAD_DAYS as days (days)}<option value={days}
-              >{days === 1 ? '1 day' : `${days} days`}</option
-            >{/each}
-        </select>
+      {#if settings.checkin_enabled}
+        <label class="field">
+          How often
+          <select bind:value={settings.interval_hours}>
+            {#each INTERVALS as [hours, label] (hours)}<option value={hours}>{label}</option>{/each}
+          </select>
+        </label>
+        <p class="note">Stops at the check-in deadline.</p>
+      {/if}
+      <label class="checkbox-row">
+        <input type="checkbox" bind:checked={settings.upcoming_enabled} />
+        Remind rostered players before a published raid
       </label>
-      <p class="note">
-        Players press Sign up, Late, Tentative or Absent on the post, and their answer fills in their
-        availability for that raid. Needs the WhenToRaid bot channel. Raids already published are skipped.
-      </p>
-    {/if}
-    <div class="buttons">
-      <button class="primary" disabled={busy || !changed}>Save reminders</button>
-    </div>
+      {#if settings.upcoming_enabled}
+        <label class="field">
+          Hours before the raid
+          <input type="number" min="1" max={MAX_LEAD_HOURS} bind:value={settings.lead_hours} />
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" bind:checked={settings.only_unconfirmed} />
+          Only players who haven’t confirmed yet
+        </label>
+        <p class="note">Players who said they can’t make it are never reminded.</p>
+      {/if}
+      <label class="checkbox-row">
+        <input type="checkbox" bind:checked={settings.signup_enabled} />
+        Post sign-ups for upcoming raids
+      </label>
+      {#if settings.signup_enabled}
+        <label class="field">
+          Days before the raid
+          <select bind:value={settings.signup_lead_days}>
+            {#each SIGNUP_LEAD_DAYS as days (days)}<option value={days}
+                >{days === 1 ? '1 day' : `${days} days`}</option
+              >{/each}
+          </select>
+        </label>
+        <p class="note">
+          Players press Sign up, Late, Tentative or Absent on the post, and their answer fills in their
+          availability for that raid. Needs the WhenToRaid bot channel. Raids already published are skipped.
+        </p>
+      {/if}
+      <div class="buttons">
+        <button class="primary" disabled={busy || !changed}>Save reminders</button>
+      </div>
+    </fieldset>
   </form>
 {/if}

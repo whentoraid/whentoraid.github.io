@@ -4,6 +4,7 @@
   import { app } from '../lib/app.svelte.js'
   import { CLASS_COLORS } from '../lib/constants.js'
   import { characterById, charactersOf, setMainCharacter } from '../lib/model.js'
+  import { hasGivenAvailability } from '../lib/personal-raids.js'
   import { showToast } from '../lib/toast.svelte.js'
 
   function makeMain(character) {
@@ -15,6 +16,9 @@
   let editing = $state(null)
 
   const myCharacters = $derived(charactersOf(app.data, app.data.currentMemberId))
+  const needsAvailability = $derived(
+    !hasGivenAvailability(app.data, app.data.currentWeek, app.data.currentMemberId),
+  )
   const editingCharacter = $derived(
     editing?.characterId ? characterById(app.data, editing.characterId) : null,
   )
@@ -29,6 +33,25 @@
     <button class="primary" onclick={() => (editing = { characterId: null })}>+ Add character</button>
   {/snippet}
 </PageTitle>
+
+{#if !myCharacters.length}
+  <section class="panel" aria-label="Your first character">
+    <h2>Add the character you want to raid with</h2>
+    <p>
+      Your officers need a character and role before they can include you in a roster. Start with one; you can
+      add alts later.
+    </p>
+    <button class="primary" onclick={() => (editing = { characterId: null })}>Add my first character</button>
+  </section>
+{:else if needsAvailability}
+  <section class="panel" aria-label="Next setup step">
+    <h2>Your character is ready</h2>
+    <p>
+      Next, let your officers know when you can raid. You can also tell them you’re unavailable this week.
+    </p>
+    <button class="primary" onclick={() => (app.view = 'availability')}>Continue to availability</button>
+  </section>
+{/if}
 
 <div class="character-list">
   {#each myCharacters as character (character.id)}
@@ -46,10 +69,5 @@
     </div>
   {/each}
 </div>
-
-<p class="note">
-  WoW: Forever character import is not yet verified. Manual profiles let your guild plan before API support is
-  confirmed.
-</p>
 
 <CharacterDialog open={editing !== null} character={editingCharacter} onclose={() => (editing = null)} />

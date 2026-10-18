@@ -113,4 +113,31 @@ describe('Characters view', () => {
     const names = charactersOf(app.data, 'm0').map((c) => c.name)
     expect(names).toEqual(['Stoneguard', 'Stoneguardalt', 'Newblade'])
   })
+
+  test('a member without characters gets a first-character action and then an availability next step', async () => {
+    app.data = { ...app.data, characters: app.data.characters.filter((c) => c.memberId !== 'm0'), weeks: {} }
+    app.view = 'characters'
+    render(Characters)
+    expect(screen.getByRole('region', { name: 'Your first character' })).toBeTruthy()
+    await fireEvent.click(screen.getByRole('button', { name: 'Add my first character' }))
+    expect(screen.getByLabelText('Realm').value).toBe('')
+    await fireEvent.input(screen.getByLabelText('Character name'), { target: { value: 'Firstblade' } })
+    await fireEvent.input(screen.getByLabelText('Realm'), { target: { value: 'Whitemane' } })
+    await fireEvent.change(screen.getByLabelText('Specialization'), { target: { value: 'Arms' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Save character' }))
+    expect(screen.queryByRole('region', { name: 'Your first character' })).toBeNull()
+    await fireEvent.click(screen.getByRole('button', { name: 'Continue to availability' }))
+    expect(app.view).toBe('availability')
+  })
+
+  test('a new alt suggests only this member’s main realm, and Cancel saves nothing', async () => {
+    const before = app.data
+    render(Characters)
+    await fireEvent.click(screen.getByRole('button', { name: '+ Add character' }))
+    expect(screen.getByLabelText('Realm').value).toBe(charactersOf(app.data, 'm0').find((c) => c.main).realm)
+    await fireEvent.input(screen.getByLabelText('Realm'), { target: { value: 'Another realm' } })
+    await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(app.data).toBe(before)
+  })
 })

@@ -53,7 +53,7 @@ test('a newly joined player is guided to add a character and check in', async ()
     members: [...app.data.members, { id: 'new-player', name: 'Nova', discordId: '' }],
   }
   render(Home)
-  expect(screen.getByRole('heading', { name: 'Get ready for your first raid' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Get ready for raid planning' })).toBeTruthy()
   await fireEvent.click(screen.getByRole('button', { name: 'Add character' }))
   expect(app.view).toBe('characters')
 })
