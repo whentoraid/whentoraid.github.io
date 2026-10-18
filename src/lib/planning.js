@@ -61,9 +61,31 @@ export function formatBackups(spare) {
 const sum = (numbers) => numbers.reduce((total, n) => total + n, 0)
 
 /**
- * Best roster for every possible session start, best first: most slots filled, required utilities
- * covered and firm players, then the most backups
- * for the thinnest role, then the most backups overall, then fairness and mains, then earliest.
+ * How suggestions are ranked, in order: each criterion only matters when every earlier one is equal,
+ * and more is better. An earlier start breaks any remaining tie. The planner's explanations read
+ * this same list, so they always describe the real ranking.
+ */
+export const SUGGESTION_RANKING = [
+  { key: 'filled', label: 'Places filled', value: (s) => s.team.length },
+  { key: 'utilities', label: 'Required utilities covered', value: (s) => s.utilityCount },
+  { key: 'firm', label: 'Firm players (not tentative)', value: (s) => s.firm },
+  { key: 'thinnest', label: 'Backups for the thinnest needed role', value: (s) => s.thinnest },
+  { key: 'backups', label: 'Backups overall', value: (s) => sum(s.backups) },
+  { key: 'fairness', label: 'Recent sit-outs brought in', value: (s) => s.fairness },
+  { key: 'mains', label: 'Main characters', value: (s) => s.mains },
+]
+
+/** Negative when `a` ranks above `b`. */
+export function compareSuggestionRank(a, b) {
+  for (const { value } of SUGGESTION_RANKING) {
+    const difference = value(b) - value(a)
+    if (difference) return difference
+  }
+  return a.day - b.day || a.startSlot - b.startSlot
+}
+
+/**
+ * Best roster for every possible session start, best first, by `SUGGESTION_RANKING`.
  * @returns {Suggestion[]}
  */
 export function rankSuggestions(windows, players, targets, rules) {
@@ -73,18 +95,7 @@ export function rankSuggestions(windows, players, targets, rules) {
       const spare = backups(players, window, composition.team)
       return { ...window, ...composition, backups: spare, thinnest: thinnestBackup(spare, targets) }
     })
-    .sort(
-      (a, b) =>
-        b.team.length - a.team.length ||
-        b.utilityCount - a.utilityCount ||
-        b.firm - a.firm ||
-        b.thinnest - a.thinnest ||
-        sum(b.backups) - sum(a.backups) ||
-        b.fairness - a.fairness ||
-        b.mains - a.mains ||
-        a.day - b.day ||
-        a.startSlot - b.startSlot,
-    )
+    .sort(compareSuggestionRank)
 }
 
 /** The best suggestion on each of the first `limit` distinct days. */
