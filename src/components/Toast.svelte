@@ -26,5 +26,6 @@
   {#if toast.action}
     <button class="toast-action" onclick={thenRefocus(runToastAction)}>{toast.action.label}</button>
   {/if}
-  <button class="toast-action" aria-label="Dismiss notification" onclick={thenRefocus(dismissToast)}>×</button>
+  <button class="toast-action" aria-label="Dismiss notification" onclick={thenRefocus(dismissToast)}>×</button
+  >
 </div>

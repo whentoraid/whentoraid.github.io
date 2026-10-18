@@ -14,15 +14,15 @@ Owned files: `src/App.svelte`; `src/views/Characters.svelte`, `Characters.test.j
 
 The initial batch preserves existing authorization, publication, and storage behavior. It does not complete permanent cross-device onboarding progress, event-based signup entry, the member/officer workspace split, or timezone restructuring. Those remain open. Application work will be marked Ready for review after validation; Claude's approval of the plan does not count as review of new code.
 
-| Coordination field                                 | Current value                                                                                                                |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Current phase                                      | Implementation; first batch Ready for review                                                                                 |
-| Last updated by                                    | Claude, October 17, 2026                                                                                                     |
-| Planning work completed                            | P01–P07                                                                                                                      |
-| Application improvements completed under this plan | 9 of 30 Ready for review (m03–m05, m08–m10, m12–m14) plus ONB initial routing; none Done or deployed                        |
-| Active implementation claims                       | Claude: first batch on `feat/member-onboarding-foundation` (taken over from Codex)                                           |
-| Next proposed handoff                              | User decides the pre–Nov 4 cut (see P07 findings); then commit/PR the first batch                                            |
-| Claude participation                               | P07 done; first batch review fixes done; code review of Codex's work recorded below                                          |
+| Coordination field                                 | Current value                                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Current phase                                      | Implementation; first batch Ready for review                                                         |
+| Last updated by                                    | Claude, October 17, 2026                                                                             |
+| Planning work completed                            | P01–P07                                                                                              |
+| Application improvements completed under this plan | 9 of 30 Ready for review (m03–m05, m08–m10, m12–m14) plus ONB initial routing; none Done or deployed |
+| Active implementation claims                       | Claude: first batch on `feat/member-onboarding-foundation` (taken over from Codex)                   |
+| Next proposed handoff                              | User decides the pre–Nov 4 cut (see P07 findings); then commit/PR the first batch                    |
+| Claude participation                               | P07 done; first batch review fixes done; code review of Codex's work recorded below                  |
 
 Codex is the proposed lead for data behavior, shared raid-state rules, timezone logic, persistence, sync/recovery, Discord/server behavior, and integration checks. Claude is the proposed lead for interaction design, screen hierarchy, copy, responsive layouts, and member-facing UI. For a change spanning both areas, agree the behavior and data contract first, then give each agent explicit file ownership. The item lead coordinates the complete outcome; it does not grant both agents permission to edit the same files concurrently. Each agent reviews the other's work within the actual capabilities of its session.
 
@@ -55,39 +55,39 @@ Codex's completed planning work is recorded here:
 
 The delivery tracker below covers all recommendations individually. Proposed leads and reviewers can change during handoff; **Claimed by** stays empty until an agent actually claims the work. Every item currently has a written proposal, but none has been implemented under this plan.
 
-| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by | Delivery status |
-| --- | --------------------------------------------- | ------------- | ----------------- | ---------- | --------------- |
+| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by          | Delivery status           |
+| --- | --------------------------------------------- | ------------- | ----------------- | ------------------- | ------------------------- |
 | ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude (from Codex) | In progress: routing done |
-| M01 | Separate member and officer workspaces        | Claude        | Codex             | —          | Not started     |
-| M02 | Quicker routine participation                 | Claude        | Codex             | —          | Not started     |
-| M03 | Consistent app/Discord raid status            | Codex         | Claude            | —          | Not started     |
-| M04 | Coherent timezone experience                  | Codex         | Claude            | —          | Not started     |
-| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | —          | Not started     |
-| M06 | Member reminders and action inbox             | Codex         | Claude            | —          | Not started     |
-| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | —          | Not started     |
-| M08 | Personal participation record and corrections | Claude        | Codex             | —          | Not started     |
-| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —          | Not started     |
-| M10 | Participation limits and raid preferences     | Codex         | Claude            | —          | Not started     |
-| M11 | Recurring availability renewal and pause      | Codex         | Claude            | —          | Not started     |
-| M12 | Task-level sync recovery                      | Codex         | Claude            | —          | Not started     |
-| M13 | Attributable history and draft restoration    | Codex         | Claude            | —          | Not started     |
-| M14 | Recurring schedule impact preview             | Claude        | Codex             | —          | Not started     |
-| M15 | Raid-day briefing                             | Claude        | Codex             | —          | Not started     |
-| m01 | Deadline beside the availability answer       | Claude        | Codex             | —          | Not started     |
-| m02 | Compact routine date strings                  | Claude        | Codex             | —          | Not started     |
-| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review |
-| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review |
-| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review |
-| m06 | Readable week ranges                          | Claude        | Codex             | —          | Not started     |
-| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —          | Not started     |
-| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review |
-| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review |
-| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review |
-| m11 | Calendar-provider guidance                    | Claude        | Codex             | —          | Not started     |
-| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review |
-| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review |
-| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review |
-| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | —          | Not started     |
+| M01 | Separate member and officer workspaces        | Claude        | Codex             | —                   | Not started               |
+| M02 | Quicker routine participation                 | Claude        | Codex             | —                   | Not started               |
+| M03 | Consistent app/Discord raid status            | Codex         | Claude            | —                   | Not started               |
+| M04 | Coherent timezone experience                  | Codex         | Claude            | —                   | Not started               |
+| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | —                   | Not started               |
+| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started               |
+| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | —                   | Not started               |
+| M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started               |
+| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started               |
+| M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | Not started               |
+| M11 | Recurring availability renewal and pause      | Codex         | Claude            | —                   | Not started               |
+| M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started               |
+| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started               |
+| M14 | Recurring schedule impact preview             | Claude        | Codex             | —                   | Not started               |
+| M15 | Raid-day briefing                             | Claude        | Codex             | —                   | Not started               |
+| m01 | Deadline beside the availability answer       | Claude        | Codex             | —                   | Not started               |
+| m02 | Compact routine date strings                  | Claude        | Codex             | —                   | Not started               |
+| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review          |
+| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review          |
+| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review          |
+| m06 | Readable week ranges                          | Claude        | Codex             | —                   | Not started               |
+| m07 | Visible selected raid and edit scope          | Claude        | Codex             | —                   | Not started               |
+| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review          |
+| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review          |
+| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review          |
+| m11 | Calendar-provider guidance                    | Claude        | Codex             | —                   | Not started               |
+| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review          |
+| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review          |
+| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review          |
+| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | —                   | Not started               |
 
 For a claimed item, append a handoff entry using: **date; agent; item IDs; status; owned files; branch/worktree or patch; work achieved; checks and results; remaining limitations; reviewer findings; next actor and action**. Use explicit Not run or Pending when evidence does not exist. Record implementation, review, and deployment separately.
 
@@ -334,27 +334,27 @@ The recommendations are product judgments grounded in this application. General 
 
 Source claims spot-checked and confirmed: the entry page leads with “Set up your guild” (`Setup.svelte`); the invite toast contradicted the checklist order; the checklist's availability step depended on this week's check-in (`personal-raids.js`); Raid planner and Guild settings appear in More for every member (`Sidebar.svelte`).
 
-| Finding                                        | Recommendation                                                                                                                                                         |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No release cut for the Nov 4, 2026 release     | Add a “before Nov 4” slice; keep the Discord acceptance run (resume at step C) and the real webhook test ahead of most items.                                           |
-| Discord auto-join (PR #36) missing             | Treat it as the main member entry path, alongside invites, in the findings, evidence, and onboarding stage 1.                                                           |
-| App treated as the primary surface             | Many members will only use Discord sign-up posts. Promote M03 ahead of M01/M02; make “recognize work done through Discord” a hard onboarding requirement.                |
-| Scope that doesn't fit a one-group guild       | Park M07–M10, M13, M15 until a real problem appears; the guild runs one fixed group per night and rejected per-boss planning.                                           |
-| Overlapping items                              | Merge into workstreams: save state (m03, m04, m12, M12); time display (M04, m02, m06); edit scope (m07 with M02).                                                       |
-| Heavy coordination protocol                    | Move the tracker to its own file or GitHub issues so this document reads as a product plan.                                                                             |
-| Research plan heavier than needed              | Observe two or three guildmates using the real app during a real raid week instead of a prototype study. Release metrics would need analytics and a privacy-page update. |
-| Missing states                                 | Officers using “Editing as” (onboarding must follow the signed-in person); existing beta members must not be pushed through new onboarding; member-and-officer landing.  |
+| Finding                                    | Recommendation                                                                                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| No release cut for the Nov 4, 2026 release | Add a “before Nov 4” slice; keep the Discord acceptance run (resume at step C) and the real webhook test ahead of most items.                                            |
+| Discord auto-join (PR #36) missing         | Treat it as the main member entry path, alongside invites, in the findings, evidence, and onboarding stage 1.                                                            |
+| App treated as the primary surface         | Many members will only use Discord sign-up posts. Promote M03 ahead of M01/M02; make “recognize work done through Discord” a hard onboarding requirement.                |
+| Scope that doesn't fit a one-group guild   | Park M07–M10, M13, M15 until a real problem appears; the guild runs one fixed group per night and rejected per-boss planning.                                            |
+| Overlapping items                          | Merge into workstreams: save state (m03, m04, m12, M12); time display (M04, m02, m06); edit scope (m07 with M02).                                                        |
+| Heavy coordination protocol                | Move the tracker to its own file or GitHub issues so this document reads as a product plan.                                                                              |
+| Research plan heavier than needed          | Observe two or three guildmates using the real app during a real raid week instead of a prototype study. Release metrics would need analytics and a privacy-page update. |
+| Missing states                             | Officers using “Editing as” (onboarding must follow the signed-in person); existing beta members must not be pushed through new onboarding; member-and-officer landing.  |
 
 Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in this batch), hide officer screens from members (M01 first step), m01, m02, m05, m09, and an M03 first slice so the app and Discord use the same signed-up/selected/confirmed labels.
 
 **Handoff — October 17, 2026; Claude; ONB (routing), m03–m05, m08–m10, m12–m14; Ready for review.**
 
-| Field             | Recorded handoff                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Work location     | `feat/member-onboarding-foundation`, uncommitted working tree                                                                                                                                                                                                                                                                                                                 |
-| Codex batch       | Invite error kinds and Retry (m10); invite routes to Characters first; panel Retry for reminders and sign-ups (m12); Undo toast pauses on hover/focus with Dismiss (m14); remembered availability editor and section (m13); “Account & guilds” control with separate sync status (m04); save status at the top of the availability editor (m03); first-character panel (m05); realm suggestion (m08); form Cancel (m09) |
-| Claude code review | Blockers: setup prompt still reappeared weekly on Home and on the new Characters banner; `Home.test.js` expected the old heading; the new e2e spec failed (label selector matched option text); Discord auto-join still landed new members on the setup page. Minor: dismissing the toast lost keyboard focus; `CharacterDialog` duplicates `CharacterFields`' default draft (left as is) |
-| Claude fixes      | `hasGivenAvailability` makes setup permanent once any week is answered or a usual schedule exists (Home, Characters, checklist); shared `welcomeNewMember` routes invites and Discord joins the same way; a signed-in player with exactly one guild and no saved choice opens it; toast actions return focus to the page; updated Home test and e2e selector                         |
-| Checks            | `vitest run`: 582 passed. `eslint .`: clean. `playwright test`: 68 passed (desktop and mobile). Not run: integration tests, hosted Discord sign-in                                                                                                                                                                                                                            |
-| Remaining limits  | Onboarding stages 3–5, cross-device progress, member/officer workspace split, and timezone work not started. No peer review of Claude's fixes yet; not committed or deployed                                                                                                                                                                                                 |
-| Next actor        | User: choose the pre–Nov 4 cut and approve a commit/PR. Reviewer (Codex or user) for this batch                                                                                                                                                                                                                                                                              |
+| Field              | Recorded handoff                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Work location      | `feat/member-onboarding-foundation`, uncommitted working tree                                                                                                                                                                                                                                                                                                                                                           |
+| Codex batch        | Invite error kinds and Retry (m10); invite routes to Characters first; panel Retry for reminders and sign-ups (m12); Undo toast pauses on hover/focus with Dismiss (m14); remembered availability editor and section (m13); “Account & guilds” control with separate sync status (m04); save status at the top of the availability editor (m03); first-character panel (m05); realm suggestion (m08); form Cancel (m09) |
+| Claude code review | Blockers: setup prompt still reappeared weekly on Home and on the new Characters banner; `Home.test.js` expected the old heading; the new e2e spec failed (label selector matched option text); Discord auto-join still landed new members on the setup page. Minor: dismissing the toast lost keyboard focus; `CharacterDialog` duplicates `CharacterFields`' default draft (left as is)                               |
+| Claude fixes       | `hasGivenAvailability` makes setup permanent once any week is answered or a usual schedule exists (Home, Characters, checklist); shared `welcomeNewMember` routes invites and Discord joins the same way; a signed-in player with exactly one guild and no saved choice opens it; toast actions return focus to the page; updated Home test and e2e selector                                                            |
+| Checks             | `vitest run`: 582 passed. `eslint .`: clean. `playwright test`: 68 passed (desktop and mobile). Not run: integration tests, hosted Discord sign-in                                                                                                                                                                                                                                                                      |
+| Remaining limits   | Onboarding stages 3–5, cross-device progress, member/officer workspace split, and timezone work not started. No peer review of Claude's fixes yet; not committed or deployed                                                                                                                                                                                                                                            |
+| Next actor         | User: choose the pre–Nov 4 cut and approve a commit/PR. Reviewer (Codex or user) for this batch                                                                                                                                                                                                                                                                                                                         |
