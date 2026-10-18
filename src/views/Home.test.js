@@ -6,6 +6,7 @@ import Home from './Home.svelte'
 import { announcedRaids, raidAnswer } from '../lib/raid-answers.js'
 import { templateFromRanges } from '../lib/availability-template.js'
 import { localRaidResponses, saveLocalRaidResponse } from '../lib/raid-services.js'
+import { remote } from '../lib/remote/sync.svelte.js'
 
 beforeEach(() => {
   localStorage.clear()
@@ -143,4 +144,30 @@ test('a usual schedule due for review is confirmed from Home in one tap', async 
   await fireEvent.click(within(review).getByRole('button', { name: 'Still right' }))
   expect(app.data.templates.m0.confirmedAt).toBe('2026-09-28')
   expect(screen.queryByRole('group', { name: 'Review your usual schedule' })).toBeNull()
+})
+
+test('an online player with a first assignment is offered the calendar link beside it', () => {
+  Object.assign(remote, { guildId: 'guild-1', memberId: 'm0', officer: false })
+  try {
+    render(Home)
+    const next = screen.getByRole('region', { name: 'Next raid assignment' })
+    expect(within(next).getByRole('button', { name: /Follow your raids in your calendar/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Add your raids to your calendar' })).toBeTruthy()
+    expect(screen.queryByText('Calendar link', { selector: 'summary' })).toBeNull()
+  } finally {
+    Object.assign(remote, { guildId: null, memberId: null, officer: false })
+  }
+})
+
+test('before a first assignment the calendar link waits behind a disclosure', () => {
+  Object.assign(remote, { guildId: 'guild-1', memberId: 'm1', officer: false })
+  app.data = { ...app.data, currentMemberId: 'm1' }
+  try {
+    render(Home)
+    expect(screen.queryByRole('button', { name: /Follow your raids in your calendar/ })).toBeNull()
+    const summary = screen.getByText('Calendar link', { selector: 'summary' })
+    expect(summary.closest('details').open).toBe(false)
+  } finally {
+    Object.assign(remote, { guildId: null, memberId: null, officer: false })
+  }
 })

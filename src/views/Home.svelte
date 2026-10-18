@@ -54,6 +54,14 @@
     app.data = { ...app.data, currentWeek: thisWeek }
     app.view = 'availability'
   }
+
+  // Onboarding stage 5: the calendar link is offered once there is a raid worth following.
+  const online = $derived(Boolean(remote.guildId) && remote.memberId === memberId)
+  let calendarPanel = $state()
+  function showCalendar() {
+    calendarPanel?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    calendarPanel?.querySelector('button')?.focus({ preventScroll: true })
+  }
 </script>
 
 <PageTitle
@@ -91,6 +99,11 @@
       <button class="text-button" onclick={() => openRaid(next)}
         >View published roster <span aria-hidden="true">→</span></button
       >
+      {#if online}
+        <button class="text-button" onclick={showCalendar}
+          >Follow your raids in your calendar <span aria-hidden="true">↓</span></button
+        >
+      {/if}
     {:else}
       <span class="eyebrow">UP NEXT</span>
       <h2>No upcoming assignment yet</h2>
@@ -180,11 +193,24 @@
 
 <RaidMonth />
 
-{#if remote.guildId && remote.memberId === memberId}
-  <div class="spaced-top"><CalendarSubscription /></div>
+{#if online && assigned.length}
+  <div class="spaced-top" bind:this={calendarPanel}><CalendarSubscription /></div>
+{:else if online}
+  <!-- Still reachable before a first roster, e.g. to turn off an old link. -->
+  <details class="spaced-top calendar-later">
+    <summary>Calendar link</summary>
+    <p class="note">
+      Once an officer puts you on a roster, your raids can follow you into your calendar app.
+    </p>
+    <CalendarSubscription />
+  </details>
 {/if}
 
 <style>
+  .calendar-later summary {
+    cursor: pointer;
+    color: var(--muted);
+  }
   .schedule-review {
     margin: 0.75rem 0;
     padding: 0.75rem;
