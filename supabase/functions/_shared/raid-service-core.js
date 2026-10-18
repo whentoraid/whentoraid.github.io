@@ -128,15 +128,32 @@ export async function deliverMessages(
 ) {
   const route = transport(target)
   const ids = [...previousIds]
-  async function request(method, url, body) {
+  async function request(method, url, body, image) {
     let response
     try {
+      let requestBody
+      const headers = { ...route.headers }
+      if (image) {
+        const form = new FormData()
+        form.append(
+          'payload_json',
+          JSON.stringify({
+            ...body,
+            attachments: [{ id: 0, filename: image.filename, description: image.description }],
+          }),
+        )
+        form.append('files[0]', new Blob([image.bytes], { type: 'image/png' }), image.filename)
+        requestBody = form
+      } else if (body) {
+        headers['Content-Type'] = 'application/json'
+        requestBody = JSON.stringify(body)
+      }
       response = await fetchFn(url, {
         method,
         redirect: 'error',
         signal: AbortSignal.timeout(15000),
-        headers: { 'Content-Type': 'application/json', ...route.headers },
-        body: body ? JSON.stringify(body) : undefined,
+        headers,
+        body: requestBody,
       })
     } catch {
       throw Object.assign(
@@ -169,7 +186,11 @@ export async function deliverMessages(
   }
   for (const [index, outgoing] of messages.entries()) {
     // Text, or `{ content, embeds }`. Every message sets both, so an edit replaces either kind.
-    const { content = '', embeds = [] } = typeof outgoing === 'string' ? { content: outgoing } : outgoing
+    const {
+      content = '',
+      embeds = [],
+      image,
+    } = typeof outgoing === 'string' ? { content: outgoing } : outgoing
     const body = {
       content,
       embeds,
@@ -181,13 +202,13 @@ export async function deliverMessages(
     }
     if (ids[index]) {
       try {
-        await request('PATCH', route.message(ids[index]), body)
+        await request('PATCH', route.message(ids[index]), body, image)
         continue
       } catch (error) {
         if (error.status !== 404) throw error
       }
     }
-    const message = await request('POST', route.create, body)
+    const message = await request('POST', route.create, body, image)
     if (!/^\d{17,20}$/.test(message?.id))
       throw Object.assign(
         new Error('Discord did not return a message identifier. Check the channel before retrying.'),

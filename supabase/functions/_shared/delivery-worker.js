@@ -4,7 +4,7 @@
  * after a press). Storage, the channel check and network calls are injected, so Vitest runs it too.
  */
 import { deliverMessages, reminderMessages } from './raid-service-core.js'
-import { rosterMessages } from './roster-post.js'
+import { rosterMessages, rosterImageModel } from './roster-post.js'
 import { signupMessages } from './signup-post.js'
 import { rosterComponents, signupComponents } from './discord-interactions.js'
 import { checkChannelInServer } from './discord-connect.js'
@@ -13,7 +13,7 @@ import { checkChannelInServer } from './discord-connect.js'
 export const MAX_DELIVERIES = 10
 
 /** What to send for one claimed job, or null when the job no longer needs a message. */
-async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
+async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage }) {
   if (job.kind === 'roster') {
     if (job.action === 'delete') return { messages: [], mentionIds: [], components: [] }
     const payload =
@@ -23,7 +23,21 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
     const components = job.channel_id ? rosterComponents(job, appUrl) : []
     const specEmojis =
       job.channel_id && !payload.cancelled && !payload.withdrawn ? await loadSpecEmojis() : {}
-    return { messages: rosterMessages(payload, mentionIds, { specEmojis }), mentionIds, components }
+    const messages = rosterMessages(payload, mentionIds, { specEmojis })
+    if (renderRosterImage && job.channel_id && !payload.cancelled && !payload.withdrawn) {
+      const model = rosterImageModel(payload, specEmojis)
+      const bytes = await renderRosterImage(model)
+      messages[0].image = {
+        filename: 'raid-roster.png',
+        description: model.sections
+          .flatMap((section) => section.members.map((member) => `${section.title}: ${member.text}`))
+          .join('; ')
+          .slice(0, 1024),
+        bytes,
+      }
+      messages[0].embeds.unshift({ color: 0x80c8ff, image: { url: 'attachment://raid-roster.png' } })
+    }
+    return { messages, mentionIds, components }
   }
   if (job.kind === 'signup') {
     // Sign-ups are read now, so the post shows every press made before this send.
@@ -118,11 +132,22 @@ export async function deliverQueued({
   checkChannel,
   fetchFn = fetch,
   loadSpecEmojis = async () => ({}),
+  renderRosterImage = null,
   max = MAX_DELIVERIES,
   log = (message) => console.error(message),
 }) {
   // Channels confirmed to be in their guild's connected server during this call.
-  const context = { rpc, botToken, appUrl, checkChannel, fetchFn, loadSpecEmojis, log, checked: new Set() }
+  const context = {
+    rpc,
+    botToken,
+    appUrl,
+    checkChannel,
+    fetchFn,
+    loadSpecEmojis,
+    renderRosterImage,
+    log,
+    checked: new Set(),
+  }
   const results = []
   for (let i = 0; i < max; i += 1) {
     const job = await rpc('claim_discord_delivery', { p_guild_id: guildId })

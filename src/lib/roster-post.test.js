@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rosterMessages } from '../../supabase/functions/_shared/roster-post.js'
+import { rosterMessages, rosterImageModel } from '../../supabase/functions/_shared/roster-post.js'
 
 const START = 1792000800000
 const ID = (n) => `1${String(n).padStart(17, '0')}`
@@ -135,7 +135,7 @@ describe('roster card', () => {
     )
     expect(field.value).not.toContain('⬜')
   })
-  it('marks confirmed roster places blue and off-roster volunteers yellow', () => {
+  it('leaves square markers off the text roster and assigns name colors in the image', () => {
     const [message] = rosterMessages(
       roster({
         team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
@@ -143,8 +143,22 @@ describe('roster card', () => {
       }),
     )
     const values = message.embeds[0].fields.map((field) => field.value).join('\n')
-    expect(values).toContain('🟦 `1`')
-    expect(values).toContain('🟨 `1`')
+    expect(values).not.toContain('🟦')
+    expect(values).not.toContain('🟨')
+    expect(values).toContain('**Tankus** Protection')
+    expect(values).toContain('**Oak** Shadow')
+    const model = rosterImageModel(
+      roster({
+        team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
+        standby: [{ name: 'Oak', class: 'Priest', spec: 'Shadow', role: 'DPS' }],
+      }),
+    )
+    expect(model.sections.flatMap((section) => section.members)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Tankus Protection', color: 'blue' }),
+        expect.objectContaining({ text: 'Oak Shadow', color: 'yellow' }),
+      ]),
+    )
     expect(message.embeds[0].fields.some((field) => field.name.includes('Available as backup (1)'))).toBe(
       true,
     )
