@@ -97,4 +97,46 @@ describe('officer dashboard', () => {
     expect(later.raids.map((r) => r.raidId)).toEqual(['raid-20'])
     expect(later.raids[0].issues[0].message).toBe('Scheduled · no draft yet')
   })
+
+  test('each issue names the planner tool that resolves it', () => {
+    const team = [{ memberId: 'm0', characterId: 'c0a', role: 'Tank' }]
+    const state = withPlan(createSeedState(), team)
+    state.weeks[SEED_WEEK].checkins.m0 = { checkedIn: true, ranges: [], declined: [] }
+    const weeks = officerDashboard(state, NOW)
+    const actions = Object.fromEntries(
+      raidOf(weeks, SEED_WEEK, 'raid-20').issues.map((issue) => [issue.code, issue.action]),
+    )
+    expect(actions.unpublished).toEqual({
+      label: 'Review and publish',
+      intent: { section: 'roster', focus: 'publish' },
+    })
+    expect(actions.conflicts).toEqual({
+      label: 'Review players',
+      intent: { section: 'roster', focus: 'publish' },
+    })
+    // The seed raid wants one more tank, so the first unfilled role is offered.
+    expect(actions['open-slots']).toEqual({
+      label: 'Find Tank candidates',
+      intent: { section: 'roster', focus: 'add', role: 'Tank' },
+    })
+    const unplanned = raidOf(weeks, SEED_WEEK, 'raid-10-1').issues[0]
+    expect(unplanned.action).toEqual({ label: 'Choose a time', intent: { section: 'schedule' } })
+  })
+
+  test('draft changes open the publication review; rule warnings open the roster', () => {
+    const team = [{ memberId: 'm6', characterId: 'c6a', role: 'DPS' }]
+    let state = withPlan(createSeedState(), team)
+    const plan = state.weeks[SEED_WEEK].plans['raid-20']
+    state = withPlan(state, team, { published: { start: plan.start, team: [] } })
+    state.settings.raids = state.settings.raids.map((raid) =>
+      raid.id === 'raid-20' ? { ...raid, rules: { classLimits: { Mage: 0 } } } : raid,
+    )
+    const issues = raidOf(officerDashboard(state, NOW), SEED_WEEK, 'raid-20').issues
+    const action = (code) => issues.find((issue) => issue.code === code).action
+    expect(action('draft-changes')).toEqual({
+      label: 'Review changes',
+      intent: { section: 'roster', focus: 'changes' },
+    })
+    expect(action('class-limit')).toEqual({ label: 'Review composition', intent: { section: 'roster' } })
+  })
 })

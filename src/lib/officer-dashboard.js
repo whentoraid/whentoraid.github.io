@@ -1,4 +1,5 @@
 import { waitingOn } from './checkins.js'
+import { ROLES } from './constants.js'
 import { compositionIssues } from './composition-rules.js'
 import { conflicts } from './engine.js'
 import { own } from './ids.js'
@@ -14,7 +15,10 @@ export const DASHBOARD_WEEKS = 4
 const ALWAYS_SHOWN_WEEKS = 2
 
 /**
- * @typedef {{ code: string, message: string }} DashboardIssue
+ * @typedef {{ section: 'schedule' | 'roster' | 'responses', focus?: 'publish' | 'changes' | 'add' | 'checkins', role?: string }} PlannerIntent
+ *   Where the planner opens to resolve an issue: its tab, then the tool within it.
+ * @typedef {{ label: string, intent: PlannerIntent }} IssueAction
+ * @typedef {{ code: string, message: string, action: IssueAction }} DashboardIssue
  * @typedef {{
  *   weekIso: string, raidId: string, raidName: string, start: number | null, status: string,
  *   published: object | null, issues: DashboardIssue[],
@@ -22,6 +26,29 @@ const ALWAYS_SHOWN_WEEKS = 2
  * @typedef {{ weekIso: string, waiting: number | null, raids: DashboardRaid[] }} DashboardWeek
  *   `waiting` counts players who have not checked in; null for weeks too far ahead to expect it.
  */
+
+const REVIEW_PUBLISH = { section: 'roster', focus: 'publish' }
+
+/** The planner tool that resolves each kind of issue. Rule warnings are listed on the roster tab. */
+function actionFor(code, role) {
+  if (code === 'unplanned') return { label: 'Choose a time', intent: { section: 'schedule' } }
+  if (code === 'unpublished') return { label: 'Review and publish', intent: REVIEW_PUBLISH }
+  if (code === 'draft-changes')
+    return { label: 'Review changes', intent: { section: 'roster', focus: 'changes' } }
+  if (code === 'open-slots')
+    return { label: `Find ${role} candidates`, intent: { section: 'roster', focus: 'add', role } }
+  if (code === 'conflicts') return { label: 'Review players', intent: REVIEW_PUBLISH }
+  if (code === 'tentative') return { label: 'Review tentative players', intent: REVIEW_PUBLISH }
+  return { label: 'Review composition', intent: { section: 'roster' } }
+}
+
+const issue = (code, message, role) => ({ code, message, action: actionFor(code, role) })
+
+/** Where an officer goes to remind players who have not checked in for a week. */
+export const CHECKIN_ACTION = { label: 'Remind players', intent: { section: 'schedule', focus: 'checkins' } }
+
+/** Where an officer reads players' answers to a published roster. */
+export const RESPONSES_ACTION = { label: 'Check confirmations', intent: { section: 'responses' } }
 
 function sameRoster(plan) {
   const { published } = plan
@@ -34,27 +61,28 @@ function planIssues(state, weekIso, raid, plan) {
   const players = plannerPlayers(scoped)
   const window = planWindow(state, raid.id, plan)
   const issues = []
-  if (!plan.published) issues.push({ code: 'unpublished', message: 'Not published yet' })
-  else if (!sameRoster(plan)) issues.push({ code: 'draft-changes', message: 'Draft changes not published' })
+  if (!plan.published) issues.push(issue('unpublished', 'Not published yet'))
+  else if (!sameRoster(plan)) issues.push(issue('draft-changes', 'Draft changes not published'))
   const open = raid.targets.reduce((sum, n) => sum + n, 0) - plan.team.length
-  if (open > 0) issues.push({ code: 'open-slots', message: `${open} open ${open === 1 ? 'slot' : 'slots'}` })
+  const short = ROLES.find(
+    (role, i) => plan.team.filter((entry) => entry.role === role).length < raid.targets[i],
+  )
+  if (open > 0) issues.push(issue('open-slots', `${open} open ${open === 1 ? 'slot' : 'slots'}`, short))
   const reasons = plan.team.map((entry) => conflicts(entry, players, window))
   const isTentative = (reason) => reason.startsWith('Tentative')
   const blocked = reasons.filter((list) => list.some((reason) => !isTentative(reason))).length
   const tentative = reasons.filter((list) => list.some(isTentative)).length
   if (blocked)
-    issues.push({
-      code: 'conflicts',
-      message: `${blocked} rostered ${blocked === 1 ? 'player needs' : 'players need'} review`,
-    })
+    issues.push(
+      issue('conflicts', `${blocked} rostered ${blocked === 1 ? 'player needs' : 'players need'} review`),
+    )
   if (tentative)
-    issues.push({
-      code: 'tentative',
-      message: `${tentative} tentative ${tentative === 1 ? 'player' : 'players'} to confirm`,
-    })
+    issues.push(
+      issue('tentative', `${tentative} tentative ${tentative === 1 ? 'player' : 'players'} to confirm`),
+    )
   const characters = players.flatMap((p) => p.characters)
-  for (const issue of compositionIssues(plan.team, characters, raid.rules))
-    issues.push({ code: issue.code, message: issue.message })
+  for (const rule of compositionIssues(plan.team, characters, raid.rules))
+    issues.push(issue(rule.code, rule.message))
   return issues
 }
 
@@ -69,7 +97,7 @@ function raidEntry(state, weekIso, raid, now) {
       ...base,
       start: occurrence?.start ?? null,
       status: 'unplanned',
-      issues: [{ code: 'unplanned', message: occurrence ? 'Scheduled · no draft yet' : 'Not planned yet' }],
+      issues: [issue('unplanned', occurrence ? 'Scheduled · no draft yet' : 'Not planned yet')],
     }
   }
   if (planWindow(state, raid.id, plan).end <= now) return null

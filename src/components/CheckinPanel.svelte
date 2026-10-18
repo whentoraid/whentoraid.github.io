@@ -29,7 +29,7 @@
 
 <section class="panel side-section" aria-labelledby="checkin-heading">
   <span class="eyebrow gold">CHECK-INS</span>
-  <h2 id="checkin-heading" class="readiness-heading">
+  <h2 id="checkin-heading" class="readiness-heading" tabindex="-1">
     {missing.length ? `Waiting on ${missing.length}` : 'Everyone has answered'}
   </h2>
   {#if deadlineLabel}

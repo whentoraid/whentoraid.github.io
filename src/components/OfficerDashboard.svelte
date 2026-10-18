@@ -2,7 +2,12 @@
   import { app } from '../lib/app.svelte.js'
   import { displayZone } from '../lib/display.svelte.js'
   import { formatDateIn } from '../lib/grid.js'
-  import { attentionCount, officerDashboard } from '../lib/officer-dashboard.js'
+  import {
+    attentionCount,
+    CHECKIN_ACTION,
+    officerDashboard,
+    RESPONSES_ACTION,
+  } from '../lib/officer-dashboard.js'
   import { formatClock, formatMonthDay, wallTime } from '../lib/time.js'
 
   /** Officers: upcoming raids across the next few weeks and what each still needs. */
@@ -23,13 +28,32 @@
       ? 'No time chosen'
       : `${formatDateIn({ start }, zone)} · ${formatClock(wallTime(start, zone).minutes)}`
 
-  function open(raid) {
-    app.data = { ...app.data, currentWeek: raid.weekIso, currentRaidId: raid.raidId }
+  const rowKey = (weekIso, raidId = '') => `${weekIso}/${raidId}`
+
+  /**
+   * Open the planner at this raid and week, at the tool an issue names (or the planner's default),
+   * remembering the row so the planner can lead back to it.
+   */
+  function open(weekIso, raidId, intent = null) {
+    app.data = { ...app.data, currentWeek: weekIso, currentRaidId: raidId ?? app.data.currentRaidId }
+    app.plannerIntent = intent
+    app.returnTo = rowKey(weekIso, raidId)
     app.view = 'planner'
   }
+
+  // Back from the planner: bring the row the officer left from into view, with its updated state.
+  let list = $state()
+  $effect(() => {
+    const key = app.dashboardFocus
+    if (!key || !list) return
+    app.dashboardFocus = null
+    const row = [...list.querySelectorAll('[data-row]')].find((el) => el.dataset.row === key)
+    row?.scrollIntoView?.({ block: 'center' })
+    row?.querySelector('button')?.focus({ preventScroll: true })
+  })
 </script>
 
-<section class="panel officer-dashboard" aria-label="Officer dashboard">
+<section class="panel officer-dashboard" aria-label="Officer dashboard" bind:this={list}>
   <div class="heading">
     <div>
       <span class="eyebrow gold">OFFICER DASHBOARD</span>
@@ -40,13 +64,19 @@
     >
   </div>
   {#each weeks.filter((week) => week.raids.length) as week (week.weekIso)}
-    <h3>
+    <h3 data-row={rowKey(week.weekIso)}>
       Week of {formatMonthDay(week.weekIso)}
-      {#if week.waiting}<small>· {week.waiting} not checked in</small>{/if}
+      {#if week.waiting}<small>· {week.waiting} not checked in</small>
+        <button
+          class="text-button fix"
+          onclick={() => open(week.weekIso, null, CHECKIN_ACTION.intent)}
+          aria-label={`${CHECKIN_ACTION.label}, week of ${formatMonthDay(week.weekIso)}`}
+          >{CHECKIN_ACTION.label}</button
+        >{/if}
     </h3>
     <ul>
       {#each week.raids as raid (raid.raidId)}
-        <li>
+        <li data-row={rowKey(raid.weekIso, raid.raidId)}>
           <div class="what">
             <strong>{raid.raidName}</strong>
             <small>{when(raid.start)} · {STATUS_LABELS[raid.status]}</small>
@@ -54,14 +84,28 @@
           <div class="issues">
             {#if raid.issues.length}
               <ul class="issue-list">
-                {#each raid.issues as issue, i (i)}<li>{issue.message}</li>{/each}
+                {#each raid.issues as issue, i (i)}<li>
+                    <span>{issue.message}</span>
+                    <button
+                      class="text-button fix"
+                      onclick={() => open(raid.weekIso, raid.raidId, issue.action.intent)}
+                      aria-label={`${issue.action.label}: ${raid.raidName}, ${issue.message}`}
+                      >{issue.action.label}</button
+                    >
+                  </li>{/each}
               </ul>
             {:else if raid.status !== 'cancelled'}
               <span class="ok">Ready</span>
             {/if}
+            {#if raid.status === 'published'}<button
+                class="text-button fix"
+                onclick={() => open(raid.weekIso, raid.raidId, RESPONSES_ACTION.intent)}
+                aria-label={`${RESPONSES_ACTION.label}: ${raid.raidName}, week of ${formatMonthDay(raid.weekIso)}`}
+                >{RESPONSES_ACTION.label}</button
+              >{/if}
           </div>
           <button
-            onclick={() => open(raid)}
+            onclick={() => open(raid.weekIso, raid.raidId)}
             aria-label={`Open ${raid.raidName}, week of ${formatMonthDay(raid.weekIso)}`}>Open</button
           >
         </li>
@@ -86,7 +130,14 @@
     margin: 1.25rem 0 0.25rem;
     font-size: 14px;
   }
+  h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.5rem;
+  }
   h3 small {
+    display: inline;
     font-weight: normal;
     color: var(--muted);
   }
@@ -114,13 +165,21 @@
     flex: 2 1 16rem;
   }
   .issue-list li {
+    align-items: baseline;
     padding: 0;
     border: 0;
+    gap: 0 0.75rem;
     color: var(--red);
     font-size: 13px;
   }
-  .issue-list li::before {
+  .issue-list li span::before {
     content: '• ';
+  }
+  .fix {
+    margin-top: 0;
+    padding-block: 0.25rem;
+    font-size: 13px;
+    font-weight: normal;
   }
   .ok {
     color: var(--green);
