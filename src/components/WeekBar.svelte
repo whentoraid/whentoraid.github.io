@@ -60,10 +60,14 @@
           checked={display.localTime}
           onchange={(e) => setLocalTime(e.currentTarget.checked)}
         />
-        Show my time ({viewerZone})
+        Use my timezone ({viewerZone.replaceAll('_', ' ')})
       </label>
     {/if}
-    <small>Times in {zone.replaceAll('_', ' ')}</small>
+    <small
+      >Times in {zone.replaceAll('_', ' ')}{zone === guild.timezone
+        ? ''
+        : ` · guild time is ${guild.timezone.replaceAll('_', ' ')}`}</small
+    >
     <details class="time-details">
       <summary>Time details</summary><small>{hoursLabel} · 30-minute slots · +1 = next day</small>
     </details>

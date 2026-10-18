@@ -180,4 +180,18 @@ describe('month calendar', () => {
     expect(raidMonthEntries(state, '2026-10', { publishedOnly: true })[0].dateIso).toBe('2026-10-06')
     expect(raidMonthEntries(state, '2026-10')[0].status).toBe('draft')
   })
+
+  test('a viewer far from the guild sees each raid on their own local date', () => {
+    const state = fixture()
+    // 7 pm Tuesday in New York is already Wednesday morning in Tokyo.
+    const start = Date.parse('2026-10-06T23:00:00Z')
+    state.weeks['2026-10-05'] = {
+      checkins: {},
+      plans: { 'raid-a': { start, team: [], published: { start, team: [] } } },
+    }
+    const options = { publishedOnly: true }
+    expect(raidMonthEntries(state, '2026-10', options)[0].dateIso).toBe('2026-10-06')
+    const tokyo = raidMonthEntries(state, '2026-10', { ...options, zone: 'Asia/Tokyo' })
+    expect(tokyo[0].dateIso).toBe('2026-10-07')
+  })
 })

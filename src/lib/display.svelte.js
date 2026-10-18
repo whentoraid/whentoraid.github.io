@@ -7,11 +7,12 @@ const LOCAL_TIME_KEY = 'whentoraid-show-local-time'
 /** This browser's timezone. */
 export const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
+/** Players read times in their own timezone unless they chose guild time; guild time is shown beside it. */
 function readPreference() {
   try {
-    return localStorage.getItem(LOCAL_TIME_KEY) === '1'
+    return localStorage.getItem(LOCAL_TIME_KEY) !== '0'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -26,7 +27,7 @@ export function setLocalTime(localTime) {
   }
 }
 
-/** The timezone to show times in: the viewer's own when they asked for it and it differs. */
+/** The timezone to show times in: the viewer's own unless they switched to guild time. */
 export function displayZone(guild) {
   return display.localTime ? viewerZone : guild.timezone
 }

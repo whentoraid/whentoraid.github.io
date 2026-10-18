@@ -265,13 +265,12 @@ function planStatus(plan) {
 }
 
 /**
- * Raids in a calendar month (`YYYY-MM`), dated in the guild timezone: saved plans with their actual
+ * Raids in a calendar month (`YYYY-MM`), dated in `zone` (the guild timezone by default): saved plans with their actual
  * times, plus schedule dates that have no plan yet. With `publishedOnly`, just published rosters at
  * their published times, as players see them.
  * @returns {{ raidId: string, raidName: string, weekIso: string, dateIso: string, start: number, status: string }[]}
  */
-export function raidMonthEntries(state, month, { publishedOnly = false } = {}) {
-  const zone = state.guild.timezone
+export function raidMonthEntries(state, month, { publishedOnly = false, zone = state.guild.timezone } = {}) {
   const names = new Map(state.settings.raids.map((raid) => [raid.id, raid.name]))
   const entries = []
   const add = (raidId, weekIso, start, status) => {
