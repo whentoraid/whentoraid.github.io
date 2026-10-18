@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   changeSeriesOccurrence,
   generateSeriesDrafts,
+  previewSeriesChange,
   raidMonthEntries,
   saveRaidSeries,
   seriesOccurrences,
@@ -134,6 +135,46 @@ describe('weekly raid series', () => {
     expect(
       changeSeriesOccurrence(state, 'raid-a', '2026-10-06', { minutes: 1200 }, 'this', { now }).error,
     ).toMatch(/week/i)
+  })
+})
+
+describe('previewing a schedule change', () => {
+  const planned = () => {
+    const state = generateSeriesDrafts(fixture(), 'raid-a', { now }).state
+    const published = state.weeks['2026-11-02'].plans['raid-a']
+    published.published = { start: published.start, team: [] }
+    return state
+  }
+  const change = { day: 1, minutes: 1200 }
+
+  test('lists every affected week the way saving will treat it, without changing anything', () => {
+    const state = planned()
+    const before = structuredClone(state)
+    const { rows, error } = previewSeriesChange(state, 'raid-a', '2026-10-19', change, 'following', { now })
+    expect(error).toBeUndefined()
+    expect(state).toEqual(before)
+    expect(rows.map((r) => [r.weekIso, r.kind, r.changed])).toEqual([
+      ['2026-10-19', 'draft', true],
+      ['2026-10-26', 'draft', true],
+      ['2026-11-02', 'published', true],
+    ])
+    const saved = changeSeriesOccurrence(state, 'raid-a', '2026-10-19', change, 'following', { now })
+    expect(saved.skippedWeeks).toEqual(rows.filter((r) => r.kind === 'published').map((r) => r.weekIso))
+    for (const row of rows.filter((r) => r.kind === 'draft'))
+      expect(saved.state.weeks[row.weekIso].plans['raid-a'].start).toBe(row.after)
+  })
+
+  test('points out weeks after a clock change', () => {
+    const { rows } = previewSeriesChange(planned(), 'raid-a', '2026-10-19', change, 'following', { now })
+    expect(rows.map((r) => r.clockChange)).toEqual([false, false, true])
+  })
+
+  test('only this week, and the same validation as saving', () => {
+    const state = planned()
+    expect(previewSeriesChange(state, 'raid-a', '2026-10-19', change, 'this', { now }).rows).toHaveLength(1)
+    expect(
+      previewSeriesChange(state, 'raid-a', '2026-10-19', { day: 1, minutes: 60 }, 'this', { now }).error,
+    ).toMatch(/planning hours/)
   })
 })
 

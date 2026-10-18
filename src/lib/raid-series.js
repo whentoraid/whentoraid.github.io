@@ -229,7 +229,7 @@ function changedSeries(series, weekIso, change, scope) {
  * they were, which officers update and republish themselves.
  * @param {{ cancelled?: boolean, day?: number, minutes?: number }} change
  * @param {'this' | 'following'} scope
- * @returns {{ state: import('./model.js').AppState, skipped: number, error?: string }}
+ * @returns {{ state: import('./model.js').AppState, skipped: number, skippedWeeks?: string[], error?: string }}
  */
 export function changeSeriesOccurrence(state, raidId, weekIso, change, scope, { now = Date.now() } = {}) {
   const raid = state.settings.raids.find((r) => r.id === raidId)
@@ -246,16 +246,72 @@ export function changeSeriesOccurrence(state, raidId, weekIso, change, scope, { 
   if (error) return { state, skipped: 0, error }
 
   let next = withSeries(state, raidId, updated)
-  let skipped = 0
-  const affected = seriesOccurrences(updated).filter((o) =>
-    scope === 'this' ? o.weekIso === weekIso : o.weekIso >= weekIso,
-  )
-  for (const item of affected) {
+  const skippedWeeks = []
+  for (const item of affectedOccurrences(updated, weekIso, scope)) {
     const result = applyToPlan(next, raidId, item, now)
     next = result.state
-    if (result.skipped) skipped += 1
+    if (result.skipped) skippedWeeks.push(item.weekIso)
   }
-  return { state: next, skipped }
+  return { state: next, skipped: skippedWeeks.length, skippedWeeks }
+}
+
+const affectedOccurrences = (series, weekIso, scope) =>
+  seriesOccurrences(series).filter((o) => (scope === 'this' ? o.weekIso === weekIso : o.weekIso >= weekIso))
+
+/** Minutes the guild clock is ahead of UTC at `start`, so clock changes can be pointed out. */
+function utcOffsetMinutes(start, timezone) {
+  const { dateIso, minutes } = wallTime(start, timezone)
+  return Math.round((Date.parse(`${dateIso}T00:00:00Z`) + minutes * 60_000 - start) / 60_000)
+}
+
+/**
+ * M14: what `changeSeriesOccurrence` would do, without doing it. One row per affected week:
+ * - `draft`: an unpublished plan moves (or is cancelled); its attendance is cleared if it moves
+ * - `scheduled`: no plan yet; the date the schedule shows changes
+ * - `published`: a published roster is kept as published and needs the officers' own review
+ * - `past`: the raid has started, so it is left alone
+ * - `invalid`: the new time does not exist that day because of a clock change
+ * `clockChange` marks weeks whose UTC offset differs from the changed week's, where the same guild
+ * time is a different hour for players whose clocks do not change.
+ * @returns {{ rows: { weekIso: string, before: number | null, after: number | null, kind: string,
+ *   changed: boolean, clockChange: boolean }[], error?: string }}
+ */
+export function previewSeriesChange(state, raidId, weekIso, change, scope, { now = Date.now() } = {}) {
+  const raid = state.settings.raids.find((r) => r.id === raidId)
+  if (!raid?.series) return { rows: [], error: 'This raid has no weekly schedule.' }
+  const updated = changedSeries(raid.series, weekIso, change, scope)
+  const error = validateRaidSeries(updated) ?? hoursError(state, raid, updated)
+  if (error) return { rows: [], error }
+  const before = new Map(seriesOccurrences(raid.series).map((o) => [o.weekIso, o]))
+  const occurrences = affectedOccurrences(updated, weekIso, scope)
+  const reference = occurrences.find((o) => o.start !== null)
+  const baseOffset = reference ? utcOffsetMinutes(reference.start, updated.timezone) : null
+  const rows = occurrences.map((item) => {
+    const plan = own(state.weeks[item.weekIso]?.plans, raidId)
+    const previous = plan?.start ?? before.get(item.weekIso)?.start ?? null
+    const kind =
+      item.start === null
+        ? 'invalid'
+        : previous !== null && previous <= now
+          ? 'past'
+          : plan?.published
+            ? 'published'
+            : plan
+              ? 'draft'
+              : 'scheduled'
+    return {
+      weekIso: item.weekIso,
+      before: previous,
+      after: item.start,
+      kind,
+      changed: previous !== item.start || Boolean(plan && plan.cancelled !== item.cancelled),
+      clockChange:
+        item.start !== null &&
+        baseOffset !== null &&
+        utcOffsetMinutes(item.start, updated.timezone) !== baseOffset,
+    }
+  })
+  return { rows }
 }
 
 function planStatus(plan) {
