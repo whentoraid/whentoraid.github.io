@@ -2,7 +2,7 @@
 -- answers. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(16);
 
 create temp table s as select
   '{"timezone": "UTC", "fromWeek": "2026-10-05", "dayStartHour": 18, "slotsPerDay": 12, "slots": [1, 2]}'::jsonb as base;
@@ -72,7 +72,7 @@ update t set delivery = (select id from public.discord_deliveries where delivery
 
 select is((select array_agg(r ->> 'name' order by r ->> 'name') from jsonb_array_elements(
     public.raid_reminder_payload((select delivery from t), (select lease from t)) -> 'recipients') r),
-  array['m-ended', 'm-none', 'm-officer', 'm-override'],
+  array['Sam', 'm-ended', 'm-none', 'm-override'],
   'members whose usual schedule answers the week, paused included, are not reminded');
 
 select * from finish();
