@@ -15,6 +15,15 @@
     { view: 'members', icon: 'members', label: 'Guild members' },
     { view: 'settings', icon: 'settings', label: 'Guild settings' },
   ]
+  /** Players get read-only guild pages; Guild settings is officer work. The server still enforces this. */
+  const guildItems = $derived(
+    canManage()
+      ? NAV_ITEMS.slice(3)
+      : [
+          { view: 'planner', icon: 'planner', label: 'Guild rosters' },
+          { view: 'members', icon: 'members', label: 'Guild members' },
+        ],
+  )
   let moreOpen = $state(false)
   let moreButton
 
@@ -78,9 +87,9 @@
   </nav>
   <div class="guild-menu" id="guild-menu">
     <p class="mobile-guild-name">{app.data.guild.name}</p>
-    <nav aria-label="Guild tools">
-      <p class="nav-label">GUILD TOOLS</p>
-      {#each NAV_ITEMS.slice(3) as item (item.view)}
+    <nav aria-label={canManage() ? 'Guild tools' : 'Guild'}>
+      <p class="nav-label">{canManage() ? 'GUILD TOOLS' : 'GUILD'}</p>
+      {#each guildItems as item (item.view)}
         <button
           class:active={app.view === item.view}
           aria-current={app.view === item.view ? 'page' : undefined}

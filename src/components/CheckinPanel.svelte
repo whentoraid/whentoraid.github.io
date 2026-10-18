@@ -1,6 +1,6 @@
 <script>
   import { app } from '../lib/app.svelte.js'
-  import { deadlineUtc, reminderDiscord, waitingOn } from '../lib/checkins.js'
+  import { deadlineUtc, formatDeadline, reminderDiscord, waitingOn } from '../lib/checkins.js'
   import { displayZone } from '../lib/display.svelte.js'
 
   /** Who still has to answer this week, the deadline, and a Discord reminder to copy. */
@@ -10,16 +10,7 @@
   const missing = $derived(waitingOn(app.data, weekIso))
   const deadline = $derived(deadlineUtc(app.data, weekIso))
   const deadlineLabel = $derived(
-    deadline === null
-      ? null
-      : new Date(deadline).toLocaleString('en-US', {
-          timeZone: displayZone(app.data.guild),
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
+    deadline === null ? null : formatDeadline(deadline, displayZone(app.data.guild)),
   )
   /** Re-checked every minute so "passed" appears without any other change on the page. */
   const CLOCK_TICK_MS = 60_000
