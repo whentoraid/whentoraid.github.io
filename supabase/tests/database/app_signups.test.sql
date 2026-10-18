@@ -35,6 +35,8 @@ insert into public.characters (guild_id, id, member_id, name, realm, class, spec
 insert into public.plans (guild_id, week, raid_id, start, team, locked, attendance, cancelled)
   select guild, week, 'raid-20', (extract(epoch from (week + 4 + time '19:00') at time zone 'UTC') * 1000)::bigint,
     '[]', '[]', '{}', false from t;
+-- Players have no direct access to sign-ups; the checks below read them, inside this rolled-back test.
+grant select on public.raid_signups to authenticated;
 create function pg_temp.signup() returns public.raid_signups language sql as $$
   select * from public.raid_signups where guild_id = (select guild from t) and member_id = 'm-player'
 $$;
