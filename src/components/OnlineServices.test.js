@@ -79,4 +79,24 @@ describe('calendar link', () => {
     expect(services.revokeCalendarSubscription).toHaveBeenCalled()
     expect(screen.queryByLabelText('Your calendar link')).toBeNull()
   })
+
+  test('the old link turning off is stated before a new link is made', () => {
+    render(CalendarSubscription)
+    const warning = screen.getByText(/Creating a link turns off any link you made before/)
+    const create = screen.getByRole('button', { name: 'Create calendar link' })
+    expect(warning.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  test('each calendar app has its own subscription steps, and a download is not a subscription', () => {
+    render(CalendarSubscription)
+    expect(screen.getByText(/A downloaded .ics file is different/)).toBeTruthy()
+    for (const app of [
+      'Google Calendar',
+      'Apple Calendar (iPhone or iPad)',
+      'Apple Calendar (Mac)',
+      'Outlook',
+    ])
+      expect(screen.getByText(app, { selector: 'dt' })).toBeTruthy()
+    expect(screen.getByText(/Other calendars, select \+, then From URL/)).toBeTruthy()
+  })
 })
