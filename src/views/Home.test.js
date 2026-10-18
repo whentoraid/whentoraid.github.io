@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { app } from '../lib/app.svelte.js'
 import { createSeedState, SEED_WEEK } from '../lib/seed.js'
 import Home from './Home.svelte'
+import { announcedRaids, raidAnswer } from '../lib/raid-answers.js'
 import { localRaidResponses, saveLocalRaidResponse } from '../lib/raid-services.js'
 
 beforeEach(() => {
@@ -96,4 +97,16 @@ test('an officer sees their own next raid before the guild dashboard', () => {
   const mine = screen.getByRole('region', { name: 'Next raid assignment' })
   const guild = screen.getByRole('region', { name: 'Officer dashboard' })
   expect(mine.compareDocumentPosition(guild) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+test('a player answers a raid in one tap, and only that raid changes', async () => {
+  render(Home)
+  const quick = screen.getByRole('region', { name: 'Answer this week’s raids' })
+  const group = within(quick).getByRole('group', { name: /Your answer for/ })
+  await fireEvent.click(within(group).getByRole('button', { name: 'Can’t make it' }))
+  const [raid] = announcedRaids(app.data, SEED_WEEK)
+  expect(raidAnswer(app.data, SEED_WEEK, 'm0', raid)).toBe('out')
+  expect(within(group).getByRole('button', { name: 'Can’t make it' }).getAttribute('aria-pressed')).toBe(
+    'true',
+  )
 })

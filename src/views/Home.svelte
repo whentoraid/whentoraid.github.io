@@ -3,6 +3,7 @@
   import OnboardingChecklist from '../components/OnboardingChecklist.svelte'
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
   import RaidResponse from '../components/RaidResponse.svelte'
+  import RaidQuickAnswer from '../components/RaidQuickAnswer.svelte'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
   import OfficerDashboard from '../components/OfficerDashboard.svelte'
   import RaidMonth from '../components/RaidMonth.svelte'
@@ -103,6 +104,7 @@
           ? 'Your times are ready for planning. Review them if anything has changed.'
           : 'You have let officers know you can’t make it this week.'}
     </p>
+    <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} />
     <button class:primary={!checkin.checkedIn} onclick={checkIn}>Update my availability</button>
     <InlineSaveStatus />
   </section>
