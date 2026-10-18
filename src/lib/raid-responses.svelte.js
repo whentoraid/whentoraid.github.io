@@ -26,6 +26,9 @@ export const responseKey = (week, raidId, published) =>
  */
 export const canRespondAs = (memberId) => !online() || memberId === remote.memberId
 
+/** Counts saved responses, so anything showing them can reload after a player answers. */
+export const responsesSaved = $state({ count: 0 })
+
 /**
  * @param {string} week
  * @param {string} raidId
@@ -43,10 +46,12 @@ export async function loadRaidResponses(week, raidId, published) {
 export async function respondToRaid({ week, raidId, published, memberId, status, note = '' }) {
   if (online()) {
     await saveRaidResponse(supabase, remote.guildId, week, raidId, published.publishedAt, status, note)
+    responsesSaved.count++
     return
   }
   try {
     saveLocalRaidResponse(currentGuildKey(), week, raidId, memberId, published, status, note)
+    responsesSaved.count++
   } catch (error) {
     if (error instanceof DOMException)
       throw new Error('Browser storage is unavailable, so the response cannot be saved.', { cause: error })

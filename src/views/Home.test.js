@@ -171,3 +171,13 @@ test('before a first assignment the calendar link waits behind a disclosure', ()
     Object.assign(remote, { guildId: null, memberId: null, officer: false })
   }
 })
+
+test('the Needs you list asks a rostered player to confirm, and clears once they do', async () => {
+  render(Home)
+  const inbox = await screen.findByRole('region', { name: 'Needs you' })
+  expect(within(inbox).getByText('Confirm your place in 20-player Raid')).toBeTruthy()
+  const next = screen.getByRole('region', { name: 'Next raid assignment' })
+  await fireEvent.click(within(next).getByRole('button', { name: 'I’ll be there' }))
+  await within(next).findByText('You confirmed you’ll be there.')
+  await vi.waitFor(() => expect(screen.queryByText('Confirm your place in 20-player Raid')).toBeNull())
+})
