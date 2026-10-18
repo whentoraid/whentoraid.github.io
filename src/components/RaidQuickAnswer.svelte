@@ -5,8 +5,10 @@
   import { charactersOf } from '../lib/model.js'
   import { compactSessionLabel } from '../lib/personal-raids.js'
   import { announcedRaids, answerRaid, raidAnswer } from '../lib/raid-answers.js'
-  import { canManage } from '../lib/remote/sync.svelte.js'
-  import { offerUndo } from '../lib/toast.svelte.js'
+  import { saveAppSignup } from '../lib/raid-services.js'
+  import { supabase } from '../lib/remote/client.js'
+  import { canManage, remote } from '../lib/remote/sync.svelte.js'
+  import { offerUndo, showToast } from '../lib/toast.svelte.js'
 
   /**
    * One tap per announced raid, like the Discord sign-up buttons. Each answer changes only that raid;
@@ -29,12 +31,31 @@
     return chosen[raidId] ?? (characters.find((c) => c.main) ?? characters[0])?.id ?? null
   }
 
+  /**
+   * Online, the answer also goes on the raid's Discord sign-up list. The check-in is already saved
+   * with the guild, so a failure here says so and offers to try the list again.
+   */
+  async function syncSignup(item, answer, characterId) {
+    if (!remote.guildId) return
+    const args = { weekIso, raidId: item.raid.id, memberId, answer, characterId }
+    try {
+      await saveAppSignup(supabase, remote.guildId, args)
+    } catch (error) {
+      showToast(`Your answer is saved, but the Discord sign-up list didn’t update: ${error.message}`, {
+        label: 'Try again',
+        run: () => syncSignup(item, answer, characterId),
+      })
+    }
+  }
+
   function answer(item, choice) {
     if (closed) return
     const previous = app.data
+    const before = raidAnswer(previous, weekIso, memberId, item)
     const characterId = choice.id === 'out' || characters.length < 2 ? null : characterFor(item.raid.id)
     app.data = answerRaid(app.data, weekIso, memberId, item, choice.id, characterId)
-    offerUndo(`${choice.done} ${item.raid.name}.`, previous)
+    void syncSignup(item, choice.id, characterId)
+    offerUndo(`${choice.done} ${item.raid.name}.`, previous, () => void syncSignup(item, before, null))
   }
 </script>
 
@@ -76,7 +97,10 @@
         </div>
       </div>
     {/each}
-    <p class="note">Each answer changes only that raid. Use My availability for other times.</p>
+    <p class="note">
+      Each answer changes only that raid{remote.guildId ? ' and shows on its Discord sign-up list' : ''}. Use
+      My availability for other times.
+    </p>
   </section>
 {/if}
 

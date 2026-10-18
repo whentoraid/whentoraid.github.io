@@ -65,7 +65,8 @@ export function runToastAction() {
  * replaced, never mutated, so both are complete snapshots; Undo refuses once anything else has
  * changed (another edit, another tab), because restoring `previous` would silently discard it.
  */
-export function offerUndo(message, previous) {
+/** @param {() => void} [onUndo] runs after the restore, for state kept outside the guild data */
+export function offerUndo(message, previous, onUndo) {
   const after = app.data
   showToast(message, {
     label: 'Undo',
@@ -76,6 +77,7 @@ export function offerUndo(message, previous) {
       }
       app.data = previous
       showToast('Undone.')
+      onUndo?.()
     },
   })
 }
