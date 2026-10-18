@@ -15,7 +15,7 @@ export const DASHBOARD_WEEKS = 4
 const ALWAYS_SHOWN_WEEKS = 2
 
 /**
- * @typedef {{ section: 'schedule' | 'roster' | 'responses', focus?: 'publish' | 'changes' | 'add' | 'checkins', role?: string }} PlannerIntent
+ * @typedef {{ section: 'schedule' | 'roster' | 'responses', focus?: 'publish' | 'changes' | 'add' | 'checkins' | 'attendance', role?: string }} PlannerIntent
  *   Where the planner opens to resolve an issue: its tab, then the tool within it.
  * @typedef {{ label: string, intent: PlannerIntent }} IssueAction
  * @typedef {{ code: string, message: string, action: IssueAction }} DashboardIssue

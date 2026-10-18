@@ -116,6 +116,7 @@
       publish: ['#publish-check', '#publish-roster'],
       changes: ['#publication-review'],
       checkins: ['#checkin-heading'],
+      attendance: ['#attendance-heading'],
     }[focus]
     const element = targets?.map((id) => document.querySelector(id)).find(Boolean)
     element?.scrollIntoView?.({ block: 'center' })

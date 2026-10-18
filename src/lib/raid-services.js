@@ -151,6 +151,16 @@ export const queueSignupPost = (client, guildId, week, raidId) =>
 export const getSignupPost = (client, guildId, week, raidId) =>
   rpc(client, 'get_signup_post', { p_guild_id: guildId, p_week: week, p_raid_id: raidId })
 
+/** M08: a player reports a mistake in their own raid record; officers resolve it. */
+export const flagRaidRecord = (client, guildId, week, raidId, note) =>
+  rpc(client, 'flag_raid_record', { p_guild_id: guildId, p_week: week, p_raid_id: raidId, p_note: note })
+
+export const listRaidRecordFlags = (client, guildId) =>
+  rpc(client, 'get_raid_record_flags', { p_guild_id: guildId })
+
+export const resolveRaidRecordFlag = (client, guildId, id, reply) =>
+  rpc(client, 'resolve_raid_record_flag', { p_guild_id: guildId, p_id: id, p_reply: reply })
+
 export const createCalendarSubscription = (client, guildId) =>
   rpc(client, 'create_raid_calendar', { p_guild_id: guildId })
 
