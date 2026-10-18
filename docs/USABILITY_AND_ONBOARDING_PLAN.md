@@ -55,39 +55,39 @@ Codex's completed planning work is recorded here:
 
 The delivery tracker below covers all recommendations individually. Proposed leads and reviewers can change during handoff; **Claimed by** stays empty until an agent actually claims the work. Every item currently has a written proposal, but none has been implemented under this plan.
 
-| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by          | Delivery status                               |
-| --- | --------------------------------------------- | ------------- | ----------------- | ------------------- | --------------------------------------------- |
-| ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude              | Ready for review: stages 1–4; stage 5 partial |
-| M01 | Separate member and officer workspaces        | Claude        | Codex             | Claude              | Ready for review                              |
-| M02 | Quicker routine participation                 | Claude        | Codex             | Claude              | Ready for review: one-tap answers             |
-| M03 | Consistent app/Discord raid status            | Codex         | Claude            | Claude              | Ready for review: needs db push               |
-| M04 | Coherent timezone experience                  | Codex         | Claude            | Claude              | Ready for review: display default + calendar  |
-| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | Claude              | Ready for review                              |
-| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started (before Nov 4)                    |
-| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | Claude              | Ready for review: needs db push               |
-| M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started (before Nov 4)                    |
-| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started (before Nov 4)                    |
-| M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | On hold: user reconsidering need              |
-| M11 | Recurring availability renewal and pause      | Codex         | Claude            | Claude              | Ready for review: needs db push               |
-| M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started (before Nov 4)                    |
-| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started (before Nov 4)                    |
-| M14 | Recurring schedule impact preview             | Claude        | Codex             | —                   | Not started (before Nov 4)                    |
-| M15 | Raid-day briefing                             | Claude        | Codex             | —                   | Not started (before Nov 4)                    |
-| m01 | Deadline beside the availability answer       | Claude        | Codex             | Claude              | Ready for review                              |
-| m02 | Compact routine date strings                  | Claude        | Codex             | Claude              | Ready for review                              |
-| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review                              |
-| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review                              |
-| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review                              |
-| m06 | Readable week ranges                          | Claude        | Codex             | Claude              | Ready for review                              |
-| m07 | Visible selected raid and edit scope          | Claude        | Codex             | Claude              | Ready for review                              |
-| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review                              |
-| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review                              |
-| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review                              |
-| m11 | Calendar-provider guidance                    | Claude        | Codex             | Claude              | Ready for review                              |
-| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review                              |
-| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review                              |
-| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review                              |
-| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | Claude              | Ready for review                              |
+| ID  | Scope                                         | Proposed lead | Proposed reviewer | Claimed by          | Delivery status                              |
+| --- | --------------------------------------------- | ------------- | ----------------- | ------------------- | -------------------------------------------- |
+| ONB | Five-stage member onboarding                  | Claude        | Codex             | Claude              | Ready for review: stages 1–5                 |
+| M01 | Separate member and officer workspaces        | Claude        | Codex             | Claude              | Ready for review                             |
+| M02 | Quicker routine participation                 | Claude        | Codex             | Claude              | Ready for review: one-tap answers            |
+| M03 | Consistent app/Discord raid status            | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
+| M04 | Coherent timezone experience                  | Codex         | Claude            | Claude              | Ready for review: display default + calendar |
+| M05 | Direct routes from officer issues to fixes    | Claude        | Codex             | Claude              | Ready for review                             |
+| M06 | Member reminders and action inbox             | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M07 | Standby offer-and-accept workflow             | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
+| M08 | Personal participation record and corrections | Claude        | Codex             | —                   | Not started (before Nov 4)                   |
+| M09 | Explain planning tradeoffs                    | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | On hold: user reconsidering need             |
+| M11 | Recurring availability renewal and pause      | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
+| M12 | Task-level sync recovery                      | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M14 | Recurring schedule impact preview             | Claude        | Codex             | —                   | Not started (before Nov 4)                   |
+| M15 | Raid-day briefing                             | Claude        | Codex             | —                   | Not started (before Nov 4)                   |
+| m01 | Deadline beside the availability answer       | Claude        | Codex             | Claude              | Ready for review                             |
+| m02 | Compact routine date strings                  | Claude        | Codex             | Claude              | Ready for review                             |
+| m03 | Save feedback beside the action               | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
+| m04 | Stable account control label                  | Claude        | Codex             | Claude (from Codex) | Ready for review                             |
+| m05 | Useful empty Characters page                  | Claude        | Codex             | Claude (from Codex) | Ready for review                             |
+| m06 | Readable week ranges                          | Claude        | Codex             | Claude              | Ready for review                             |
+| m07 | Visible selected raid and edit scope          | Claude        | Codex             | Claude              | Ready for review                             |
+| m08 | Suggest the member's existing realm           | Claude        | Codex             | Claude (from Codex) | Ready for review                             |
+| m09 | Explicit character-form Cancel                | Claude        | Codex             | Claude (from Codex) | Ready for review                             |
+| m10 | Actionable invitation errors                  | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
+| m11 | Calendar-provider guidance                    | Claude        | Codex             | Claude              | Ready for review                             |
+| m12 | Retry failed information panels               | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
+| m13 | Remember display preferences                  | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
+| m14 | Accessible Undo notification timing           | Codex         | Claude            | Claude (from Codex) | Ready for review                             |
+| m15 | Comfortable mobile controls and zoom          | Claude        | Codex             | Claude              | Ready for review                             |
 
 For a claimed item, append a handoff entry using: **date; agent; item IDs; status; owned files; branch/worktree or patch; work achieved; checks and results; remaining limitations; reviewer findings; next actor and action**. Use explicit Not run or Pending when evidence does not exist. Record implementation, review, and deployment separately.
 
@@ -396,3 +396,5 @@ Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in t
 **Decision — October 18, 2026 (user).** M07 offers are app only for now: no Discord posts or DMs. Officers pick the response deadline (1, 3, 12 or 24 hours, default 3), capped at the raid's start.
 
 **Handoff — October 18, 2026; Claude; M07 (standby offers, app only); Ready for review (migration pending push).** Branch `feat/standby-offers` (stacked on `feat/discord-card-app-answers`). Migration `20261026120000_standby_offers.sql` must be pushed before merging. Players with no place in a published raid can go on standby from My raids, with a preferred character and optionally only until 1 or 3 hours before the start, and leave standby without it counting as a missed raid. In the Planner's Responses tab, officers see who is on standby, offer a published place (players who can't make it are listed first) to one or more players with a deadline, and withdraw offers. The offered player sees the place, the deadline and the time left, and accepts or declines. The first acceptance holds the place; the server locks the place's offers, re-checks the published roster, the character and any overlapping published raid, closes the other offers as “someone else accepted”, takes the player off standby, and records the acceptance as their confirmation for that assignment. Accepting never changes the published roster: officers press “Put … in the draft” (the same swap as Find a replacement), review and publish. Standby players are also listed first in Find a replacement. Checks: `npm run check` (639 unit tests) pass; new pgTAP `standby_offers.test.sql` (22 checks) runs in CI's Supabase job. Limits: online guilds only; no Discord notice of offers (by decision); no notification beyond the app, so players see an offer when they open My raids.
+
+**Handoff — October 18, 2026; Claude; ONB stage 5; Ready for review.** Branch `feat/onboarding-calendar-offer`. Migrations for M03, M07 and M11 were pushed to the hosted database on October 18 and #43–#48 merged. Stage 5: the calendar link is now offered when there is a raid to follow. A player with a published assignment sees “Follow your raids in your calendar” beside it, which jumps to the calendar panel; before a first assignment the panel sits behind a closed “Calendar link” disclosure, so an old link can still be turned off. Confirmation guidance beside the assignment was already in place from M03. Checks: `TZ=UTC npm run check`; Home unit tests cover both states. Next: M06.
