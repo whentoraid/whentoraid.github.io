@@ -87,4 +87,4 @@ grant execute on function public.flag_raid_record(uuid, date, text, text),
 
 -- Keep in step with the newest migration's timestamp (checked by src/lib/schema-version.test.js).
 create or replace function public.app_schema_version() returns text
-language sql stable security invoker set search_path = '' as $$ select '20261028120000'::text $$;
+language sql stable security invoker set search_path = '' as $$ select '20261031120000'::text $$;
