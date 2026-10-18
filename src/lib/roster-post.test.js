@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { rosterMessages, rosterImageModel } from '../../supabase/functions/_shared/roster-post.js'
+import {
+  briefingLines,
+  rosterMessages,
+  rosterImageModel,
+} from '../../supabase/functions/_shared/roster-post.js'
 
 const START = 1792000800000
 const ID = (n) => `1${String(n).padStart(17, '0')}`
@@ -162,5 +166,34 @@ describe('roster card', () => {
     expect(message.embeds[0].fields.some((field) => field.name.includes('Available as backup (1)'))).toBe(
       true,
     )
+  })
+})
+
+describe('raid-day briefing on the roster card', () => {
+  it('summarises the officer’s logistics under the start time', () => {
+    const [message] = rosterMessages(
+      roster({
+        briefing: {
+          assemblyMinutes: 15,
+          location: 'Stormwind gates',
+          voiceUrl: 'https://discord.gg/abc123',
+          contact: 'Sam',
+          notes: 'Bring *flasks*.',
+          weekNote: 'Late pull',
+        },
+      }),
+    )
+    const description = message.embeds[0].description
+    expect(description).toContain(`📍 Meet <t:${START / 1000 - 900}:t> (15 min early) · Stormwind gates`)
+    expect(description).toContain('🔊 [Voice chat (discord.gg)](https://discord.gg/abc123)')
+    expect(description).toContain('🙋 Problems? Contact Sam')
+    expect(description).toContain(String.raw`📝 Bring \*flasks\*`)
+    expect(description).toContain('📌 This week: Late pull')
+  })
+
+  it('leaves out an unsafe link and adds nothing without a briefing', () => {
+    expect(briefingLines({ voiceUrl: 'javascript:alert(1)' }, START)).toEqual([])
+    expect(briefingLines({ voiceUrl: 'https://x.test/a)(b' }, START)).toEqual([])
+    expect(rosterMessages(roster({ briefing: null }))[0].embeds[0].description).not.toContain('📍')
   })
 })

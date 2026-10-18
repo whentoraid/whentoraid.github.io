@@ -11,6 +11,7 @@
   import CompositionFields from '../components/CompositionFields.svelte'
   import RaidRulesEditor from '../components/RaidRulesEditor.svelte'
   import RaidScheduleEditor from '../components/RaidScheduleEditor.svelte'
+  import RaidBriefingEditor from '../components/RaidBriefingEditor.svelte'
   import SectionTabs from '../components/SectionTabs.svelte'
   import { getRaid } from '../lib/raids.js'
   import { app } from '../lib/app.svelte.js'
@@ -372,6 +373,7 @@
     {/key}
     <RaidRulesEditor />
     <RaidScheduleEditor />
+    <RaidBriefingEditor />
   </div>
 
   <div

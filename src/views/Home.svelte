@@ -8,6 +8,7 @@
   import ActionInbox from '../components/ActionInbox.svelte'
   import ReminderPreferences from '../components/ReminderPreferences.svelte'
   import RaidRecord from '../components/RaidRecord.svelte'
+  import RaidBriefing from '../components/RaidBriefing.svelte'
   import RecordCorrections from '../components/RecordCorrections.svelte'
   import { recordFlagsOnline } from '../lib/record-flags.svelte.js'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
@@ -97,6 +98,7 @@
         </div>
       </div>
       <p class="raid-time">{compactSessionLabel(next.session, viewerZone)}</p>
+      {#if online}<RaidBriefing item={next} {now} />{/if}
       <div class="assignment">
         <span class="eyebrow">YOUR CHARACTER</span>
         <p>
