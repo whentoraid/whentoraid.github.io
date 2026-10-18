@@ -10,10 +10,13 @@
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import { app } from '../lib/app.svelte.js'
   import { viewerZone } from '../lib/display.svelte.js'
-  import { getCheckin, memberById } from '../lib/model.js'
+  import { confirmAvailabilityTemplate, getCheckin, memberById } from '../lib/model.js'
+  import { templateConfirmedOn, templateNeedsReview } from '../lib/availability-template.js'
+  import { own } from '../lib/ids.js'
+  import { showToast } from '../lib/toast.svelte.js'
   import { personalRaids, availabilitySource, compactSessionLabel } from '../lib/personal-raids.js'
   import { weekStatus } from '../lib/raid-status.js'
-  import { mondayOf, todayIso } from '../lib/time.js'
+  import { formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
 
   let now = $state(Date.now())
   $effect(() => {
@@ -35,6 +38,14 @@
     app.data = { ...app.data, currentWeek: item.weekIso, currentRaidId: item.raidId }
     app.plannerIntent = 'published'
     app.view = 'planner'
+  }
+
+  const template = $derived(own(app.data.templates, memberId))
+  const reviewDue = $derived(templateNeedsReview(template, todayIso(app.data.guild.timezone, now)))
+
+  function confirmSchedule() {
+    app.data = confirmAvailabilityTemplate(app.data, memberId, now)
+    showToast('Thanks. Your usual schedule is confirmed.')
   }
 
   function checkIn() {
@@ -100,10 +111,25 @@
     <p>
       {!checkin.checkedIn
         ? 'Your officers are waiting for your times.'
-        : checkin.ranges.length
-          ? 'Your times are ready for planning. Review them if anything has changed.'
-          : 'You have let officers know you can’t make it this week.'}
+        : checkin.paused
+          ? 'Your usual schedule is paused, so you count as away this week.'
+          : checkin.ranges.length
+            ? 'Your times are ready for planning. Review them if anything has changed.'
+            : 'You have let officers know you can’t make it this week.'}
     </p>
+    {#if reviewDue}
+      <div class="schedule-review" role="group" aria-label="Review your usual schedule">
+        <p>
+          Is your usual schedule still right? You last confirmed it {formatMonthDay(
+            templateConfirmedOn(template),
+          )}.
+        </p>
+        <div class="buttons">
+          <button class="primary" onclick={confirmSchedule}>Still right</button>
+          <button onclick={checkIn}>Review it</button>
+        </div>
+      </div>
+    {/if}
     <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} />
     <button class:primary={!checkin.checkedIn} onclick={checkIn}>Update my availability</button>
     <InlineSaveStatus />
@@ -152,6 +178,15 @@
 {/if}
 
 <style>
+  .schedule-review {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    border-left: 2px solid var(--gold);
+    background: #ffffff05;
+  }
+  .schedule-review p {
+    margin: 0 0 0.5rem;
+  }
   .home-priorities {
     display: grid;
     grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);

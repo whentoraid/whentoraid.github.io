@@ -7,10 +7,10 @@
   import WeekBar from '../components/WeekBar.svelte'
   import RaidSelector from '../components/RaidSelector.svelte'
   import SectionTabs from '../components/SectionTabs.svelte'
+  import UsualSchedule from '../components/UsualSchedule.svelte'
   import { getRaid } from '../lib/raids.js'
   import { app } from '../lib/app.svelte.js'
-  import { templateFor } from '../lib/availability-template.js'
-  import { changesClosedWeek, checkinsClosed, deadlineUtc, formatDeadline } from '../lib/checkins.js'
+  import { checkinsClosed, deadlineUtc, formatDeadline } from '../lib/checkins.js'
   import { displayZone } from '../lib/display.svelte.js'
   import { own } from '../lib/ids.js'
   import { stableJson } from '../lib/remote/rows.js'
@@ -39,9 +39,6 @@
     setCharacterOffered,
     setRaidParticipation,
     upcomingAbsences,
-    saveAvailabilityTemplate,
-    removeAvailabilityTemplate,
-    useAvailabilityTemplate,
   } from '../lib/model.js'
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
 
@@ -81,10 +78,6 @@
   const offeringAny = $derived(isOfferingAny(app.data, weekIso, memberId))
   const raid = $derived(getRaid(app.data))
   const participating = $derived(checkin.raids?.[raid.id]?.participating !== false)
-  const template = $derived(own(app.data.templates, memberId))
-  const usingTemplate = $derived(
-    templateFor(template, weekIso) !== null && !own(app.data.weeks[weekIso]?.checkins, memberId),
-  )
 
   /** Re-checked every minute, so the page locks when the deadline passes while it is open. */
   const CLOCK_TICK_MS = 60_000
@@ -97,31 +90,6 @@
   const closed = $derived(!canManage() && checkinsClosed(app.data, weekIso, now))
   const deadline = $derived(deadlineUtc(app.data, weekIso))
   const deadlineAhead = $derived(deadline !== null && now < deadline)
-
-  function changeTemplate(action) {
-    const previous = app.data
-    const next =
-      action === 'save'
-        ? saveAvailabilityTemplate(app.data, weekIso, memberId)
-        : action === 'remove'
-          ? removeAvailabilityTemplate(app.data, memberId)
-          : useAvailabilityTemplate(app.data, weekIso, memberId)
-    if (!canManage() && changesClosedWeek(previous, next, memberId)) {
-      showToast(
-        'This week’s check-ins have closed and your usual schedule fills them in. Change it from next week instead.',
-      )
-      return
-    }
-    app.data = next
-    offerUndo(
-      action === 'save'
-        ? 'Usual schedule saved for new weeks.'
-        : action === 'remove'
-          ? 'Usual schedule removed. Saved weeks are unchanged.'
-          : 'Usual schedule applied to this week.',
-      previous,
-    )
-  }
 
   const status = $derived.by(() => {
     if (!checkin.checkedIn) return 'Not checked in yet · mark your times and they save automatically'
@@ -315,25 +283,7 @@
       <InlineSaveStatus />
     </div>
     <span class="badge">{availabilitySource(app.data, weekIso, memberId)}</span>
-    <details class="usual-schedule">
-      <summary>Usual schedule</summary>
-      <div class="buttons">
-        <button onclick={() => changeTemplate('save')}>Save as usual schedule</button>
-        {#if template}
-          <button disabled={templateFor(template, weekIso) === null} onclick={() => changeTemplate('use')}
-            >Use usual schedule this week</button
-          >
-          <button onclick={() => changeTemplate('remove')}>Remove usual schedule</button>
-        {/if}
-      </div>
-      {#if template}
-        <p class="note">
-          Usual schedule saved in {template.timezone}, from week of {template.fromWeek}. {usingTemplate
-            ? 'This week uses it automatically.'
-            : 'Saved weekly check-ins override it.'}
-        </p>
-      {/if}
-    </details>
+    <UsualSchedule {memberId} {weekIso} />
     <details class="usual-schedule">
       <summary>Away dates{absences.length ? ` (${absences.length})` : ''}</summary>
       <p class="note">
