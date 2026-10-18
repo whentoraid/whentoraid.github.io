@@ -4,7 +4,7 @@ import { addInterval, removeInterval } from './intervals.js'
 import { addDays, daysBetween, isIsoDate, mondayOf, todayIso } from './time.js'
 import { slotWindow } from './grid.js'
 import { getRaid, validateRaid } from './raids.js'
-import { templateFor, templateFromRanges, templateRanges } from './availability-template.js'
+import { governing, pausedIn, templateFromRanges, templateRanges } from './availability-template.js'
 import { own } from './ids.js'
 
 /**
@@ -68,8 +68,13 @@ export function getWeek(state, weekIso) {
 export function getRawCheckin(state, weekIso, memberId) {
   const saved = own(getWeek(state, weekIso).checkins, memberId)
   if (saved) return saved
-  const ranges = templateRanges(own(state.templates, memberId), weekIso)
-  return ranges === null ? emptyCheckin() : { checkedIn: true, ranges, declined: [] }
+  const template = own(state.templates, memberId)
+  const ranges = templateRanges(template, weekIso)
+  if (ranges !== null) return { checkedIn: true, ranges, declined: [] }
+  // A paused usual schedule answers the week as away: no times, nothing to remind about.
+  return pausedIn(template, weekIso)
+    ? { checkedIn: true, ranges: [], declined: [], paused: true }
+    : emptyCheckin()
 }
 
 /** The member's check-in with absent days removed from every kind of availability. */
@@ -188,9 +193,11 @@ export function pruneOldWeeks(state, thisWeekIso, keepWeeks = CHECKIN_HISTORY_WE
 
 /** Edits apply to the saved check-in, so absences never erase the times underneath them. */
 function withCheckin(state, weekIso, memberId, update) {
+  // `paused` only describes a week filled in by a paused schedule; a saved check-in is its own answer.
+  const { paused: _paused, ...current } = getRawCheckin(state, weekIso, memberId)
   return updateWeek(state, weekIso, (week) => ({
     ...week,
-    checkins: { ...week.checkins, [memberId]: update(getRawCheckin(state, weekIso, memberId)) },
+    checkins: { ...week.checkins, [memberId]: update(current) },
   }))
 }
 
@@ -344,7 +351,8 @@ export function setRaidParticipation(state, weekIso, memberId, raidId, participa
 
 /**
  * Save the week's times as the usual schedule from that week on. The schedule it replaces stays as
- * `previous` for the week before, so a week whose check-ins already closed keeps its times.
+ * `previous` for the week before, so a week whose check-ins already closed keeps its times. Saving
+ * confirms the schedule today and starts it unpaused; the member's review interval carries over.
  */
 export function saveAvailabilityTemplate(state, weekIso, memberId, now = Date.now()) {
   const checkin = getCheckin(state, weekIso, memberId)
@@ -352,13 +360,93 @@ export function saveAvailabilityTemplate(state, weekIso, memberId, now = Date.no
   // Only one older schedule is kept. When saving for a later week, keep the one covering this
   // week, since this week's check-ins may already be closed; weeks in between then use it too.
   const thisWeek = mondayOf(todayIso(state.guild.timezone, now))
-  const weekBefore = templateFor(existing, addDays(weekIso, -7))
-  const previous = weekIso > thisWeek ? (templateFor(existing, thisWeek) ?? weekBefore) : weekBefore
-  const template = templateFromRanges(weekIso, checkin.ranges, state.guild)
-  return {
-    ...state,
-    templates: { ...state.templates, [memberId]: previous ? { ...template, previous } : template },
+  const weekBefore = governing(existing, addDays(weekIso, -7))
+  const previous = weekIso > thisWeek ? (governing(existing, thisWeek) ?? weekBefore) : weekBefore
+  const template = {
+    ...templateFromRanges(weekIso, checkin.ranges, state.guild),
+    confirmedAt: todayIso(state.guild.timezone, now),
+    ...(existing?.reviewWeeks ? { reviewWeeks: existing.reviewWeeks } : {}),
   }
+  return withTemplate(state, memberId, previous ? { ...template, previous } : template)
+}
+
+function withTemplate(state, memberId, template) {
+  return { ...state, templates: { ...state.templates, [memberId]: template } }
+}
+
+/** Apply `change` to the template and to the schedule it replaced, so every week reads the same way. */
+function changeBoth(template, change) {
+  const { previous, ...current } = template
+  return { ...change(current), ...(previous ? { previous: change(previous) } : {}) }
+}
+
+const withoutPause = ({ pausedFrom: _from, pausedUntil: _until, ...rest }) => rest
+
+/**
+ * Pause the usual schedule from `fromWeek` until `untilWeek` (when it resumes), or until the member
+ * resumes it. Paused weeks count as away; the schedule's times stay saved for afterwards.
+ * @returns {{ state: AppState, error?: string }}
+ */
+export function pauseAvailabilityTemplate(state, memberId, fromWeek, untilWeek = null) {
+  const template = own(state.templates, memberId)
+  if (!template) return { state, error: 'Save a usual schedule first.' }
+  if (!isIsoDate(fromWeek) || (untilWeek !== null && !isIsoDate(untilWeek)))
+    return { state, error: 'Choose valid weeks.' }
+  const from = mondayOf(fromWeek)
+  const until = untilWeek === null ? null : mondayOf(untilWeek)
+  if (until !== null && until <= from) return { state, error: 'Resume after the pause starts.' }
+  const pause = (schedule) => ({
+    ...withoutPause(schedule),
+    pausedFrom: from,
+    ...(until ? { pausedUntil: until } : {}),
+  })
+  return { state: withTemplate(state, memberId, changeBoth(template, pause)) }
+}
+
+/** Resume a paused usual schedule from `weekIso`. Weeks before it stay as they were. */
+export function resumeAvailabilityTemplate(state, memberId, weekIso) {
+  const template = own(state.templates, memberId)
+  if (!template?.pausedFrom) return state
+  const week = mondayOf(weekIso)
+  const resume = (schedule) =>
+    !schedule.pausedFrom || schedule.pausedFrom >= week
+      ? withoutPause(schedule)
+      : { ...schedule, pausedUntil: week }
+  return withTemplate(state, memberId, changeBoth(template, resume))
+}
+
+/**
+ * Let the usual schedule fill in weeks only through `endWeek`, or without end when null. Weeks after
+ * it are unanswered again, not unavailable, so the member is asked as usual.
+ * @returns {{ state: AppState, error?: string }}
+ */
+export function setAvailabilityTemplateEnd(state, memberId, endWeek) {
+  const template = own(state.templates, memberId)
+  if (!template) return { state, error: 'Save a usual schedule first.' }
+  if (endWeek === null) {
+    const { endWeek: _end, ...rest } = template
+    return { state: withTemplate(state, memberId, rest) }
+  }
+  if (!isIsoDate(endWeek)) return { state, error: 'Choose a valid week.' }
+  const last = mondayOf(endWeek)
+  if (last < template.fromWeek) return { state, error: 'Choose a week from when the schedule starts.' }
+  return { state: withTemplate(state, memberId, { ...template, endWeek: last }) }
+}
+
+/** The member says their usual schedule still holds, as of today in the guild. */
+export function confirmAvailabilityTemplate(state, memberId, now = Date.now()) {
+  const template = own(state.templates, memberId)
+  if (!template) return state
+  return withTemplate(state, memberId, { ...template, confirmedAt: todayIso(state.guild.timezone, now) })
+}
+
+/** Weeks between reviews of the member's usual schedule that the member chose. */
+export const REVIEW_WEEK_OPTIONS = [4, 8, 12, 26]
+
+export function setAvailabilityTemplateReview(state, memberId, weeks) {
+  const template = own(state.templates, memberId)
+  if (!template || !REVIEW_WEEK_OPTIONS.includes(weeks)) return state
+  return withTemplate(state, memberId, { ...template, reviewWeeks: weeks })
 }
 
 export function removeAvailabilityTemplate(state, memberId) {

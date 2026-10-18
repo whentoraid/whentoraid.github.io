@@ -1,7 +1,17 @@
 import { describe, expect, test } from 'vitest'
 import { templateFor } from './availability-template.js'
-import { changesClosedWeek, checkinsClosed } from './checkins.js'
-import { getCheckin, markUnavailable, removeAvailabilityTemplate, saveAvailabilityTemplate } from './model.js'
+import { changesClosedWeek, checkinsClosed, waitingOn } from './checkins.js'
+import {
+  confirmAvailabilityTemplate,
+  getCheckin,
+  markUnavailable,
+  pauseAvailabilityTemplate,
+  removeAvailabilityTemplate,
+  resumeAvailabilityTemplate,
+  saveAvailabilityTemplate,
+  setAvailabilityTemplateEnd,
+  setAvailabilityTemplateReview,
+} from './model.js'
 import { createSeedState, SEED_WEEK } from './seed.js'
 import { addDays } from './time.js'
 
@@ -29,7 +39,9 @@ describe('closed check-in weeks', () => {
       member,
       AFTER_DEADLINE,
     )
-    expect(after.templates[member].previous).toEqual(templateFor(before.templates[member], WEEK))
+    expect(templateFor(after.templates[member].previous, WEEK)).toEqual(
+      templateFor(before.templates[member], WEEK),
+    )
     expect(getCheckin(after, WEEK, member)).toEqual(getCheckin(before, WEEK, member))
     expect(getCheckin(after, addDays(WEEK, 14), member).ranges).toEqual([])
     expect(changesClosedWeek(before, after, member, AFTER_DEADLINE)).toBe(false)
@@ -79,5 +91,64 @@ describe('closed check-in weeks', () => {
     expect(templateFor(template, '2026-10-19')).toEqual(current)
     expect(templateFor(template, '2026-10-05')).toEqual(previous)
     expect(templateFor(template, '2026-09-21')).toBeNull()
+  })
+})
+
+describe('pausing, ending and reviewing a usual schedule', () => {
+  const saved = () => saveAvailabilityTemplate(createSeedState(), SEED_WEEK, member, BEFORE_DEADLINE)
+  const LATER = addDays(WEEK, 14)
+
+  test('saving confirms the schedule today in the guild', () => {
+    expect(saved().templates[member].confirmedAt).toBe('2026-10-07')
+  })
+
+  test('a paused week is answered as away and nobody waits on it; resuming brings the times back', () => {
+    const base = saved()
+    const times = getCheckin(base, LATER, member).ranges
+    const { state } = pauseAvailabilityTemplate(base, member, WEEK)
+    expect(getCheckin(state, LATER, member)).toMatchObject({ checkedIn: true, ranges: [], paused: true })
+    expect(waitingOn(state, LATER).some((m) => m.id === member)).toBe(false)
+    const resumed = resumeAvailabilityTemplate(state, member, LATER)
+    expect(getCheckin(resumed, WEEK, member).paused).toBe(true)
+    expect(getCheckin(resumed, LATER, member).ranges).toEqual(times)
+  })
+
+  test('a saved check-in for a paused week still wins', () => {
+    const { state } = pauseAvailabilityTemplate(saved(), member, WEEK)
+    const answered = markUnavailable(state, WEEK, member)
+    expect(getCheckin(answered, WEEK, member).paused).toBeUndefined()
+  })
+
+  test('pausing a week whose check-ins closed is caught, like any change to it', () => {
+    const before = saveAvailabilityTemplate(createSeedState(), SEED_WEEK, member, BEFORE_DEADLINE)
+    const thisWeekPause = pauseAvailabilityTemplate(before, member, WEEK).state
+    expect(changesClosedWeek(before, thisWeekPause, member, AFTER_DEADLINE)).toBe(true)
+    const nextWeekPause = pauseAvailabilityTemplate(before, member, addDays(WEEK, 7)).state
+    expect(changesClosedWeek(before, nextWeekPause, member, AFTER_DEADLINE)).toBe(false)
+    const reviewed = confirmAvailabilityTemplate(before, member, AFTER_DEADLINE)
+    expect(changesClosedWeek(before, reviewed, member, AFTER_DEADLINE)).toBe(false)
+  })
+
+  test('after its last week the member is asked again rather than marked unavailable', () => {
+    const { state } = setAvailabilityTemplateEnd(saved(), member, WEEK)
+    expect(getCheckin(state, WEEK, member).checkedIn).toBe(true)
+    expect(getCheckin(state, LATER, member).checkedIn).toBe(false)
+    expect(waitingOn(state, LATER).some((m) => m.id === member)).toBe(true)
+    expect(setAvailabilityTemplateEnd(state, member, null).state.templates[member].endWeek).toBeUndefined()
+    expect(setAvailabilityTemplateEnd(state, member, addDays(SEED_WEEK, -7)).error).toMatch(/from when/)
+  })
+
+  test('invalid pauses are refused, and the review interval is the member’s choice', () => {
+    expect(pauseAvailabilityTemplate(createSeedState(), member, WEEK).error).toMatch(/Save a usual schedule/)
+    expect(pauseAvailabilityTemplate(saved(), member, WEEK, WEEK).error).toMatch(/Resume after/)
+    expect(setAvailabilityTemplateReview(saved(), member, 4).templates[member].reviewWeeks).toBe(4)
+    expect(setAvailabilityTemplateReview(saved(), member, 5).templates[member].reviewWeeks).toBeUndefined()
+    const resaved = saveAvailabilityTemplate(
+      setAvailabilityTemplateReview(saved(), member, 12),
+      WEEK,
+      member,
+      BEFORE_DEADLINE,
+    )
+    expect(resaved.templates[member].reviewWeeks).toBe(12)
   })
 })

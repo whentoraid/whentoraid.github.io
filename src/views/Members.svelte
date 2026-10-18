@@ -6,7 +6,8 @@
   import { app } from '../lib/app.svelte.js'
   import { attendanceRecord, formatRecord, RECORD_LOOKBACK_WEEKS } from '../lib/attendance.js'
   import { CLASS_COLORS, ROLES } from '../lib/constants.js'
-  import { availabilitySource } from '../lib/personal-raids.js'
+  import { availabilitySource, scheduleFreshness } from '../lib/personal-raids.js'
+  import { todayIso } from '../lib/time.js'
   import { setCurrentMember } from '../lib/members.js'
   import { charactersOf, getCheckin, memberById, setCurrentWeek, tracksAttendance } from '../lib/model.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
@@ -32,6 +33,7 @@
         alts: Math.max(0, mine.length - 1),
         status: weekStatus(getCheckin(app.data, weekIso, member.id)),
         source: availabilitySource(app.data, weekIso, member.id),
+        freshness: scheduleFreshness(app.data, weekIso, member.id, todayIso(app.data.guild.timezone)),
         record: formatRecord(attendanceRecord(app.data, weekIso, member.id)),
       }
     }),
@@ -157,7 +159,7 @@
         </tr>
       </thead>
       <tbody>
-        {#each filteredRows as { member, main, alts, status, source, record } (member.id)}
+        {#each filteredRows as { member, main, alts, status, source, freshness, record } (member.id)}
           {@const isMe = member.id === app.data.currentMemberId}
           <tr>
             <th scope="row">
@@ -178,7 +180,9 @@
               {/if}
             </td>
             <td data-label="Check-in"
-              ><span class={status.tone}>{status.label}</span><small>{source}</small></td
+              ><span class={status.tone}>{status.label}</span><small
+                >{source}{freshness ? ` · ${freshness}` : ''}</small
+              ></td
             >
             {#if showAttendance}<td data-label="Attendance">{record ?? '—'}</td>{/if}
             {#if canManage()}

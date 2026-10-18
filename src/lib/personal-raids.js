@@ -1,7 +1,14 @@
 import { SLOT_MINUTES } from './constants.js'
-import { templateFor } from './availability-template.js'
+import {
+  pausedIn,
+  templateAnswers,
+  templateConfirmedOn,
+  templateFor,
+  templateNeedsReview,
+} from './availability-template.js'
 import { own } from './ids.js'
 import { charactersOf } from './model.js'
+import { formatMonthDay } from './time.js'
 
 /** Only a published snapshot is a promise to players; draft edits never change this list. */
 export function personalRaids(state, memberId, now = Date.now()) {
@@ -35,8 +42,22 @@ export function personalRaids(state, memberId, now = Date.now()) {
 
 export function availabilitySource(state, weekIso, memberId) {
   if (own(state.weeks[weekIso]?.checkins, memberId)?.checkedIn) return 'Updated this week'
-  if (templateFor(own(state.templates, memberId), weekIso)) return 'Using usual schedule'
+  const template = own(state.templates, memberId)
+  if (templateFor(template, weekIso)) return 'Using usual schedule'
+  if (pausedIn(template, weekIso)) return 'Usual schedule paused'
   return 'No response yet'
+}
+
+/**
+ * How fresh an inherited answer is, for officers: when the member last confirmed the usual schedule
+ * filling in this week, and whether that review is overdue. Null when the week is not inherited.
+ */
+export function scheduleFreshness(state, weekIso, memberId, today) {
+  if (own(state.weeks[weekIso]?.checkins, memberId)) return null
+  const template = own(state.templates, memberId)
+  if (!templateFor(template, weekIso)) return null
+  const confirmed = `confirmed ${formatMonthDay(templateConfirmedOn(template))}`
+  return templateNeedsReview(template, today) ? `${confirmed} · review due` : confirmed
 }
 
 /**
@@ -44,7 +65,7 @@ export function availabilitySource(state, weekIso, memberId) {
  * A missing answer for this week is a weekly nudge on Home, not a reason to restart setup.
  */
 export function hasGivenAvailability(state, weekIso, memberId) {
-  if (templateFor(own(state.templates, memberId), weekIso)) return true
+  if (templateAnswers(own(state.templates, memberId), weekIso)) return true
   return Object.values(state.weeks).some((week) => own(week.checkins, memberId)?.checkedIn)
 }
 

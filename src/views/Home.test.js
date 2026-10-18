@@ -4,6 +4,7 @@ import { app } from '../lib/app.svelte.js'
 import { createSeedState, SEED_WEEK } from '../lib/seed.js'
 import Home from './Home.svelte'
 import { announcedRaids, raidAnswer } from '../lib/raid-answers.js'
+import { templateFromRanges } from '../lib/availability-template.js'
 import { localRaidResponses, saveLocalRaidResponse } from '../lib/raid-services.js'
 
 beforeEach(() => {
@@ -130,4 +131,16 @@ test('returning from the planner brings the raid the officer left from back into
   const row = dashboard.querySelector(`[data-row="${SEED_WEEK}/raid-20"]`)
   expect(row.contains(document.activeElement)).toBe(true)
   expect(app.dashboardFocus).toBeNull()
+})
+
+test('a usual schedule due for review is confirmed from Home in one tap', async () => {
+  app.data.templates = {
+    m0: { ...templateFromRanges(SEED_WEEK, [], app.data.guild), confirmedAt: '2026-07-01' },
+  }
+  render(Home)
+  const review = screen.getByRole('group', { name: 'Review your usual schedule' })
+  expect(within(review).getByText(/You last confirmed it Jul 1/)).toBeTruthy()
+  await fireEvent.click(within(review).getByRole('button', { name: 'Still right' }))
+  expect(app.data.templates.m0.confirmedAt).toBe('2026-09-28')
+  expect(screen.queryByRole('group', { name: 'Review your usual schedule' })).toBeNull()
 })

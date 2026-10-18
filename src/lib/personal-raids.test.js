@@ -7,7 +7,12 @@ import {
   onboardingSteps,
 } from './personal-raids.js'
 import { createSeedState, SEED_WEEK } from './seed.js'
-import { markUnavailable, saveAvailabilityTemplate, setCurrentWeek } from './model.js'
+import {
+  markUnavailable,
+  pauseAvailabilityTemplate,
+  saveAvailabilityTemplate,
+  setCurrentWeek,
+} from './model.js'
 
 function withPlans() {
   const state = createSeedState()
@@ -45,6 +50,13 @@ describe('personal raid dashboard', () => {
     const state = saveAvailabilityTemplate(createSeedState(), SEED_WEEK, 'm0', 0)
     const next = setCurrentWeek(state, '2026-10-05')
     expect(availabilitySource(next, next.currentWeek, 'm0')).toBe('Using usual schedule')
+    expect(
+      availabilitySource(
+        pauseAvailabilityTemplate(next, 'm0', next.currentWeek).state,
+        next.currentWeek,
+        'm0',
+      ),
+    ).toBe('Usual schedule paused')
     expect(availabilitySource(next, next.currentWeek, 'm1')).toBe('No response yet')
     expect(availabilitySource(markUnavailable(next, next.currentWeek, 'm0'), next.currentWeek, 'm0')).toBe(
       'Updated this week',
