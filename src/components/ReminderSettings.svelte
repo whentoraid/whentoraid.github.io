@@ -1,4 +1,5 @@
 <script>
+  import { discordChannel } from '../lib/discord-channel.svelte.js'
   import { getReminderSettings, setReminderSettings } from '../lib/raid-services.js'
   import { supabase } from '../lib/remote/client.js'
   import { remote } from '../lib/remote/sync.svelte.js'
@@ -73,8 +74,8 @@
   }
 </script>
 
-<h2>Discord reminders</h2>
-<p>Post a nudge in your Discord channel that names only the players who still need to act.</p>
+<h2>Discord sign-ups and reminders</h2>
+<p>Let players answer upcoming raids in Discord, and choose which reminders the channel should send.</p>
 {#if error}
   <p class="warning" role="alert">Reminder settings could not be loaded: {error}</p>
   <button onclick={() => (retry += 1)}>Retry reminder settings</button>
@@ -83,6 +84,31 @@
 {:else}
   <form onsubmit={save}>
     <fieldset class="plain" disabled={busy}>
+      <label class="checkbox-row">
+        <input
+          type="checkbox"
+          bind:checked={settings.signup_enabled}
+          disabled={!discordChannel.channelId && !settings.signup_enabled}
+        />
+        Post sign-ups for upcoming raids
+      </label>
+      {#if !discordChannel.channelId}
+        <p class="note">Choose a WhenToRaid bot channel above to post interactive sign-ups.</p>
+      {/if}
+      {#if settings.signup_enabled}
+        <label class="field">
+          Days before the raid
+          <select bind:value={settings.signup_lead_days}>
+            {#each SIGNUP_LEAD_DAYS as days (days)}<option value={days}
+                >{days === 1 ? '1 day' : `${days} days`}</option
+              >{/each}
+          </select>
+        </label>
+        <p class="note">
+          Players press Sign up, Late, Tentative or Absent on the post, and their answer fills in their
+          availability for that raid. Needs the WhenToRaid bot channel. Raids already published are skipped.
+        </p>
+      {/if}
       <label class="checkbox-row">
         <input type="checkbox" bind:checked={settings.checkin_enabled} />
         Remind players who haven’t checked in this week
@@ -110,24 +136,6 @@
           Only players who haven’t confirmed yet
         </label>
         <p class="note">Players who said they can’t make it are never reminded.</p>
-      {/if}
-      <label class="checkbox-row">
-        <input type="checkbox" bind:checked={settings.signup_enabled} />
-        Post sign-ups for upcoming raids
-      </label>
-      {#if settings.signup_enabled}
-        <label class="field">
-          Days before the raid
-          <select bind:value={settings.signup_lead_days}>
-            {#each SIGNUP_LEAD_DAYS as days (days)}<option value={days}
-                >{days === 1 ? '1 day' : `${days} days`}</option
-              >{/each}
-          </select>
-        </label>
-        <p class="note">
-          Players press Sign up, Late, Tentative or Absent on the post, and their answer fills in their
-          availability for that raid. Needs the WhenToRaid bot channel. Raids already published are skipped.
-        </p>
       {/if}
       <div class="buttons">
         <button class="primary" disabled={busy || !changed}>Save reminders</button>

@@ -63,6 +63,13 @@ export async function startDiscordConnect(client, guildId, { storage = session()
 /** Whether this tab just came back from Discord's "add to server" screen. */
 export const hasDiscordReturn = (storage = session()) => read(storage, RETURN_KEY) !== null
 
+/** Reopen the guild that started this bot connection after the Discord redirect. */
+export function pendingDiscordConnectGuildId(storage = session()) {
+  if (!read(storage, RETURN_KEY)) return null
+  const guildId = read(storage, START_KEY)?.guildId
+  return typeof guildId === 'string' && /^[0-9a-f-]{36}$/i.test(guildId) ? guildId : null
+}
+
 /**
  * Finish a connection this tab started: verify the returned state, then let the server confirm with
  * Discord which server the bot joined. Returns null when there is nothing to finish.
@@ -72,14 +79,29 @@ export async function finishDiscordConnect(client, guildId, { storage = session(
   const returned = read(storage, RETURN_KEY)
   if (!returned) return null
   const started = read(storage, START_KEY)
+  if (!started || started.state !== returned.state) {
+    forget(storage, RETURN_KEY)
+    forget(storage, START_KEY)
+    throw new Error('That Discord connection could not be verified. Add the bot again.')
+  }
+  if (started.guildId !== guildId)
+    throw new Error(
+      'This Discord connection belongs to another guild. Open that guild to finish connecting it.',
+    )
+  if (returned.error || !returned.code) {
+    forget(storage, RETURN_KEY)
+    forget(storage, START_KEY)
+    throw new Error('The bot was not added to a Discord server.')
+  }
+  const linked = await invoke(client, {
+    action: 'link',
+    guildId,
+    code: returned.code,
+    redirectUri: connectRedirectUri(),
+  })
   forget(storage, RETURN_KEY)
   forget(storage, START_KEY)
-  if (!started || started.state !== returned.state)
-    throw new Error('That Discord connection could not be verified. Add the bot again.')
-  if (started.guildId !== guildId)
-    throw new Error('That Discord connection was for another guild. Open it and add the bot again.')
-  if (returned.error || !returned.code) throw new Error('The bot was not added to a Discord server.')
-  return invoke(client, { action: 'link', guildId, code: returned.code, redirectUri: connectRedirectUri() })
+  return linked
 }
 
 /**
@@ -88,6 +110,11 @@ export async function finishDiscordConnect(client, guildId, { storage = session(
  */
 export async function listDiscordChannels(client, guildId) {
   return (await invoke(client, { action: 'channels', guildId })).channels ?? []
+}
+
+/** Officer role choices from the verified connected Discord server. */
+export async function listDiscordRoles(client, guildId) {
+  return (await invoke(client, { action: 'roles', guildId })).roles ?? []
 }
 
 /** Enable or update guild-scoped slash commands in the verified connected server. */

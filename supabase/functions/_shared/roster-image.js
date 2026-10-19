@@ -79,14 +79,20 @@ export async function renderRosterImage(model) {
               : null,
             h(
               'div',
-              {
-                style: {
-                  display: 'flex',
-                  color: colors[member.color] ?? colors.default,
-                  fontWeight: member.color === 'default' ? 500 : 700,
+              { style: { display: 'flex', alignItems: 'baseline' } },
+              h(
+                'span',
+                {
+                  style: {
+                    color: colors[member.color] ?? colors.default,
+                    fontWeight: member.color === 'default' ? 500 : 700,
+                  },
                 },
-              },
-              member.text,
+                member.name ?? member.text,
+              ),
+              member.detail
+                ? h('span', { style: { color: colors.default, fontWeight: 500 } }, member.detail)
+                : null,
             ),
           ),
         ),

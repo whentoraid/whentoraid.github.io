@@ -13,6 +13,7 @@ import { isLocalBackend, supabase } from './client.js'
 import { diffRows, mergeRows, newGuildPayload, rowsToState, stateToRows, TABLES } from './rows.js'
 import { APPLICABLE, unsavedChanges, withoutChange } from './recovery.js'
 import { viewerZone } from '../display.svelte.js'
+import { pendingDiscordConnectGuildId } from '../discord-connect.js'
 
 /**
  * Online guilds. While a guild is open, `app.data` still holds the whole guild and every change
@@ -37,6 +38,9 @@ export const remote = $state({
   signedIn: false,
   /** The signed-in player's Discord user ID, as verified by Supabase Auth. */
   discordId: null,
+  /** A Discord membership check can be retried without leaving the page. */
+  joinError: null,
+  joining: false,
   /** @type {{ id: string, name: string }[]} */
   guilds: [],
   /** The open online guild, or null in browser-only mode. */
@@ -375,6 +379,7 @@ function sinceWeek() {
 
 /** A roster link opened before signing in, kept for the sign-in round trip. */
 const PENDING_LINK_KEY = 'whentoraid-pending-link'
+const INVITE_KEY = 'whentoraid-invite'
 /** An abandoned sign-in must not send a later one to an old link. */
 const PENDING_LINK_MS = 10 * 60_000
 
@@ -385,6 +390,15 @@ function takePendingLink() {
     return pending && Date.now() - pending.at < PENDING_LINK_MS ? pending : null
   } catch {
     return null
+  }
+}
+
+/** A personal invite must claim its existing profile before server auto-join can create one. */
+function hasPendingInvite() {
+  try {
+    return /^[a-f0-9]{32}$/i.test(sessionStorage.getItem(INVITE_KEY) ?? '')
+  } catch {
+    return false
   }
 }
 
@@ -445,38 +459,51 @@ async function onSession(session, generation) {
   closeGuild(Boolean(userId))
   sessionUserId = userId
   remote.signedIn = Boolean(userId)
-  Object.assign(remote, { discordId: null, guilds: [], ready: !userId })
+  Object.assign(remote, { discordId: null, guilds: [], joinError: null, joining: false, ready: !userId })
   if (!userId) return
   cleanAuthParams()
   try {
     const discordId = await myDiscordId(supabase)
     if (generation !== sessionGeneration) return
     remote.discordId = discordId
-    // Joining from Discord runs beside the guild list; only a player with no guild yet waits for it.
-    const joining = joinFromDiscord(supabase).then(
+    // Joining from Discord runs beside the guild list. A player pinned to the old online demo
+    // waits too, so their newly connected real guild can become the default.
+    const joining = (hasPendingInvite() ? Promise.resolve([]) : joinFromDiscord(supabase)).then(
       (ids) => ({ ids }),
       (error) => ({ ids: [], error }),
     )
     let guilds = await listGuilds(supabase)
     if (generation !== sessionGeneration) return
     let joinedNow = []
-    if (guilds.length) void showJoinedGuilds(joining, generation)
+    if (guilds.length && !(guilds.length === 1 && isDemoGuild(guilds[0])))
+      void showJoinedGuilds(joining, generation)
     else {
       const joined = await joining
       if (generation !== sessionGeneration) return
-      if (joined.error) showToast(joined.error.message)
+      if (joined.error) remote.joinError = joined.error.message
       if (joined.ids.length) guilds = await listGuilds(supabase)
       if (generation !== sessionGeneration) return
       joinedNow = joined.ids
     }
     remote.guilds = guilds
     const requested = takeRequestedGuild()
+    const connecting = pendingDiscordConnectGuildId()
     const member = (id) => guilds.some((g) => g.id === id)
     if (requested && !member(requested.guildId))
       showToast('That roster link is for a guild you have not joined. Ask an officer for an invite.')
-    // With nothing saved, a player in exactly one guild opens it, so a Discord newcomer lands inside.
-    const fallback = member(saved) ? saved : guilds.length === 1 ? guilds[0].id : null
-    const chosen = requested && member(requested.guildId) ? requested.guildId : fallback
+    // An old saved demo never keeps a player from their one real guild.
+    const realGuilds = guilds.filter((guild) => !isDemoGuild(guild))
+    const savedGuild = guilds.find((guild) => guild.id === saved)
+    const fallback =
+      savedGuild && !isDemoGuild(savedGuild)
+        ? saved
+        : realGuilds.length === 1
+          ? realGuilds[0].id
+          : guilds.length === 1
+            ? guilds[0].id
+            : null
+    const chosen =
+      requested && member(requested.guildId) ? requested.guildId : member(connecting) ? connecting : fallback
     if (chosen) {
       await openGuild(chosen, generation)
       if (generation !== sessionGeneration) return
@@ -490,19 +517,52 @@ async function onSession(session, generation) {
   }
 }
 
+function isDemoGuild(guild) {
+  return /\(demo\)$/i.test(guild?.name ?? '')
+}
+
 /**
  * A player who already has a guild does not wait for joining from Discord. A guild they just joined
  * is added to the list once it lands; a new officer role reaches the open guild through its revision
- * bump. A failed check only delays both until the next page load, so it is not shown.
+ * bump. A failed check stays visible so the player can retry it.
  */
 async function showJoinedGuilds(joining, generation) {
-  const { ids } = await joining
+  const { ids, error } = await joining
+  if (error && generation === sessionGeneration) remote.joinError = error.message
   if (!ids.some((id) => !remote.guilds.some((g) => g.id === id))) return
   try {
     const guilds = await listGuilds(supabase)
     if (generation === sessionGeneration) remote.guilds = guilds
   } catch {
     // The next page load lists it.
+  }
+}
+
+/** Try again after Discord or the bot comes back, then open a newly found single guild. */
+export async function retryDiscordJoin() {
+  if (!remote.signedIn || remote.joining || hasPendingInvite()) return
+  remote.joining = true
+  remote.joinError = null
+  try {
+    const ids = await joinFromDiscord(supabase)
+    const guilds = await listGuilds(supabase)
+    remote.guilds = guilds
+    const realGuilds = guilds.filter((guild) => !isDemoGuild(guild))
+    const current = guilds.find((guild) => guild.id === remote.guildId)
+    const chosen =
+      realGuilds.length === 1 && (!current || isDemoGuild(current))
+        ? realGuilds[0]
+        : !current && guilds.length === 1
+          ? guilds[0]
+          : null
+    if (chosen) {
+      await openGuild(chosen.id)
+      if (ids.includes(chosen.id)) welcomeNewMember(app.data.guild.name)
+    }
+  } catch (error) {
+    remote.joinError = error.message
+  } finally {
+    remote.joining = false
   }
 }
 
@@ -609,6 +669,7 @@ export async function openGuild(guildId, expectedGeneration = sessionGeneration)
   remote.status = 'saved'
   storeGuildId(guildId)
   app.data = state
+  app.showSetup = false
   follow(guildId)
   await showDraftForOpenGuild()
 }
@@ -634,7 +695,10 @@ export function closeGuild(preserveStoredGuild = false) {
   unsavedDraftKey = null
   reapplyRequested = null
   if (!preserveStoredGuild) storeGuildId(null)
-  if (wasOnline) app.data = loadState()
+  if (wasOnline) {
+    app.data = loadState()
+    app.showSetup = false
+  }
 }
 
 /**

@@ -171,6 +171,15 @@ export async function listChannels({ serverId, botToken, fetchFn = fetch }) {
     })
 }
 
+/** Roles the owner may choose for automatic officer access. */
+export async function listOfficerRoles({ serverId, botToken, fetchFn = fetch }) {
+  const roles = await discordGet(`/guilds/${serverId}/roles`, botToken, fetchFn)
+  return roles
+    .filter((role) => role.id !== serverId && !role.managed)
+    .sort((a, b) => (b.position ?? 0) - (a.position ?? 0))
+    .map((role) => ({ id: role.id, name: role.name }))
+}
+
 /** Refuse a bot channel outside the guild's connected server, before the bot posts there. */
 export async function checkChannelInServer({
   channelId,
@@ -239,12 +248,23 @@ export async function handleConnect(body, config) {
       p_server_id: server.id,
       p_server_name: server.name,
     })
-    return { serverId: server.id, serverName: server.name }
+    try {
+      await registerRaidCommand({ applicationId, serverId: server.id, botToken, fetchFn })
+      return { serverId: server.id, serverName: server.name, commandsReady: true }
+    } catch {
+      // Linking succeeded. The officer can retry command setup from Connections.
+      return { serverId: server.id, serverName: server.name, commandsReady: false }
+    }
   }
   if (action === 'channels') {
     const serverId = await linkedServer(guildId)
     if (!serverId) throw new ConnectError('Add WhenToRaid to your Discord server first.', 409)
     return { channels: await listChannels({ serverId, botToken, fetchFn }) }
+  }
+  if (action === 'roles') {
+    const serverId = await linkedServer(guildId)
+    if (!serverId) throw new ConnectError('Add WhenToRaid to your Discord server first.', 409)
+    return { roles: await listOfficerRoles({ serverId, botToken, fetchFn }) }
   }
   if (action === 'commands') {
     const serverId = await linkedServer(guildId)

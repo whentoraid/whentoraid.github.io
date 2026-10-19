@@ -57,7 +57,7 @@ async function show(row) {
 describe('connecting the WhenToRaid bot', () => {
   test('officers can enable the command hub for the current guild', async () => {
     await show(stored({ serverId: SERVER, serverName: 'After Hours' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Enable / update raid commands' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Retry / update raid commands' }))
     expect(connect.enableDiscordCommands).toHaveBeenCalledWith({}, 'g1')
     await waitFor(() =>
       expect(showToast).toHaveBeenCalledWith(
@@ -72,11 +72,11 @@ describe('connecting the WhenToRaid bot', () => {
       new Error('Discord is rate limiting command setup. Try again shortly.'),
     )
     await show(stored({ serverId: SERVER, serverName: 'After Hours' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Enable / update raid commands' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Retry / update raid commands' }))
     await waitFor(() =>
       expect(showToast).toHaveBeenCalledWith('Discord is rate limiting command setup. Try again shortly.'),
     )
-    expect(screen.getByRole('button', { name: 'Enable / update raid commands' }).disabled).toBe(false)
+    expect(screen.getByRole('button', { name: 'Retry / update raid commands' }).disabled).toBe(false)
   })
   test('before the bot is added, one button opens Discord for this guild', async () => {
     await show(null)

@@ -41,8 +41,14 @@ export async function myDiscordId(client) {
  */
 export async function joinFromDiscord(client) {
   const { data, error } = await client.functions.invoke('discord-join', { body: {} })
-  if (error)
-    throw new Error('Your Discord server could not be checked. Reload to try again.', { cause: error })
+  if (error) {
+    const message = await Promise.resolve(error.context?.json?.())
+      .then((payload) => payload?.error)
+      .catch(() => null)
+    throw new Error(message || 'Your Discord server could not be checked. Try again shortly.', {
+      cause: error,
+    })
+  }
   return Array.isArray(data?.guildIds) ? data.guildIds : []
 }
 

@@ -17,7 +17,7 @@ Every command reply is private. Signup cards now state the exact missing roles a
 
 Roster lists show the full character name and the player name when they differ, plus role/spec details. Before publication, role slots and the bench follow signup order. After publication, the roster is the officers' selected team and the bench contains signed-up or late players outside it. Tentative and absent signup answers remain separate, including when an officer has already rostered that player. Empty groups say **None**. Large lists continue on private pages or additional public signup messages: no names are replaced with “and N more.” The delivery worker edits those messages in place, removes surplus continuations when lists shrink, and puts the buttons on the last message.
 
-Guild settings → Connections includes an **Enable / update raid commands** action and a command guide. Registration upserts only `/raid` for the connected server; other application commands stay intact. It does not post channel messages.
+Guild settings → Connections enables `/raid` when the bot is linked and includes a **Retry / update raid commands** action and a command guide. Registration upserts only `/raid` for the connected server; other application commands stay intact. It does not post channel messages.
 
 The existing signup buttons, character/spec menus, reminders, published roster responses, and delivery retries continue to work.
 
@@ -88,7 +88,7 @@ References: [Discord embeds](https://docs.discord.com/developers/resources/messa
 1. Apply `20261020120000_discord_command_hub.sql` to the hosted Supabase project. The deployment schema check requires this version.
 2. Deploy `raid-interactions`, `discord-connect`, and `raid-dispatch` together so the command handler, setup action, and enhanced signup cards use the same shared code.
 3. Deploy the frontend. Keep the existing `DISCORD_APPLICATION_ID`, `DISCORD_PUBLIC_KEY`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, and HTTPS `WHENTORAID_APP_URL` settings.
-4. An officer opens Connections and clicks **Enable / update raid commands** for each connected Discord server. Existing bot installations already include the application command scope with the bot scope. Discord's **Use Application Commands** permission controls whether members can invoke commands in a channel.
+4. Linking the bot enables `/raid` for the connected Discord server. If that fails, an officer opens Connections and clicks **Retry / update raid commands**. Existing bot installations already include the application command scope with the bot scope. Discord's **Use Application Commands** permission controls whether members can invoke commands in a channel.
 5. Verify `/raid help`, `/raid next`, `/raid mine`, and `/raid roster` with a member account, and `/raid readiness` with an officer account. Check a character/spec change, a benched signup, a republished assignment, and names across continuation pages. Existing signup cards adopt the improved summary on their next refresh.
 
 Command registration and production deployment are not performed by the code change itself. Live Discord verification requires a deployed endpoint and connected test server.

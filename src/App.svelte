@@ -157,10 +157,16 @@
 <svelte:window onpopstate={followUrl} onhashchange={followUrl} />
 
 <svelte:head>
-  <title>{app.data ? `${viewTitle} · ${app.data.guild.name}` : 'Set up your guild'} · WhenToRaid</title>
+  <title
+    >{app.data && !app.showSetup
+      ? `${viewTitle} · ${app.data.guild.name}`
+      : remote.enabled
+        ? 'Join your guild'
+        : 'Set up your guild'} · WhenToRaid</title
+  >
 </svelte:head>
 
-{#if app.data}
+{#if app.data && !app.showSetup}
   <a
     class="skip-link"
     href="#content"

@@ -47,7 +47,8 @@
     creating = true
     try {
       await createOnlineGuild(result.state)
-      app.view = 'home'
+      app.showSetup = false
+      app.view = 'settings'
     } catch (failure) {
       error = failure.message
     } finally {
@@ -56,12 +57,14 @@
   }
 
   function loadDemo() {
+    app.showSetup = false
     app.view = 'planner'
     app.data = createDemoState()
     showToast('Demo guild loaded. It is saved only in this browser; start over from Guild settings.')
   }
 
   function restore(state) {
+    app.showSetup = false
     app.view = 'planner'
     app.data = state
     showToast(`Restored ${state.guild.name} from the backup.`)
@@ -79,14 +82,12 @@
       <span>WHEN<span class="gold">TO</span>RAID<small>THE GUILD WAR ROOM</small></span>
     </div>
     <p class="eyebrow gold">FIRST RAID NIGHT STARTS HERE</p>
-    <h1>Set up your guild</h1>
+    <h1>{remote.enabled ? 'Join your guild' : 'Set up your guild'}</h1>
     <p class="subtitle">
-      Takes a minute. You can add the rest of your guild next, and change any of this later in Guild settings.
+      {remote.enabled
+        ? 'Sign in with Discord. If your server uses WhenToRaid, your guild opens automatically.'
+        : 'Create a guild saved in this browser.'}
     </p>
-    <div class="demo-callout">
-      <span>Want to look around first? The demo guild has 24 sample players and a year of raids.</span>
-      <button onclick={loadDemo}>Try the demo</button>
-    </div>
 
     {#if app.unreadable}
       <section class="panel spaced-top recovery" role="alert">
@@ -109,85 +110,112 @@
       </section>
     {/if}
 
-    <form class="panel spaced-top" onsubmit={create}>
-      <h2>Your guild</h2>
-      <p class="note">
-        {online
-          ? 'Online guild: your players sign in with Discord and share live check-ins and rosters.'
-          : remote.enabled
-            ? 'Browser-only guild: saved on this device. Sign in with Discord to create a shared online guild, or move this guild online later in Guild settings.'
-            : 'Browser-only guild: saved on this device, in this browser. Download backups in Guild settings to keep a copy. Shared guilds and Discord sign-in are not available on this site.'}
-      </p>
-      <p>
-        Starts with two 10-player raids and one 20-player raid. Rename them and tune each composition in Guild
-        settings.
-      </p>
-      <div class="settings-grid">
-        <label class="field">Guild name<input name="guildName" required maxlength="60" /></label>
-        <label class="field">
-          Guild timezone
-          <select name="timezone">
-            {#each zones as zone (zone)}
-              <option selected={zone === browserZone}>{zone}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="field">
-          Raids can start from
-          <select name="startHour">
-            {#each START_HOUR_OPTIONS as hour (hour.value)}
-              <option value={hour.value} selected={hour.value === DEFAULT_START_HOUR}>{hour.label}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="field">
-          Raids must end by
-          <select name="endHour">
-            {#each END_HOUR_OPTIONS as hour (hour.value)}
-              <option value={hour.value} selected={hour.value === DEFAULT_END_HOUR}>{hour.label}</option>
-            {/each}
-          </select>
-        </label>
-      </div>
+    {#if !remote.enabled || (remote.ready && remote.signedIn)}
+      <details class="panel spaced-top owner-setup" open={!remote.enabled || app.showSetup}>
+        <summary
+          ><h2>{remote.enabled ? 'Starting a new guild? Set it up here' : 'Create your guild'}</h2></summary
+        >
+        {#if remote.enabled}
+          <p class="note">
+            Create the guild, then add WhenToRaid to your Discord server in Guild settings → Connections.
+            Members and officers can sign in with Discord after that.
+          </p>
+        {/if}
+        <form onsubmit={create}>
+          <h2>Guild details</h2>
+          <p class="note">
+            {online
+              ? 'Online guild: your players sign in with Discord and share live check-ins and rosters.'
+              : remote.enabled
+                ? 'Browser-only guild: saved on this device. Sign in with Discord to create a shared online guild, or move this guild online later in Guild settings.'
+                : 'Browser-only guild: saved on this device, in this browser. Download backups in Guild settings to keep a copy. Shared guilds and Discord sign-in are not available on this site.'}
+          </p>
+          <p>
+            Starts with two 10-player raids and one 20-player raid. Rename them and tune each composition in
+            Guild settings.
+          </p>
+          <div class="settings-grid">
+            <label class="field">Guild name<input name="guildName" required maxlength="60" /></label>
+            <label class="field">
+              Guild timezone
+              <select name="timezone">
+                {#each zones as zone (zone)}
+                  <option selected={zone === browserZone}>{zone}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="field">
+              Raids can start from
+              <select name="startHour">
+                {#each START_HOUR_OPTIONS as hour (hour.value)}
+                  <option value={hour.value} selected={hour.value === DEFAULT_START_HOUR}>{hour.label}</option
+                  >
+                {/each}
+              </select>
+            </label>
+            <label class="field">
+              Raids must end by
+              <select name="endHour">
+                {#each END_HOUR_OPTIONS as hour (hour.value)}
+                  <option value={hour.value} selected={hour.value === DEFAULT_END_HOUR}>{hour.label}</option>
+                {/each}
+              </select>
+            </label>
+          </div>
 
-      <h2>You</h2>
-      <div class="settings-grid">
-        <label class="field">Your name<input name="memberName" required maxlength="30" /></label>
-        <label class="field">
-          Discord user ID (optional)
-          <input name="discordId" inputmode="numeric" pattern="[0-9]*" placeholder="Used to @mention you" />
-        </label>
-        <CharacterFields prefix="character-" />
-      </div>
+          <h2>You</h2>
+          <div class="settings-grid">
+            <label class="field">Your name<input name="memberName" required maxlength="30" /></label>
+            {#if !online}
+              <label class="field">
+                Discord user ID (optional)
+                <input
+                  name="discordId"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Used to @mention you"
+                />
+              </label>
+            {/if}
+            <CharacterFields prefix="character-" />
+          </div>
 
-      {#if error}
-        <p class="note warning" role="alert">{error}</p>
-      {/if}
-      <div class="buttons form-actions">
-        <button class="primary" disabled={creating}>
-          {online ? (creating ? 'Creating…' : 'Create guild online') : 'Create guild in this browser'}
-        </button>
-      </div>
-    </form>
+          {#if error}
+            <p class="note warning" role="alert">{error}</p>
+          {/if}
+          <div class="buttons form-actions">
+            <button class="primary" disabled={creating}>
+              {online ? (creating ? 'Creating…' : 'Create guild online') : 'Create guild in this browser'}
+            </button>
+          </div>
+        </form>
+      </details>
+    {/if}
 
-    <section class="panel spaced-top">
-      <h2>Just looking?</h2>
-      <p class="note">
-        Demo: sample players and schedules, saved only in this browser. No invitations or real Discord posts
-        are sent.
-      </p>
-      <p>
-        Explore 24 sample players with a full calendar year of randomized availability and plans for all three
-        raids. Every load creates a fresh demo.
-      </p>
-      <button onclick={loadDemo}>Explore the demo guild</button>
-    </section>
+    {#if app.showSetup && app.data}
+      <button onclick={() => (app.showSetup = false)}>Back to {app.data.guild.name}</button>
+    {/if}
 
-    <section class="panel spaced-top">
-      <h2>Have a backup?</h2>
-      <p>Restore a guild downloaded from Guild settings in this or another browser.</p>
-      <RestoreButton onrestore={restore} />
-    </section>
+    {#if !remote.guildId}
+      <details class="panel spaced-top">
+        <summary><h2>Explore a sample guild</h2></summary>
+        <p class="note">
+          Demo: sample players and schedules, saved only in this browser. No invitations or real Discord posts
+          are sent.
+        </p>
+        <p>
+          Explore 24 sample players with a full calendar year of randomized availability and plans for all
+          three raids. Every load creates a fresh demo.
+        </p>
+        <button onclick={loadDemo}>Explore the demo guild</button>
+      </details>
+
+      <section class="panel spaced-top">
+        <h2>Have a backup?</h2>
+        <p>Restore a guild downloaded from Guild settings in this or another browser.</p>
+        <RestoreButton onrestore={restore} />
+      </section>
+    {/if}
     <nav class="legal-links" aria-label="Legal">
       <a href="./privacy.html">Privacy Policy</a> · <a href="./terms.html">Terms of Service</a>
     </nav>
@@ -195,15 +223,7 @@
 </main>
 
 <style>
-  .demo-callout {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
+  .owner-setup form {
     margin-top: 1rem;
-    padding: 0.75rem 1rem;
-    border: 1px dashed var(--gold);
-    border-radius: 6px;
   }
 </style>

@@ -15,6 +15,7 @@ describe('first-run setup', () => {
   beforeEach(() => {
     localStorage.clear()
     app.data = null
+    app.showSetup = false
     app.view = 'planner'
   })
 
@@ -59,7 +60,7 @@ describe('first-run setup', () => {
     expect(app.data).toBeNull()
   })
 
-  test('the demo guild is one click away', async () => {
+  test('the sample guild is available from optional setup', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('button', { name: 'Explore the demo guild' }))
     expect(app.data.members).toHaveLength(24)

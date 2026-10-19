@@ -130,6 +130,8 @@ export function rosterImageModel(payload, specEmojis = {}) {
         const emojiId = specEmojis[emojiName]
         return {
           text: `${name}${player}${spec}`,
+          name: `${name}${player}`,
+          detail: spec,
           color:
             title === 'Available as backup' ? 'yellow' : entry.response === 'confirmed' ? 'blue' : 'default',
           emojiId: /^\d{17,20}$/.test(emojiId ?? '') ? emojiId : null,

@@ -15,6 +15,7 @@ const mocked = vi.hoisted(() => ({
   signOutCalls: 0,
   applyHandler: null,
   onSubscription: null,
+  joinCalls: 0,
 }))
 
 vi.mock('./client.js', () => ({
@@ -47,6 +48,7 @@ vi.mock('./client.js', () => ({
 vi.mock('./api.js', () => ({
   myDiscordId: async () => mocked.discordId,
   joinFromDiscord: async () => {
+    mocked.joinCalls += 1
     if (mocked.joinError) throw new Error('Your Discord server could not be checked. Reload to try again.')
     return mocked.joined ?? []
   },
@@ -78,6 +80,7 @@ import {
   reapplyUnsavedDraft,
   remote,
   signOut,
+  retryDiscordJoin,
 } from './sync.svelte.js'
 
 /** The stored recovery draft of `userId` for `guildId`, from any page, or null. */
@@ -92,7 +95,7 @@ afterEach(() => {
   sessionStorage.clear()
   mocked.applyHandler = null
   mocked.applied = 0
-  Object.assign(mocked, { joined: null, joinError: false, guildLists: null })
+  Object.assign(mocked, { joined: null, joinError: false, joinCalls: 0, guildLists: null })
 })
 
 test('a player with no guild yet joins from their Discord server at sign-in', async () => {
@@ -136,7 +139,6 @@ test('a Discord newcomer with no saved guild lands in it and starts with their f
 
 test('a failed Discord check tells a player with no guild, without signing them out', async () => {
   Object.assign(mocked, { joinError: true, guildLists: [[]] })
-  const { toast } = await import('../toast.svelte.js')
   const stop = initRemote()
   try {
     mocked.discordId = 'discord-unchecked'
@@ -145,8 +147,127 @@ test('a failed Discord check tells a player with no guild, without signing them 
     await waitFor(() => expect(remote.ready).toBe(true))
     expect(remote.signedIn).toBe(true)
     expect(remote.guilds).toEqual([])
-    expect(toast.message).toContain('Discord server could not be checked')
+    expect(remote.joinError).toContain('Discord server could not be checked')
+    mocked.joinError = false
+    mocked.guildLists = [[]]
+    await retryDiscordJoin()
+    expect(remote.joinError).toBeNull()
+    expect(mocked.joinCalls).toBe(2)
   } finally {
+    stop()
+  }
+})
+
+test('retry opens the real guild when a failed check left the saved demo open', async () => {
+  const realGuild = '11111111-2222-3333-4444-555555555555'
+  localStorage.setItem('whentoraid-online-guild', 'demo-guild')
+  mocked.rows = { ...stateToRows(createSeedState(), realGuild), revision: 0 }
+  Object.assign(mocked, {
+    joinError: true,
+    guildLists: [[{ id: 'demo-guild', name: 'The After Hours (demo)' }]],
+  })
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-real-player'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-real-player' } })
+    await waitFor(() => expect(remote.guildId).toBe('demo-guild'))
+    await waitFor(() => expect(remote.ready).toBe(true))
+    expect(remote.joinError).toBeTruthy()
+    mocked.joinError = false
+    mocked.joined = [realGuild]
+    mocked.guildLists = [
+      [
+        { id: 'demo-guild', name: 'The After Hours (demo)' },
+        { id: realGuild, name: 'Real guild' },
+      ],
+    ]
+    await retryDiscordJoin()
+    expect(remote.guildId).toBe(realGuild)
+    expect(remote.joinError).toBeNull()
+  } finally {
+    await leaveGuild()
+    stop()
+  }
+})
+
+test('a personal invite takes precedence over Discord server auto-join', async () => {
+  sessionStorage.setItem('whentoraid-invite', '0123456789abcdef0123456789abcdef')
+  Object.assign(mocked, { joined: ['guild-test'], guildLists: [[]] })
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-invited'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-invited' } })
+    await waitFor(() => expect(remote.discordId).toBe('discord-invited'))
+    await waitFor(() => expect(remote.ready).toBe(true))
+    expect(mocked.joinCalls).toBe(0)
+    expect(remote.guilds).toEqual([])
+    sessionStorage.removeItem('whentoraid-invite')
+    mocked.guildLists = [[{ id: 'guild-test', name: 'Test guild' }]]
+    const state = createSeedState()
+    state.members[1] = { ...state.members[1], discordId: 'discord-invited' }
+    mocked.rows = { ...stateToRows(state, 'guild-test'), revision: 0 }
+    await retryDiscordJoin()
+    expect(mocked.joinCalls).toBe(1)
+    expect(remote.guildId).toBe('guild-test')
+  } finally {
+    if (remote.guildId) await leaveGuild()
+    stop()
+  }
+})
+
+test('a Discord bot connection reopens the guild that started it', async () => {
+  const connecting = '11111111-2222-3333-4444-555555555555'
+  sessionStorage.setItem('whentoraid-discord-connect', JSON.stringify({ state: 's1', guildId: connecting }))
+  sessionStorage.setItem('whentoraid-discord-return', JSON.stringify({ code: 'code', state: 's1' }))
+  localStorage.setItem('whentoraid-online-guild', 'guild-test')
+  const state = createSeedState()
+  state.members[0] = { ...state.members[0], discordId: 'discord-owner', officer: true }
+  mocked.rows = { ...stateToRows(state, connecting), revision: 0 }
+  Object.assign(mocked, {
+    joined: [],
+    guildLists: [
+      [
+        { id: 'guild-test', name: 'Other guild' },
+        { id: connecting, name: 'New guild' },
+      ],
+    ],
+  })
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-owner'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-owner' } })
+    await waitFor(() => expect(remote.guildId).toBe(connecting))
+    expect(app.data.guild.name).toBe(state.guild.name)
+  } finally {
+    await leaveGuild()
+    stop()
+  }
+})
+
+test('a player pinned to the online demo opens the real guild found in Discord', async () => {
+  const realGuild = '11111111-2222-3333-4444-555555555555'
+  localStorage.setItem('whentoraid-online-guild', 'demo-guild')
+  const state = createSeedState()
+  state.members[1] = { ...state.members[1], discordId: 'discord-real-player' }
+  mocked.rows = { ...stateToRows(state, realGuild), revision: 0 }
+  Object.assign(mocked, {
+    joined: [realGuild],
+    guildLists: [
+      [{ id: 'demo-guild', name: 'The After Hours (demo)' }],
+      [
+        { id: 'demo-guild', name: 'The After Hours (demo)' },
+        { id: realGuild, name: 'Real guild' },
+      ],
+    ],
+  })
+  const stop = initRemote()
+  try {
+    mocked.discordId = 'discord-real-player'
+    mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'discord-real-player' } })
+    await waitFor(() => expect(remote.guildId).toBe(realGuild))
+    expect(remote.guilds).toHaveLength(2)
+  } finally {
+    await leaveGuild()
     stop()
   }
 })

@@ -22,7 +22,7 @@ WhenToRaid runs in two modes. Without backend settings it is **browser-only**: o
 ### How access works
 
 - Players sign in with Discord through Supabase Auth.
-- A signed-in player belongs to a guild when a member row carries their Discord user ID. Officers invite players by adding that ID on Guild members; players see their own ID in the Online panel.
+- A signed-in player joins a guild linked to a Discord server they belong to. The owner connects the server in Guild settings → Connections. Existing profiles can also use a personal invite link to keep their characters and history.
 - The ID is read from `auth.identities`, which Supabase fills in from Discord. It is never read from `user_metadata`, which users can edit.
 - Row-level security (`supabase/migrations/`) is the permission check:
   - Officers change guild settings, players, rosters, and attendance.
@@ -31,6 +31,12 @@ WhenToRaid runs in two modes. Without backend settings it is **browser-only**: o
   - Signed-out visitors can read nothing.
   - The last officer cannot step down.
 - `create_online_guild` makes its caller the first officer and uploads the browser guild, including its history, in one transaction.
+
+### Bring a Discord guild online
+
+1. The owner signs in with Discord, creates the online guild, and opens Guild settings → Connections. The owner adds WhenToRaid to the Discord server, selects a channel, and saves it. The app enables `/raid` commands when the bot is linked; Connections offers a retry if Discord declines command setup.
+2. To grant planner access from Discord roles, the owner selects officer roles by name in Connections. Members without those roles join as players. Raid rules → Discord access retains a role ID field as a fallback.
+3. Members and officers open WhenToRaid and sign in with Discord. The app finds the connected server and opens their guild. They add a character and answer availability in the app; they can use sign-up posts and `/raid` commands in Discord. An officer should send a personal invite to anyone whose profile was already created in the app.
 
 ### How sync works
 
@@ -118,7 +124,7 @@ The publishable key is public by design. Never put the secret or service-role ke
 
    5. Optional: **sign-up posts**. With the bot channel connected, an officer turns on "Post sign-ups for upcoming raids" in Connections and picks how many days ahead (1–14). The scheduler then posts each upcoming raid that is not published yet: a draft plan's time, or the raid's weekly schedule when there is no plan. Officers can also post one early from the Planner's Responses tab. Players press **Sign up**, **Late**, **Tentative** or **Absent**; Sign up and Late ask which character when a player has several. The private reply offers a spec choice for that raid. The answer is written into the player's check-in for that raid (their usual schedule is kept), so the planner counts it like availability entered in the app, and the post updates within seconds. Only guild members can sign up. Sign-ups stay open until the raid starts, also after the weekly check-in deadline; those are marked "after the deadline" for officers. Once the raid starts, or is cancelled, the post loses its buttons. Signup cards require **Embed Links** and show role shortages, provisional bench places, late arrivals, and tentative players.
 
-   6. **Discord command hub.** In Connections, click **Enable / update raid commands**. Members can use `/raid next`, `/raid upcoming`, `/raid mine`, `/raid roster`, and `/raid help`; officers also get `/raid readiness`. Replies are private, show times in each reader's timezone, and link to existing signup and confirmation posts. Commands look ahead four weeks and support `page` for lists. `/raid roster` lists every player and character on the roster, bench, tentative list, and absence list; use `raid` to choose a number from `/raid upcoming`. Large lists continue across pages or public messages without dropping names. The readiness report separates signup coverage from the published roster and counts only confirmations matching current assignments. See [Discord overhaul and rollout](docs/DISCORD_OVERHAUL.md) for access rules, deployment steps, and the remaining product work.
+   6. **Discord command hub.** Connecting the bot enables `/raid`; Connections has **Retry / update raid commands** if setup fails. Members can use `/raid next`, `/raid upcoming`, `/raid mine`, `/raid roster`, and `/raid help`; officers also get `/raid readiness`. Replies are private, show times in each reader's timezone, and link to existing signup and confirmation posts. Commands look ahead four weeks and support `page` for lists. `/raid roster` lists every player and character on the roster, bench, tentative list, and absence list; use `raid` to choose a number from `/raid upcoming`. Large lists continue across pages or public messages without dropping names. The readiness report separates signup coverage from the published roster and counts only confirmations matching current assignments. See [Discord overhaul and rollout](docs/DISCORD_OVERHAUL.md) for access rules, deployment steps, and the remaining product work.
 
    Delivery stays off until an officer connects a channel and posts a roster; reminders and sign-up posts stay off until enabled in Connections.
 

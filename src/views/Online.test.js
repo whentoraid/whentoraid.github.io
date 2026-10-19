@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import App from '../App.svelte'
 import { app } from '../lib/app.svelte.js'
 import { remote } from '../lib/remote/sync.svelte.js'
+import { discordChannel } from '../lib/discord-channel.svelte.js'
 import { createSeedState } from '../lib/seed.js'
 
 /** A signed-in player in an online guild who is not an officer. */
@@ -17,6 +18,7 @@ describe('online guild, as a player', () => {
 
   afterEach(() => {
     Object.assign(remote, { guildId: null, memberId: null, officer: false })
+    Object.assign(discordChannel, { guildKey: null, loaded: false, channelId: '', webhookUrl: '' })
   })
 
   test('players see only the published roster, without editing controls', () => {
@@ -56,5 +58,19 @@ describe('online guild, as a player', () => {
     render(App)
     expect(screen.getByRole('button', { name: '+ Add player' })).toBeTruthy()
     expect(screen.getByLabelText('Editing as')).toBeTruthy()
+  })
+
+  test('a bot-only guild can reach automatic Discord sign-up settings', () => {
+    remote.officer = true
+    app.view = 'settings'
+    Object.assign(discordChannel, {
+      guildKey: 'guild-1',
+      loaded: true,
+      channelId: '800000000000000001',
+      webhookUrl: '',
+    })
+    render(App)
+    expect(screen.getByRole('heading', { name: 'Discord sign-ups and reminders' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Set a weekly raid time' })).toBeTruthy()
   })
 })

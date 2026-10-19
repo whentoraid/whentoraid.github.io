@@ -4,9 +4,15 @@ import {
   checkChannelInServer,
   handleConnect,
   listChannels,
+  listOfficerRoles,
   validRedirectUri,
 } from '../../supabase/functions/_shared/discord-connect.js'
-import { connectRedirectUri, finishDiscordConnect, startDiscordConnect } from './discord-connect.js'
+import {
+  connectRedirectUri,
+  finishDiscordConnect,
+  pendingDiscordConnectGuildId,
+  startDiscordConnect,
+} from './discord-connect.js'
 
 const SERVER = '700000000000000001'
 const BOT = '700000000000000002'
@@ -158,6 +164,27 @@ describe('listing the connected server’s channels', () => {
   })
 })
 
+test('officer roles are listed by name, excluding everyone and managed bot roles', async () => {
+  const fetchFn = discordApi({
+    [`GET /guilds/${SERVER}/roles`]: [
+      { id: SERVER, name: '@everyone', position: 0 },
+      { id: OFFICERS, name: 'Raid Officers', position: 10 },
+      { id: BOT_ROLE, name: 'WhenToRaid', position: 8, managed: true },
+      { id: '700000000000000005', name: 'Raid Leads', position: 5 },
+    ],
+  })
+  expect(await listOfficerRoles({ serverId: SERVER, botToken: 'token', fetchFn })).toEqual([
+    { id: OFFICERS, name: 'Raid Officers' },
+    { id: '700000000000000005', name: 'Raid Leads' },
+  ])
+  expect(await handleConnect({ action: 'roles', guildId: GUILD_ID }, config({ fetchFn }))).toEqual({
+    roles: [
+      { id: OFFICERS, name: 'Raid Officers' },
+      { id: '700000000000000005', name: 'Raid Leads' },
+    ],
+  })
+})
+
 describe('the bot only posts in the connected server', () => {
   test('a channel in the connected server passes; another server or no connection is refused', async () => {
     const fetchFn = discordApi({
@@ -262,13 +289,14 @@ describe('officer requests', () => {
   test('link records the server Discord names in the token response, never one from the browser', async () => {
     const fetchFn = discordApi({
       'POST /oauth2/token': { access_token: 'x', guild: { id: SERVER, name: 'After Hours' } },
+      [`POST /applications/${BOT}/guilds/${SERVER}/commands`]: { id: '1' },
     })
     const settings = config({ fetchFn })
     const result = await handleConnect(
       { action: 'link', guildId: GUILD_ID, redirectUri: REDIRECT, code: 'abcdefghijkl', guild_id: '1' },
       settings,
     )
-    expect(result).toEqual({ serverId: SERVER, serverName: 'After Hours' })
+    expect(result).toEqual({ serverId: SERVER, serverName: 'After Hours', commandsReady: true })
     expect(settings.rpc).toHaveBeenCalledWith('link_discord_server', {
       p_guild_id: GUILD_ID,
       p_server_id: SERVER,
@@ -289,6 +317,21 @@ describe('officer requests', () => {
       ),
     ).rejects.toMatchObject({ status: 502 })
     expect(settings.rpc).not.toHaveBeenCalled()
+  })
+
+  test('a command registration failure leaves the server linked and offers a retry', async () => {
+    const settings = config({
+      fetchFn: discordApi({
+        'POST /oauth2/token': { access_token: 'x', guild: { id: SERVER, name: 'After Hours' } },
+      }),
+    })
+    expect(
+      await handleConnect(
+        { action: 'link', guildId: GUILD_ID, redirectUri: REDIRECT, code: 'abcdefghijkl' },
+        settings,
+      ),
+    ).toEqual({ serverId: SERVER, serverName: 'After Hours', commandsReady: false })
+    expect(settings.rpc).toHaveBeenCalledWith('link_discord_server', expect.anything())
   })
 
   test('channels need a connected server; nothing works until the bot is set up', async () => {
@@ -328,6 +371,7 @@ describe('the browser side of connecting', () => {
     expect(go).toHaveBeenCalledWith('https://discord.com/oauth2/authorize?x')
     const { state } = JSON.parse(storage.getItem('whentoraid-discord-connect'))
     storage.setItem('whentoraid-discord-return', JSON.stringify({ code: 'abcdefghijkl', state, error: null }))
+    expect(pendingDiscordConnectGuildId(storage)).toBe(GUILD_ID)
 
     const linking = client({ serverId: SERVER, serverName: 'After Hours' })
     expect(await finishDiscordConnect(linking, GUILD_ID, { storage })).toEqual({
@@ -338,6 +382,7 @@ describe('the browser side of connecting', () => {
       body: expect.objectContaining({ action: 'link', guildId: GUILD_ID, code: 'abcdefghijkl' }),
     })
     expect(await finishDiscordConnect(linking, GUILD_ID, { storage })).toBeNull()
+    expect(pendingDiscordConnectGuildId(storage)).toBeNull()
   })
 
   test('a return this tab did not start, or for another guild, is refused without calling the server', async () => {
@@ -352,6 +397,7 @@ describe('the browser side of connecting', () => {
     storage.setItem('whentoraid-discord-connect', JSON.stringify({ state: 's1', guildId: 'another' }))
     storage.setItem('whentoraid-discord-return', JSON.stringify({ code: 'abcdefghijkl', state: 's1' }))
     await expect(finishDiscordConnect(linking, GUILD_ID, { storage })).rejects.toThrow(/another guild/)
+    expect(storage.getItem('whentoraid-discord-return')).not.toBeNull()
     expect(linking.functions.invoke).not.toHaveBeenCalled()
   })
 

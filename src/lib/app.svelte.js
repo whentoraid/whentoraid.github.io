@@ -24,6 +24,8 @@ const route = parseHash(globalThis.location?.hash)
 export const app = $state({
   /** @type {import('./model.js').AppState | null} */
   data: initialData(saved.state, route),
+  /** Temporarily show owner setup while keeping a sample guild available for return. */
+  showSetup: false,
   view: route.view,
   /**
    * One-time navigation intent, never saved with guild data: 'published' from a personal assignment or

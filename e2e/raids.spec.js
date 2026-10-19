@@ -6,6 +6,7 @@ const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('whe
 
 test('demo replacement generates a new year and retains January after reload', async ({ page }, testInfo) => {
   await page.goto('./')
+  await page.getByText('Explore a sample guild').click()
   await page.getByRole('button', { name: 'Explore the demo guild' }).click()
   await expect(page.getByRole('region', { name: 'Roster publication' })).toBeVisible()
   const first = await saved(page)

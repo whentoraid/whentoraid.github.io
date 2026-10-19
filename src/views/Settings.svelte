@@ -1,6 +1,7 @@
 <script>
   import { tick, untrack } from 'svelte'
   import DiscordChannelSettings from '../components/DiscordChannelSettings.svelte'
+  import DiscordOfficerRoles from '../components/DiscordOfficerRoles.svelte'
   import ReminderSettings from '../components/ReminderSettings.svelte'
   import { discordChannel } from '../lib/discord-channel.svelte.js'
   import { hasDiscordReturn } from '../lib/discord-connect.js'
@@ -45,7 +46,11 @@
     { id: 'backups', label: 'Backups' },
   ]
   // Coming back from adding the bot on Discord: Connections finishes the connection.
-  let section = $state(hasDiscordReturn() ? 'connections' : 'rules')
+  let section = $state(
+    hasDiscordReturn() || (remote.guildId && remote.officer && !app.data.guild.discordServerId)
+      ? 'connections'
+      : 'rules',
+  )
   let rulesPanel
 
   let hasDeadline = $state(app.data.settings.checkinDeadline !== null)
@@ -99,6 +104,16 @@
     selectSection('rules')
     await tick()
     rulesPanel?.focus()
+  }
+
+  async function openWeeklySchedule() {
+    selectSection('rules')
+    await tick()
+    const details = document.querySelector('section[aria-label="Weekly schedule"] details')
+    if (!details) return
+    details.open = true
+    details.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    details.querySelector('select')?.focus({ preventScroll: true })
   }
 
   async function discardEdits() {
@@ -340,7 +355,7 @@
                 />
               </label>
               <label class="field">
-                Officer role IDs (comma-separated)
+                Officer role IDs (advanced fallback)
                 <input
                   name="officerRoleIds"
                   pattern="[0-9, ]*"
@@ -386,9 +401,21 @@
   >
     <section class="panel settings-panel">
       <DiscordChannelSettings />
+      <DiscordOfficerRoles settingsDirty={dirty} onsaved={() => (formVersion += 1)} />
     </section>
 
-    {#if remote.guildId && canManage() && discordChannel.webhookUrl}
+    {#if remote.guildId && canManage() && !app.data.settings.raids.some((raid) => raid.series)}
+      <section class="panel settings-panel" aria-label="First raid time">
+        <h2>Choose your first raid time</h2>
+        <p>
+          Automatic Discord sign-up posts need a weekly raid schedule or a planned raid time. Set a weekly
+          time for the raids you run; you can change individual weeks later.
+        </p>
+        <button class="primary" onclick={openWeeklySchedule}>Set a weekly raid time</button>
+      </section>
+    {/if}
+
+    {#if remote.guildId && canManage() && (discordChannel.channelId || discordChannel.webhookUrl)}
       <section class="panel settings-panel">
         <ReminderSettings />
       </section>

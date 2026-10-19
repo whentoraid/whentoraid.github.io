@@ -159,8 +159,13 @@ describe('roster card', () => {
     )
     expect(model.sections.flatMap((section) => section.members)).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ text: 'Tankus Protection', color: 'blue' }),
-        expect.objectContaining({ text: 'Oak Shadow', color: 'yellow' }),
+        expect.objectContaining({
+          text: 'Tankus Protection',
+          name: 'Tankus',
+          detail: ' Protection',
+          color: 'blue',
+        }),
+        expect.objectContaining({ text: 'Oak Shadow', name: 'Oak', detail: ' Shadow', color: 'yellow' }),
       ]),
     )
     expect(message.embeds[0].fields.some((field) => field.name.includes('Available as backup (1)'))).toBe(

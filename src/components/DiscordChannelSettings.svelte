@@ -96,7 +96,7 @@
         if (!linked) return
         await loadDiscordChannel({ force: true })
         showToast(
-          `WhenToRaid joined ${linked.serverName || 'your Discord server'}. Choose its channel below.`,
+          `WhenToRaid joined ${linked.serverName || 'your Discord server'}. Choose its channel below.${linked.commandsReady === false ? ' Then retry /raid commands.' : ''}`,
         )
       } catch (error) {
         showToast(error.message)
@@ -146,11 +146,16 @@
   )
 </script>
 
-<h2>Discord channel</h2>
+<h2>Connect your Discord server</h2>
 <p>
-  Post published rosters straight to a Discord channel. Posting again edits the same message, so the channel
-  keeps one roster per raid.
+  Once connected, people in your server join this guild when they sign in. Pick a channel for the bot to post
+  sign-ups and rosters.
 </p>
+{#if remote.guildId && canManage()}
+  <p class="note">
+    Choose officer roles by name below to grant planner access automatically. Everyone else joins as a player.
+  </p>
+{/if}
 {#if !canManage()}
   <p class="note">Only officers can connect a Discord channel.</p>
 {:else if discordChannel.error}
@@ -161,7 +166,7 @@
   <form onsubmit={save}>
     {#if remote.guildId}
       <div class="bot-connect">
-        <h3>WhenToRaid bot</h3>
+        <h3>1. Add WhenToRaid to your server</h3>
         {#if discordChannel.serverId}
           <p>
             Added to <b>{discordChannel.serverName || 'your Discord server'}</b>. Rosters the bot posts have
@@ -195,15 +200,15 @@
           </p>
           <div class="buttons">
             <button type="button" disabled={busy} onclick={enableCommands}
-              >Enable / update raid commands</button
+              >Retry / update raid commands</button
             >
             <button type="button" disabled={busy || channelsLoading} onclick={loadChannels}
               >Refresh channels</button
             >
             <button type="button" disabled={busy} onclick={connect}>Add to a different server</button>
           </div>
-          <div class="command-guide">
-            <h4>Your raid hub in Discord</h4>
+          <details class="command-guide">
+            <summary>Your raid hub in Discord</summary>
             <p>
               Find the next raid, check your place, and see what the team still needs. Command replies are
               visible only to the person asking.
@@ -222,53 +227,55 @@
               <dt><code>/raid help</code></dt>
               <dd>A quick guide for your players.</dd>
             </dl>
-          </div>
+          </details>
         {:else}
           <p>
-            Add the bot to your Discord server, then pick its channel here. Rosters it posts get Confirm and
-            Can’t attend buttons. You need the Manage Server permission on the server.
+            You need Manage Server permission in Discord. After adding the bot, return here and choose its
+            channel. Members and officers can then sign in with Discord to join.
           </p>
           <button type="button" class="primary" disabled={busy} onclick={connect}
             >Add WhenToRaid to Discord</button
           >
         {/if}
       </div>
-      <h3>Or post with a webhook</h3>
     {/if}
-    <details class="note">
-      <summary>How to get a webhook URL</summary>
-      <ol>
-        <li>
-          In Discord, open the channel’s settings (the gear next to its name), then <b>Integrations</b>.
-        </li>
-        <li><b>Webhooks</b>, then <b>New Webhook</b>. Name it, for example “WhenToRaid”.</li>
-        <li>Click <b>Copy Webhook URL</b> and paste it below.</li>
-      </ol>
-      <p>You need the Manage Webhooks permission on the server.</p>
+    <details class="webhook-setup" open={!remote.guildId || Boolean(discordChannel.webhookUrl)}>
+      <summary>{remote.guildId ? 'Advanced: post with a webhook' : 'Webhook setup'}</summary>
+      <details class="note">
+        <summary>How to get a webhook URL</summary>
+        <ol>
+          <li>
+            In Discord, open the channel’s settings (the gear next to its name), then <b>Integrations</b>.
+          </li>
+          <li><b>Webhooks</b>, then <b>New Webhook</b>. Name it, for example “WhenToRaid”.</li>
+          <li>Click <b>Copy Webhook URL</b> and paste it below.</li>
+        </ol>
+        <p>You need the Manage Webhooks permission on the server.</p>
+      </details>
+      <label class="field">
+        Webhook URL
+        <input
+          type="url"
+          name="webhookUrl"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="https://discord.com/api/webhooks/…"
+          bind:value={webhookUrl}
+        />
+      </label>
+      {#if remote.guildId && channelId}
+        <p class="note">The bot channel is used while one is chosen; the webhook is kept for later.</p>
+      {/if}
+      <label class="checkbox-row">
+        <input type="checkbox" bind:checked={mentionPlayers} />
+        Mention rostered players who have a Discord ID when a roster is first posted
+      </label>
+      <p class="note">
+        Anyone with this URL can post in the channel, so only officers see it{remote.guildId
+          ? ''
+          : '. It is saved in this browser only, not in backups'}.
+      </p>
     </details>
-    <label class="field">
-      Webhook URL
-      <input
-        type="url"
-        name="webhookUrl"
-        autocomplete="off"
-        spellcheck="false"
-        placeholder="https://discord.com/api/webhooks/…"
-        bind:value={webhookUrl}
-      />
-    </label>
-    {#if remote.guildId && channelId}
-      <p class="note">The bot channel is used while one is chosen; the webhook is kept for later.</p>
-    {/if}
-    <label class="checkbox-row">
-      <input type="checkbox" bind:checked={mentionPlayers} />
-      Mention rostered players who have a Discord ID when a roster is first posted
-    </label>
-    <p class="note">
-      Anyone with this URL can post in the channel, so only officers see it{remote.guildId
-        ? ''
-        : '. It is saved in this browser only, not in backups'}.
-    </p>
     <div class="buttons">
       <button class="primary" disabled={busy || !changed}>Save channel</button>
       {#if saved}

@@ -10,8 +10,10 @@ vi.mock('../lib/raid-services.js', () => ({
 
 const services = await import('../lib/raid-services.js')
 const { default: ReminderSettings } = await import('./ReminderSettings.svelte')
+const { discordChannel } = await import('../lib/discord-channel.svelte.js')
 beforeEach(() => {
   vi.resetAllMocks()
+  discordChannel.channelId = ''
   services.getReminderSettings.mockResolvedValue({
     checkin_enabled: false,
     upcoming_enabled: false,
@@ -21,6 +23,15 @@ beforeEach(() => {
     signup_enabled: false,
     signup_lead_days: 7,
   })
+})
+
+test('interactive sign-ups require a bot channel', async () => {
+  render(ReminderSettings)
+  const signup = await screen.findByRole('checkbox', { name: 'Post sign-ups for upcoming raids' })
+  expect(signup.disabled).toBe(true)
+  expect(screen.getByText(/Choose a WhenToRaid bot channel above/)).toBeTruthy()
+  discordChannel.channelId = '800000000000000001'
+  await vi.waitFor(() => expect(signup.disabled).toBe(false))
 })
 
 test('retrying a failed load restores the saved settings without enabling reminders', async () => {

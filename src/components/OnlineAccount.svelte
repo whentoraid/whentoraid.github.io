@@ -7,10 +7,10 @@
     localTestSignInAvailable,
     openGuild,
     remote,
+    retryDiscordJoin,
     signIn,
     signOut,
   } from '../lib/remote/sync.svelte.js'
-  import { createDemoState } from '../lib/seed.js'
   import { showToast } from '../lib/toast.svelte.js'
 
   /** Sign-in, choosing an online guild, and moving the browser guild online. */
@@ -48,18 +48,12 @@
     }
   }
 
-  /** A separate online guild with the demo's sample players and raids, for trying things out. */
-  const createDemoGuild = () =>
-    run(() => {
-      const demo = createDemoState()
-      return createOnlineGuild({ ...demo, guild: { ...demo.guild, name: `${demo.guild.name} (demo)` } })
-    }, 'Demo guild created and opened. Switch back any time under Your online guilds.')
-
   const moveOnline = () =>
     run(
       () => createOnlineGuild($state.snapshot(app.data)),
       'Your guild is online. Invite players with the invite link on Guild members.',
     )
+  const sampleGuild = $derived(Boolean(app.data?.demoYear) || /\(demo\)$/i.test(app.data?.guild?.name ?? ''))
 </script>
 
 {#if !remote.enabled}
@@ -94,13 +88,13 @@
     </div>
   {/if}
 {:else}
-  <p>
-    Signed in with Discord.
-    {#if remote.discordId}
-      Your Discord ID is <code>{remote.discordId}</code>. To join a guild, open its invite link, or give an
-      officer this ID.
-    {/if}
-  </p>
+  <p>Signed in with Discord. Guilds connected to your server appear below automatically.</p>
+  {#if remote.discordId}
+    <details class="note">
+      <summary>Your Discord account ID</summary>
+      <code>{remote.discordId}</code>
+    </details>
+  {/if}
 
   {#if remote.guilds.length}
     <h3>Your online guilds</h3>
@@ -116,24 +110,32 @@
       {/each}
     </div>
   {:else}
-    <p class="note">
-      No online guild lists you yet. Ask an officer for the guild’s invite link, or create one.
-    </p>
+    {#if remote.joinError}
+      <p class="warning" role="alert">{remote.joinError}</p>
+    {:else}
+      <p class="note">
+        No connected guild found yet. Ask your guild owner to add WhenToRaid to your Discord server, or open a
+        personal invite link from an officer. If you own the server, create the guild below.
+      </p>
+    {/if}
+    <button disabled={remote.joining} onclick={retryDiscordJoin}>
+      {remote.joining ? 'Checking Discord…' : 'Check my Discord server again'}
+    </button>
+  {/if}
+  {#if remote.guilds.length && remote.joinError}
+    <p class="warning" role="alert">{remote.joinError}</p>
+    <button disabled={remote.joining} onclick={retryDiscordJoin}>
+      {remote.joining ? 'Checking Discord…' : 'Check my Discord server again'}
+    </button>
   {/if}
 
-  <h3>Try things out</h3>
-  <p class="note">
-    Create a separate online guild with 24 sample players and a year of availability and raids, with you as
-    its officer. Use it to test rosters and Discord posts; your other guilds are not changed.
-  </p>
-  <div class="buttons">
-    <button disabled={busy} onclick={createDemoGuild}>Create a demo guild online</button>
-  </div>
-
   <div class="buttons spaced-top">
+    {#if sampleGuild && !app.showSetup}
+      <button class="primary" onclick={() => (app.showSetup = true)}>Start your real guild</button>
+    {/if}
     {#if remote.guildId}
       <button disabled={busy} onclick={() => run(leaveGuild)}>Use the guild saved in this browser</button>
-    {:else if app.data}
+    {:else if app.data && !sampleGuild}
       <button class="primary" disabled={busy} onclick={moveOnline}>Move “{app.data.guild.name}” online</button
       >
     {/if}

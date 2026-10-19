@@ -39,18 +39,25 @@ Deno.serve(async (request) => {
   const discordId = await callerDiscordId(request)
   if (!discordId) return json({ error: 'Sign in with Discord first.' }, 401)
   const botToken = Deno.env.get('DISCORD_BOT_TOKEN') ?? ''
-  if (!botToken) return json({ guildIds: [] })
+  if (!botToken)
+    return json({ error: 'The Discord bot is not ready. Ask the guild owner to check the connection.' }, 503)
   const { data, error } = await admin.from('guild_discord_servers').select('server_id')
   if (error) {
     console.error('discord-join failed:', error.message)
     return json({ error: 'Your Discord servers could not be checked. Try again shortly.' }, 503)
   }
+  let failed = false
   const guildIds = await joinLinkedServers({
     discordId,
     servers: data.map((row) => row.server_id),
     botToken,
     rpc,
-    log: (message) => console.error('discord-join', message),
+    log: (message) => {
+      failed = true
+      console.error('discord-join', message)
+    },
   })
+  if (failed && !guildIds.length)
+    return json({ error: 'Discord could not check every connected server. Try again shortly.' }, 503)
   return json({ guildIds })
 })
