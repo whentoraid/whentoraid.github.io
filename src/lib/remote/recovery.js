@@ -27,9 +27,11 @@ const TASKS = {
   checkins: 'availability',
   plans: 'roster',
 }
-/** Rows a player may change for themselves; everything else needs an officer (as the database rules). */
+/**
+ * Rows a player may change for themselves; everything else, player rows included, needs an
+ * officer (as apply_guild_changes rules).
+ */
 const OWNED = {
-  members: 'id',
   characters: 'member_id',
   availability_templates: 'member_id',
   checkins: 'member_id',
