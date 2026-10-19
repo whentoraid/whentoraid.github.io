@@ -166,7 +166,6 @@ export function rosterImageModel(payload, specEmojis = {}) {
       : []),
   ]
   return {
-    title: String(payload.raidName ?? 'Raid').slice(0, 100),
     sections: sections.map(({ title, members }) => ({
       title,
       members: members.map((entry) => {

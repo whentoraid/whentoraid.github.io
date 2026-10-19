@@ -26,21 +26,25 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage
     const messages = rosterMessages(payload, mentionIds, { specEmojis })
     if (renderRosterImage && job.channel_id && !payload.cancelled && !payload.withdrawn) {
       const model = rosterImageModel(payload, specEmojis)
-      const bytes = await renderRosterImage(model)
-      messages[0].image = {
-        filename: 'raid-roster.png',
-        description: model.sections
-          .flatMap((section) =>
-            section.members.map(
-              (member) =>
-                `${section.title}: ${member.name} (${member.color === 'yellow' ? 'backup' : 'roster'})`,
-            ),
-          )
-          .join('; ')
-          .slice(0, 1024),
-        bytes,
+      const description = model.sections
+        .flatMap((section) =>
+          section.members.map(
+            (member) =>
+              `${section.title}: ${member.name} (${member.color === 'yellow' ? 'backup' : 'roster'})`,
+          ),
+        )
+        .join('; ')
+      const height =
+        64 +
+        model.sections
+          .filter((section) => section.members.length)
+          .reduce((total, section) => total + 40 + section.members.length * 42, 0)
+      if (messages.length === 1 && height <= 5000 && description.length <= 1024) {
+        const bytes = await renderRosterImage(model)
+        messages[0].image = { filename: 'raid-roster.png', description, bytes }
+        messages[0].embeds[0].image = { url: 'attachment://raid-roster.png' }
+        delete messages[0].embeds[0].fields
       }
-      messages[0].embeds.unshift({ color: 0x80c8ff, image: { url: 'attachment://raid-roster.png' } })
     }
     return { messages, mentionIds, components }
   }
