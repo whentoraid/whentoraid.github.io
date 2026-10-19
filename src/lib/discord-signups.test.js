@@ -80,7 +80,7 @@ const payload = (overrides = {}) => ({
   guildId: GUILD,
   week: '2026-10-26',
   raidId: 'raid-20',
-  guildName: 'Unsanction Raid',
+  guildName: 'Distracted Minds',
   raidName: '20-player Raid',
   start: START,
   end: START + 10800000,
@@ -168,7 +168,7 @@ describe('sign-up posts', () => {
         ],
       }),
     )
-    expect(embed.author.name).toBe('Unsanction Raid')
+    expect(embed.author.name).toBe('Distracted Minds')
     expect(embed.title).toBe('20-player Raid')
     expect(embed.timestamp).toBe(new Date(START).toISOString())
     expect(embed.description).toContain(`<t:${START / 1000}:F>`)
@@ -361,8 +361,8 @@ describe('sign-up presses', () => {
     expect(
       signupReply({ outcome: 'saved', status: 'signed', raidName: 'Raid', afterDeadline: true }).content,
     ).toMatch(/deadline/)
-    expect(signupReply({ outcome: 'not-member', guildName: 'Unsanction Raid' }).content).toMatch(
-      /Unsanction Raid.*invite/,
+    expect(signupReply({ outcome: 'not-member', guildName: 'Distracted Minds' }).content).toMatch(
+      /Distracted Minds.*invite/,
     )
     expect(signupReply({ outcome: 'no-characters' }).content).toMatch(/Add a character/)
     expect(signupReply({ outcome: 'closed' }).content).toMatch(/closed/)

@@ -8,7 +8,7 @@ vi.mock('../lib/remote/sync.svelte.js', () => ({
     signedIn: true,
     discordId: '700000000000000001',
     guildId: 'g1',
-    guilds: [{ id: 'g1', name: 'Unsanctioned' }],
+    guilds: [{ id: 'g1', name: 'Distracted Minds' }],
     joinError: null,
     joining: false,
   },
@@ -62,12 +62,12 @@ test('a sample guild offers owner setup without moving its sample data online', 
 })
 
 test('a failed account action shows its error inside the panel, not in a toast', async () => {
-  remote.guilds = [{ id: 'g1', name: 'Unsanctioned' }]
+  remote.guilds = [{ id: 'g1', name: 'Distracted Minds' }]
   remote.guildId = null
   openGuild.mockRejectedValueOnce(new Error('Could not reach the server.'))
   showToast.mockClear()
   render(OnlineAccount)
-  await fireEvent.click(screen.getByRole('button', { name: 'Unsanctioned' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Distracted Minds' }))
   expect((await screen.findByRole('alert')).textContent).toBe('Could not reach the server.')
   expect(showToast).not.toHaveBeenCalled()
 })

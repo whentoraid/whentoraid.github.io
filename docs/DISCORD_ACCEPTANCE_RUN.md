@@ -2,7 +2,9 @@
 
 Real-channel test of the online Discord lifecycle (audit risk #2 in [AUDIT_2026-10-16.md](AUDIT_2026-10-16.md)). Started October 16, 2026; paused after step B. **Must be finished before the November 4, 2026 release.**
 
-Test guild: **Unsanction Raid** (bot channel in the "Distracted Minds" Discord server, no webhook). The demo guild "The After Hours (demo)" has no Discord link, so publishing there never posts.
+Historical test guild: bot channel in the **Distracted Minds** Discord server, no webhook. The demo guild "The After Hours (demo)" has no Discord link, so publishing there never posts.
+
+This is a historical test log. On October 18, the owner confirmed that test raids could be reset. Their tracked Discord posts and raid records were removed, and the live guild was renamed **Distracted Minds**. Run the remaining acceptance steps with new real raid data.
 
 ## Setup (done October 16)
 

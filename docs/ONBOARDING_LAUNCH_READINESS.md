@@ -42,11 +42,12 @@ Record the time from link or sign-in to first answer, the number of people needi
 
 - Confirm the exact roster name color rule. The current image uses blue for confirmed players and yellow for backup offers.
 - Decide whether the first cohort uses automatic sign-up posts, app availability, or both as the expected first answer. The interface supports both; the owner should announce one clear path to members.
-- Choose the real Discord server and roster channel. No production guild or channel was changed during this local pass.
+- Confirm the currently selected bot channel is the intended announcement channel before enabling automatic posts.
 
-## Hosted audit, 2026-10-18
+## Hosted state, 2026-10-18
 
 - The linked WhenToRaid Supabase project is healthy; local and hosted migrations match. The Discord bot secrets and all five Edge Functions are present.
-- The only hosted guild is **Unsanctioned Minds**, connected to **Distracted Minds**. It has five Discord-linked members, two characters, an officer role selection, and a bot channel. It has no weekly raid time; automatic sign-up posts and reminders are off.
-- Confirm that this existing server and channel are the intended launch destination before enabling posts. Preserve the existing guild and member history.
-- GitHub CLI authentication is invalid, but a Git push dry run succeeds. The Pages workflow runs lint, unit, browser, database, integration, and hosted schema checks before publishing.
+- The only hosted guild is **Distracted Minds**, connected to the **Distracted Minds** Discord server. It has five Discord-linked members, two characters, an officer role selection, and a bot channel.
+- The owner confirmed that the old raids were tests. Seven plans and their check-ins, responses, history, calendar records, and availability template were cleared. The five tracked Discord roster messages were deleted first. No raid posts remain.
+- There is no weekly raid time. Automatic sign-up posts and reminders are off until the owner chooses the first real schedule. Member and character profiles were preserved.
+- The onboarding release passed the Pages workflow's lint, unit, browser, database, integration, and hosted schema gates. The public app and Discord Edge Functions are deployed.
