@@ -21,7 +21,7 @@ $$;
 
 -- Everything happens in one transaction, so every entry has the same time; order by kind instead.
 create temp table t (guild uuid, week date, start_ms bigint, first uuid);
-grant select on t to authenticated;
+grant select, insert, update on t to authenticated;
 insert into t (week, start_ms) values (date_trunc('week', now() at time zone 'UTC')::date + 7,
   (extract(epoch from now() + interval '8 days') * 1000)::bigint);
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000e1');
