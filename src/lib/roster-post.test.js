@@ -37,9 +37,9 @@ describe('roster card', () => {
     )
     expect(embed.description).toContain('**Still needed:** 2 healers, 6 DPS')
     const fields = Object.fromEntries(embed.fields.map((field) => [field.name, field.value]))
-    expect(fields['🛡️ Tanks (1/1)']).toBe('`1` 🟫 **Tankus** Protection')
+    expect(fields['🛡️ Tanks (1/1)']).toBe('`1` 🟫 **Tankus**')
     expect(fields['💚 Healers (0/2)']).toBe('None')
-    expect(fields['⚔️ Melee DPS (1)']).toBe('`2` 🟨 **Skoogerino** (Skooger) Combat')
+    expect(fields['⚔️ Melee DPS (1)']).toBe('`2` 🟨 **Skoogerino** (Skooger)')
     expect(fields['🏹 Ranged DPS (0)']).toBe('None')
     expect(embed.fields.every((field) => field.inline === false)).toBe(true)
     expect(embed.description).toContain('⚔️ Melee DPS **1** · 🏹 Ranged DPS **0**')
@@ -131,11 +131,11 @@ describe('roster card', () => {
     )
     const field = messages[0].embeds[0].fields.find((field) => field.name.startsWith('🏹'))
     expect(field.value).toBe(
-      `\`1\` <:wtr_priest_shadow:${ID(3)}> **Skuggerino** Shadow\n\n\`2\` <:wtr_priest_shadow:${ID(3)}> **Second** Shadow`,
+      `\`1\` <:wtr_priest_shadow:${ID(3)}> **Skuggerino**\n\n\`2\` <:wtr_priest_shadow:${ID(3)}> **Second**`,
     )
     expect(field.value).not.toContain('⬜')
   })
-  it('keeps roster and backup players in the native role fields without status squares or images', () => {
+  it('keeps roster and backup players in the native role fields without redundant spec text', () => {
     const [message] = rosterMessages(
       roster({
         team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
@@ -145,8 +145,7 @@ describe('roster card', () => {
     const values = message.embeds[0].fields.map((field) => field.value).join('\n')
     expect(values).toContain('**Tankus**')
     expect(values).toContain('**Oak**')
-    expect(values).toContain('**Tankus** Protection')
-    expect(values).toContain('**Oak** Shadow')
+    expect(values).not.toMatch(/Protection|Shadow/)
     expect(values).not.toContain('🟦')
     expect(message.embeds[0].image).toBeUndefined()
     expect(message.embeds[0].fields.some((field) => /backup|available/i.test(field.name))).toBe(false)
