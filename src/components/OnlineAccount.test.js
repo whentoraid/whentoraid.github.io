@@ -46,6 +46,14 @@ test('a failed Discord check stays visible and can be retried', async () => {
   remote.joinError = null
 })
 
+test('a failed Discord sign-in is explained next to the sign-in button', () => {
+  Object.assign(remote, { signedIn: false, signInError: 'Discord sign-in did not finish (x).' })
+  render(OnlineAccount)
+  expect(screen.getByRole('alert').textContent).toMatch(/did not finish/)
+  expect(screen.getByRole('button', { name: 'Sign in with Discord' })).toBeTruthy()
+  Object.assign(remote, { signedIn: true, signInError: null })
+})
+
 test('a failed account action shows its error inside the panel, not in a toast', async () => {
   remote.guilds = [{ id: 'g1', name: 'Distracted Minds' }]
   remote.guildId = null
