@@ -98,14 +98,18 @@
       {/each}
     </nav>
     <div class="aside-bottom">
-      <span class="live-dot" class:warn={(remote.guildId ? remote.status : localSave.status) === 'error'}
+      <span
+        class="live-dot"
+        class:warn={['error', 'stale'].includes(remote.guildId ? remote.status : localSave.status)}
       ></span>
       {remote.guildId
         ? remote.status === 'error'
           ? 'Online · not saved'
-          : remote.status === 'saving'
-            ? 'Online · saving…'
-            : 'Online · shared with your guild'
+          : remote.status === 'stale'
+            ? 'Online · can’t reach the server'
+            : remote.status === 'saving'
+              ? 'Online · saving…'
+              : 'Online · shared with your guild'
         : localSave.status === 'error'
           ? 'Browser changes not saved'
           : 'Saved in this browser'}

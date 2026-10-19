@@ -245,7 +245,8 @@ export function stableJson(value) {
   return JSON.stringify(value ?? null)
 }
 
-function keyOf(table, row) {
+/** A row's primary key within its table, as one string. */
+export function keyOf(table, row) {
   return KEY_COLUMNS[table].map((column) => row[column]).join('|')
 }
 

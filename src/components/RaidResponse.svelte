@@ -23,6 +23,8 @@
   let note = $state('')
   let saving = $state(false)
   let error = $state('')
+  /** M12: the answer that did not reach the server, for Try again. */
+  let failed = $state(null)
   const current = $derived(loadedKey === key ? response : null)
 
   $effect(() => {
@@ -33,18 +35,19 @@
         response = byMember[memberId] ?? null
         loadedKey = wanted
         error = ''
+        failed = null
       })
       .catch((e) => {
         if (wanted === key) error = e.message
       })
   })
 
-  async function respond(status) {
+  async function respond(status, text = status === 'unavailable' ? note.trim() : '') {
     // The roster this answer is for; if it is republished meanwhile, the answer is not shown as current.
     const answered = key
     saving = true
     error = ''
-    const text = status === 'unavailable' ? note.trim() : ''
+    failed = null
     try {
       await respondToRaid({
         week: item.weekIso,
@@ -61,9 +64,41 @@
       note = ''
     } catch (e) {
       error = e.message
+      failed = { status, note: text, key: answered }
     } finally {
       saving = false
     }
+  }
+
+  /**
+   * Before sending a failed answer again, check it still applies: the roster may have been
+   * republished, or the first try may have reached the server after all.
+   */
+  async function retry() {
+    const attempt = failed
+    if (attempt.key !== key) {
+      failed = null
+      error = 'The roster changed since you answered. Check your place, then answer again.'
+      return
+    }
+    saving = true
+    try {
+      const saved = (await loadRaidResponses(item.weekIso, item.raidId, item.plan))[memberId]
+      if (attempt.key !== key) return
+      if (saved?.status === attempt.status && (saved.note ?? '') === attempt.note) {
+        response = saved
+        loadedKey = attempt.key
+        failed = null
+        error = ''
+        return
+      }
+    } catch (e) {
+      error = e.message
+      return
+    } finally {
+      saving = false
+    }
+    await respond(attempt.status, attempt.note)
   }
 </script>
 
@@ -119,7 +154,12 @@
       {/if}
     </div>
   {/if}
-  {#if error}<p role="alert" class="warning">{error}</p>{/if}
+  {#if error}
+    <p role="alert" class="warning">
+      {failed ? `Your answer was not saved: ${error}` : error}
+      {#if failed && canRespond}<button disabled={saving} onclick={retry}>Try again</button>{/if}
+    </p>
+  {/if}
 </div>
 
 <style>

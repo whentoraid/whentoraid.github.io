@@ -5,15 +5,7 @@
   import { setCurrentWeek } from './lib/model.js'
   import { DEFAULT_RAID_ID, setCurrentRaid } from './lib/raids.js'
   import { formatHash, parseHash } from './lib/route.js'
-  import {
-    canManage,
-    dismissUnsavedDraft,
-    downloadUnsavedDraft,
-    initRemote,
-    pushChanges,
-    reapplyUnsavedDraft,
-    remote,
-  } from './lib/remote/sync.svelte.js'
+  import { canManage, initRemote, pushChanges, remote } from './lib/remote/sync.svelte.js'
   import { captureInvite, invite, loadInvite } from './lib/remote/invite.svelte.js'
   import { backupJson, sameGuild, saveState, watchOtherTabs } from './lib/storage.js'
   import { downloadText } from './lib/download.js'
@@ -24,6 +16,7 @@
   import OnlineAccount from './components/OnlineAccount.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Toast from './components/Toast.svelte'
+  import UnsavedChanges from './components/UnsavedChanges.svelte'
   import Availability from './views/Availability.svelte'
   import Characters from './views/Characters.svelte'
   import Members from './views/Members.svelte'
@@ -45,10 +38,14 @@
   /** Players only see published rosters there, so it is not a planner to them. */
   const viewTitle = $derived(app.view === 'planner' && !canManage() ? 'Guild rosters' : VIEW_TITLES[app.view])
 
-  const ONLINE_LABELS = { saved: 'Online · saved', saving: 'Online · saving…', error: 'Online · not saved' }
+  const ONLINE_LABELS = {
+    saved: 'Online · saved',
+    saving: 'Online · saving…',
+    error: 'Online · not saved',
+    stale: 'Online · can’t reach the server',
+  }
 
   let discordOpen = $state(false)
-  let confirmReapply = $state(false)
   let storageWarningShown = false
   /** Set when another tab saved with a newer app version: saving here would overwrite its data. */
   let savingPaused = false
@@ -202,35 +199,7 @@
           >
         </section>
       {/if}
-      {#if remote.hasUnsavedDraft}
-        <section class="unsaved-notice" role="alert">
-          <strong>Your last online edit was not saved.</strong>
-          <p>
-            The current guild has been reloaded. Download your edit for safekeeping, or reapply it over the
-            current online version.
-          </p>
-          <div class="buttons">
-            <button onclick={downloadUnsavedDraft}>Download unsaved edit</button>
-            {#if confirmReapply}
-              <button
-                class="primary"
-                onclick={() => {
-                  reapplyUnsavedDraft()
-                  confirmReapply = false
-                }}>Confirm reapply</button
-              >
-            {:else}
-              <button onclick={() => (confirmReapply = true)}>Reapply my edit</button>
-            {/if}
-            <button
-              onclick={() => {
-                dismissUnsavedDraft()
-                confirmReapply = false
-              }}>Discard unsaved edit</button
-            >
-          </div>
-        </section>
-      {/if}
+      {#if remote.hasUnsavedDraft}<UnsavedChanges />{/if}
       <div inert={remote.hasUnsavedDraft}>
         <EditingAsBanner />
         {#if app.view === 'home'}

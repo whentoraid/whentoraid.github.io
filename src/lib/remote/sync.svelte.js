@@ -11,6 +11,8 @@ import { welcomeNewMember } from '../welcome.js'
 import { applyOps, createGuildWithRows, fetchGuild, joinFromDiscord, listGuilds, myDiscordId } from './api.js'
 import { isLocalBackend, supabase } from './client.js'
 import { diffRows, mergeRows, newGuildPayload, rowsToState, stateToRows, TABLES } from './rows.js'
+import { APPLICABLE, unsavedChanges, withoutChange } from './recovery.js'
+import { viewerZone } from '../display.svelte.js'
 
 /**
  * Online guilds. While a guild is open, `app.data` still holds the whole guild and every change
@@ -42,9 +44,14 @@ export const remote = $state({
   /** The signed-in player's member id in the open guild. */
   memberId: null,
   officer: false,
-  /** @type {'saved' | 'saving' | 'error'} */
+  /**
+   * 'stale': the server cannot be reached, so the guild shown is the last one loaded.
+   * @type {'saved' | 'saving' | 'error' | 'stale'}
+   */
   status: 'saved',
   hasUnsavedDraft: false,
+  /** M12: the unsaved edit, task by task. @type {import('./recovery.js').UnsavedChange[]} */
+  changes: [],
 })
 
 /** Rows the server is believed to hold for the open guild; changes are diffed against it. */
@@ -65,6 +72,8 @@ let draftBase = null
 /** Where the offered draft is stored: this page's own key, or a closed page's key it took over. */
 let unsavedDraftKey = null
 let reapplyRequested = null
+/** Counts drafts this page wrote, so a slower read of stored drafts never replaces a newer one. */
+let draftWrites = 0
 
 /**
  * Each page (a tab; a reload is a new page) keeps its recovery draft under its own key, so one tab
@@ -147,16 +156,75 @@ async function readDraft() {
 async function showDraftForOpenGuild() {
   const guildId = remote.guildId
   const userId = sessionUserId
+  const writes = draftWrites
   const found = await readDraft()
-  if (remote.guildId !== guildId || sessionUserId !== userId) return
+  if (remote.guildId !== guildId || sessionUserId !== userId || draftWrites !== writes) return
   unsavedDraft = found?.stored ?? null
   unsavedDraftKey = found?.key ?? null
   remote.hasUnsavedDraft = Boolean(unsavedDraft)
   if (remote.hasUnsavedDraft) remote.status = 'error'
+  refreshRecovery()
+}
+
+/** The unsaved edit's rows, and each change in it compared with what the server holds now. */
+function draftChanges() {
+  // While a save is in flight or the latest server copy is loading, `shadow` holds this edit's own
+  // optimistic rows, which would make every change look saved.
+  if (!unsavedDraft?.base || !shadow || !remote.guildId || pending || blockedGuilds[remote.guildId])
+    return null
+  try {
+    const rows = stateToRows(unsavedDraft.state, remote.guildId)
+    const changes = unsavedChanges(unsavedDraft.base, rows, shadow, {
+      state: app.data,
+      memberId: remote.memberId,
+      officer: remote.officer,
+      zone: viewerZone,
+    })
+    return { rows, changes }
+  } catch {
+    // An unreadable draft can still be downloaded.
+    return null
+  }
+}
+
+function refreshRecovery() {
+  const found = remote.hasUnsavedDraft ? draftChanges() : null
+  if (found?.changes.length && found.changes.every((change) => change.outcome === 'saved')) {
+    // The save reached the server even though the answer did not: nothing is lost.
+    showToast('Your last change was saved after all.')
+    dismissUnsavedDraft()
+    return
+  }
+  remote.changes = found?.changes ?? []
+}
+
+function storeDraft(draft) {
+  draftWrites += 1
+  unsavedDraft = draft
+  try {
+    localStorage.setItem(unsavedDraftKey ?? draftKey(), JSON.stringify(draft))
+  } catch {
+    // The in-memory copy stays available to download.
+  }
+}
+
+/** Drop one change from the unsaved edit, keeping the rest for review. */
+export function discardUnsavedChange(id) {
+  const found = draftChanges()
+  if (!found) return
+  const rows = withoutChange(unsavedDraft.base, found.rows, id)
+  if (!diffRows(unsavedDraft.base, rows).length) {
+    dismissUnsavedDraft()
+    return
+  }
+  const { currentWeek, currentMemberId, currentRaidId } = unsavedDraft.state
+  storeDraft({ ...unsavedDraft, state: rowsToState(rows, { currentWeek, currentMemberId, currentRaidId }) })
+  refreshRecovery()
 }
 
 function preserveDraft(needsReview = true) {
   if (!sessionUserId || !remote.guildId || !app.data) return
+  draftWrites += 1
   unsavedDraft = {
     userId: sessionUserId,
     guildId: remote.guildId,
@@ -179,6 +247,7 @@ function preserveDraft(needsReview = true) {
   }
   remote.hasUnsavedDraft = needsReview
   if (needsReview) remote.status = 'error'
+  if (needsReview) refreshRecovery()
   return true
 }
 
@@ -189,6 +258,7 @@ function clearDraft() {
   draftBase = null
   unsavedDraftKey = null
   remote.hasUnsavedDraft = false
+  remote.changes = []
   reapplyRequested = null
   try {
     for (const key of keys) if (key) localStorage.removeItem(key)
@@ -223,9 +293,18 @@ export function reapplyUnsavedDraft() {
     )
     return
   }
+  const found = draftChanges()
+  if (!found) {
+    showToast('This edit cannot be read by this version of WhenToRaid. Download it instead.')
+    return
+  }
+  // Changes that can no longer be applied are left out; the list said why.
+  const applicable = found.changes
+    .filter((change) => !APPLICABLE.has(change.outcome) && change.outcome !== 'saved')
+    .reduce((rows, change) => withoutChange(unsavedDraft.base, rows, change.id), found.rows)
   let recovered
   try {
-    recovered = mergeRows(unsavedDraft.base, stateToRows(unsavedDraft.state, remote.guildId), shadow, {
+    recovered = mergeRows(unsavedDraft.base, applicable, shadow, {
       reviewed: true,
     })
   } catch {
@@ -693,7 +772,7 @@ async function reload() {
       return
     }
     // Probably offline: keep trying, and show the server's copy once it answers.
-    remote.status = 'error'
+    remote.status = remote.hasUnsavedDraft ? 'error' : 'stale'
     return scheduleReload(RETRY_MS)
   }
   if (remote.guildId !== guildId) return
@@ -718,4 +797,5 @@ async function reload() {
   remote.status = remote.hasUnsavedDraft ? 'error' : 'saved'
   const changed = diffRows(stateToRows(app.data, guildId), fresh).length > 0
   if (changed || state.currentMemberId !== currentMemberId) app.data = state
+  if (remote.hasUnsavedDraft) refreshRecovery()
 }
