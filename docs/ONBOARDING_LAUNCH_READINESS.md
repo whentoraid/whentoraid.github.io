@@ -23,7 +23,7 @@ These are action counts, not measured times. Time to first useful action needs a
 | The owner had to enable `/raid` separately                                     | Bot linking installs the command; failure leaves a retry action                                      | Discord connect tests             |
 | A bot-only channel hid the sign-up post setting                                | Sign-up controls appear for a bot channel, before reminders                                          | Settings and reminder UI          |
 | The owner could enable sign-ups without a raid time                            | Connections points to the weekly schedule editor                                                     | Settings UI                       |
-| Roster status needed to be clear at a glance                                   | Roster names are blue and backup names yellow in the image, with spec icons beside them              | Roster and delivery tests         |
+| Roster images duplicated the Discord card                                      | The roster stays in native Discord fields with names, spec icons, and controls together              | Roster and delivery tests         |
 
 ## Live launch gate
 

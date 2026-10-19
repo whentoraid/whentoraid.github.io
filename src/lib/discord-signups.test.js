@@ -618,7 +618,7 @@ describe('the delivery worker', () => {
     expect(body.allowed_mentions).toEqual({ parse: [], users: [] })
   })
 
-  it('colors names in the roster image while keeping text and controls', async () => {
+  it('keeps player names, specs and controls in one native Discord roster card', async () => {
     const { rpc, fetchFn } = worker(
       claimed({
         kind: 'roster',
@@ -632,7 +632,6 @@ describe('the delivery worker', () => {
         },
       }),
     )
-    const renderRosterImage = vi.fn(async () => new Uint8Array([137, 80, 78, 71]))
     const results = await deliverQueued({
       rpc,
       guildId: GUILD,
@@ -640,30 +639,22 @@ describe('the delivery worker', () => {
       appUrl: 'https://whentoraid.example/',
       checkChannel: vi.fn(),
       fetchFn,
-      renderRosterImage,
     })
     expect(results).toEqual([{ id: JOB, status: 'sent' }])
-    const model = renderRosterImage.mock.calls[0][0]
-    expect(model.sections.flatMap((section) => section.members)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'Skogerino (Skoog)', color: 'blue' }),
-        expect.objectContaining({ name: 'Oak', color: 'yellow' }),
-      ]),
-    )
     const body = fetchFn.mock.calls[0][1].body
-    expect(body).toBeInstanceOf(FormData)
-    const payloadJson = JSON.parse(body.get('payload_json'))
+    expect(body).toEqual(expect.any(String))
+    const payloadJson = JSON.parse(body)
     expect(payloadJson.embeds).toHaveLength(1)
-    expect(payloadJson.embeds[0].image.url).toBe('attachment://raid-roster.png')
-    expect(payloadJson.embeds[0].fields).toBeUndefined()
+    expect(payloadJson.embeds[0].image).toBeUndefined()
     expect(payloadJson.embeds[0].description).toContain('rostered')
-    expect(body.get('payload_json')).not.toMatch(/🟦|🟨|Shadow/)
-    expect(payloadJson.attachments[0].description).toContain('Skogerino (Skoog) (roster)')
-    expect(payloadJson.attachments[0].description).toContain('Oak (backup)')
+    const fields = payloadJson.embeds[0].fields.map((field) => field.value).join('\n')
+    expect(fields).toContain('**Skogerino** (Skoog) Shadow')
+    expect(fields).toContain('**Oak** Shadow')
+    expect(fields).not.toContain('🟦')
     expect(payloadJson.components[0].components[0].label).toBe('Confirm')
   })
 
-  it('keeps the text roster when an image could not describe every player', async () => {
+  it('keeps every player in text when the roster spans multiple fields', async () => {
     const team = Array.from({ length: 40 }, (_, index) => ({
       name: `Player ${index} ${'Longname'.repeat(4)}`,
       class: 'Priest',
@@ -676,7 +667,6 @@ describe('the delivery worker', () => {
         payload: { guildName: 'Guild', raidName: 'Raid', start: START, targets: [0, 0, 40], team },
       }),
     )
-    const renderRosterImage = vi.fn()
     const results = await deliverQueued({
       rpc,
       guildId: GUILD,
@@ -684,10 +674,8 @@ describe('the delivery worker', () => {
       appUrl: 'https://whentoraid.example/',
       checkChannel: vi.fn(),
       fetchFn,
-      renderRosterImage,
     })
     expect(results).toEqual([{ id: JOB, status: 'sent' }])
-    expect(renderRosterImage).not.toHaveBeenCalled()
     const embeds = JSON.parse(fetchFn.mock.calls[0][1].body).embeds
     expect(
       embeds.flatMap((embed) => embed.fields ?? []).some((field) => field.value.includes('Player 39')),

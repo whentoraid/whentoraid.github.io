@@ -8,7 +8,6 @@ import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { handleDiscordInteraction } from '../_shared/discord-interactions.js'
 import { connectedChannelCheck, deliverQueued } from '../_shared/delivery-worker.js'
 import { createSpecEmojiLoader } from '../_shared/discord-spec-emojis.js'
-import { renderRosterImage } from '../_shared/roster-image.js'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
@@ -38,7 +37,6 @@ const refresh = (guildId) =>
         botToken: BOT_TOKEN,
         appUrl: APP_URL,
         loadSpecEmojis,
-        renderRosterImage,
         checkChannel: connectedChannelCheck(admin, BOT_TOKEN),
         max: REFRESH_DELIVERIES,
       })
