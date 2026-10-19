@@ -104,14 +104,14 @@ describe('Guild settings: unsaved changes', () => {
     expect(app.view).toBe('planner')
   })
 
-  test('leaving backups cancels a pending guild replacement confirmation', async () => {
+  test('leaving backups cancels a pending erase confirmation', async () => {
     render(App)
     await fireEvent.click(screen.getByRole('tab', { name: 'Backups' }))
-    await fireEvent.click(screen.getByRole('button', { name: 'Replace with the demo guild' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Set up a new guild' }))
     await fireEvent.click(screen.getByRole('tab', { name: 'Raid rules' }))
     await fireEvent.click(screen.getByRole('tab', { name: 'Backups' }))
-    expect(screen.queryByRole('button', { name: 'Click again to replace your guild' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'Replace with the demo guild' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Click again to erase this guild' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Set up a new guild' })).toBeTruthy()
   })
 
   test('leaving with unsaved changes stays on the page until they are discarded', async () => {

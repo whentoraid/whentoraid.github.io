@@ -10,7 +10,10 @@
   import { backupJson, sameGuild, saveState, watchOtherTabs } from './lib/storage.js'
   import { downloadText } from './lib/download.js'
   import { showToast } from './lib/toast.svelte.js'
+  import { hasGuildLink } from './lib/remote/guild-link.js'
+  import BrowserGuildBanner from './components/BrowserGuildBanner.svelte'
   import EditingAsBanner from './components/EditingAsBanner.svelte'
+  import { EDIT_AS_OTHER_PLAYERS } from './lib/features.js'
   import JoinGuildDialog from './components/JoinGuildDialog.svelte'
   import Modal from './components/Modal.svelte'
   import OnlineAccount from './components/OnlineAccount.svelte'
@@ -47,6 +50,13 @@
     error: 'Online · not saved',
     stale: 'Online · can’t reach the server',
   }
+
+  /**
+   * A link from Discord names an online guild. Signed out, it leads to sign-in, never to the guild saved
+   * in this browser (often the sample guild), where characters would not reach the guild.
+   */
+  const signInForLink = $derived(remote.enabled && remote.ready && !remote.signedIn && hasGuildLink())
+  const showGuild = $derived(Boolean(app.data) && !app.showSetup && !signInForLink)
 
   let discordOpen = $state(false)
   let storageWarningShown = false
@@ -161,7 +171,7 @@
 
 <svelte:head>
   <title
-    >{app.data && !app.showSetup
+    >{showGuild
       ? `${viewTitle} · ${app.data.guild.name}`
       : remote.enabled
         ? 'Join your guild'
@@ -169,7 +179,7 @@
   >
 </svelte:head>
 
-{#if app.data && !app.showSetup}
+{#if showGuild}
   <a
     class="skip-link"
     href="#content"
@@ -210,7 +220,8 @@
       {/if}
       {#if remote.hasUnsavedDraft}<UnsavedChanges />{/if}
       <div inert={remote.hasUnsavedDraft}>
-        <EditingAsBanner />
+        <BrowserGuildBanner />
+        {#if EDIT_AS_OTHER_PLAYERS}<EditingAsBanner />{/if}
         {#if OFFICER_VIEWS.includes(app.view) && !canManage()}
           <OfficerOnly />
         {:else if app.view === 'home'}

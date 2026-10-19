@@ -29,7 +29,6 @@
   import { tracksAttendance } from '../lib/model.js'
   import { applySettings } from '../lib/planning.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
-  import { createDemoState } from '../lib/seed.js'
   import { downloadText } from '../lib/download.js'
   import { backupJson, clearState } from '../lib/storage.js'
   import { todayIso } from '../lib/time.js'
@@ -166,17 +165,6 @@
     app.data = result.state
     showToast('Guild settings and selected raid composition saved')
     app.view = 'planner'
-  }
-
-  function loadDemo() {
-    if (confirming !== 'demo') {
-      confirming = 'demo'
-      return
-    }
-    const previous = app.data
-    app.view = 'planner'
-    app.data = createDemoState()
-    offerUndo('Demo guild loaded.', previous)
   }
 
   function startOver() {
@@ -457,15 +445,8 @@
     {#if !remote.guildId}
       <section class="panel settings-panel settings-reset">
         <h2>Start over</h2>
-        <p>Your guild is saved only in this browser. Both options below erase it here.</p>
-        <p>
-          The demo generates a fresh calendar year of sample availability and plans for all three raids every
-          time.
-        </p>
+        <p>Your guild is saved only in this browser. Setting up a new guild erases it here.</p>
         <div class="buttons">
-          <button class:danger={confirming === 'demo'} onclick={loadDemo}>
-            {confirming === 'demo' ? 'Click again to replace your guild' : 'Replace with the demo guild'}
-          </button>
           <button class:danger={confirming === 'new'} onclick={startOver}>
             {confirming === 'new' ? 'Click again to erase this guild' : 'Set up a new guild'}
           </button>

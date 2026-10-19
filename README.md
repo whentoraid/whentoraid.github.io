@@ -13,8 +13,6 @@ npm run format   # Prettier
 npm run check    # lint, format check, tests, and build: run before sharing changes
 ```
 
-The original single-file prototype is kept in `legacy/` for comparison.
-
 WhenToRaid runs in two modes. Without backend settings it is **browser-only**: one guild, saved in this browser, with "Act as" standing in for sign-in. With a Supabase project it is **online**: players sign in with Discord, the whole guild sees the same data live, and the database enforces who may change what. See [Online guilds (Supabase)](#online-guilds-supabase).
 
 ## Online guilds (Supabase)
@@ -27,7 +25,7 @@ WhenToRaid runs in two modes. Without backend settings it is **browser-only**: o
 - Row-level security (`supabase/migrations/`) is the permission check:
   - Officers change guild settings, players, rosters, and attendance.
   - Players change only their own check-ins and characters.
-  - Officers can edit anyone's check-in ("Act as").
+  - Officers may edit anyone's check-in. The app's "Editing as" control for this is switched off for now (`EDIT_AS_OTHER_PLAYERS` in `src/lib/features.js`).
   - Signed-out visitors can read nothing.
   - The last officer cannot step down.
 - `create_online_guild` makes its caller the first officer and uploads the browser guild, including its history, in one transaction.
@@ -168,7 +166,7 @@ Realtime change events are filtered to guild members, except delete events. Thos
   - `grid.js`, `time.js`, `intervals.js`: the guild's half-hour grid, timezone conversion, and UTC time ranges.
   - `setup.js`, `guild.js`, `members.js`: first-run guild creation, guild name/timezone/hours/deadline rules, and adding, editing, and removing players.
   - `checkins.js`, `attendance.js`: who has not answered, the weekly deadline, the Discord reminder, and after-raid attendance.
-  - `seed.js`: demo guild. `storage.js`: browser persistence, version upgrades, backup files, recovery of unreadable saves, and cross-tab updates.
+  - `seed.js`: sample guild used as the test fixture. `storage.js`: browser persistence, version upgrades, backup files, recovery of unreadable saves, and cross-tab updates.
   - `remote/`: online mode. `rows.js` (state ↔ rows, row diff), `api.js` (Supabase calls), `client.js` (client, or null when not configured), `sync.svelte.js` (sign-in, save queue, Realtime, `canManage`).
   - `route.js`: the page and week in the URL hash. `display.svelte.js`: the viewer's "show my time" preference. `toast.svelte.js`: messages, including Undo. `roster-export.js`, `calendar.js`: Discord/text roster and `.ics` export. `grid-nav.js`: arrow-key movement in the week grids.
 - `public/`: web app manifest, icons, and `sw.js`, the service worker for offline use (production builds only).
@@ -180,16 +178,16 @@ Realtime change events are filtered to guild members, except delete events. Thos
 
 Version 6 adds `settings.raids` and a `plans` map keyed by raid ID in each week. The selected raid is a viewer preference (`currentRaidId`); weekly availability stays shared. Existing saves and backups migrate their composition and plan into `raid-20`, keeping rosters, locks, and attendance. New guilds have two 10-player raids (2 tanks / 2 healers / 6 damage) and one 20-player raid (2 / 4 / 14). These are editable starting compositions, not verified encounter requirements. Rename each raid in Guild settings when its name is known.
 
-For an existing online installation, follow [the atomic write rollout and rollback procedure](docs/ATOMIC_WRITE_ROLLOUT.md) before deploying this build. The Pages workflow checks the hosted `app_schema_version()` marker before publishing an online build and stops if the migration is missing. The new save RPC is incompatible with old frontend builds, so coordinate a maintenance window and reload open tabs after deployment.
+The Pages workflow checks the hosted `app_schema_version()` marker before publishing an online build and stops if the migration is missing. The new save RPC is incompatible with old frontend builds, so coordinate a maintenance window and reload open tabs after deployment.
 
 Members and characters are stored once. Each week holds only check-ins (availability as UTC time ranges, plus characters declined that week) and the officer's plan (session start in UTC plus the roster). Storing UTC lets the grid be shown in any timezone later without migrating data. Check-ins save as they are edited; there is no submit step. The first edit of a week checks the member in, and "Can't make it this week" records a response with no availability, so officers can tell "unavailable" from "hasn't answered". Browser storage uses the key `whentoraid-v3` (the key predates the state version); `storage.js` upgrades older saved state on load, one version at a time. Version 5 adds each member's Discord user ID (optional, used to @mention them in reminders), a weekly check-in deadline, and per-plan attendance (`attended`, `late`, `noshow`) plus a `cancelled` flag. Data saved by the legacy prototype is not migrated. If saved data cannot be loaded (damaged, or saved by a newer version), it is copied to `whentoraid-unreadable` before setup opens, and setup offers it for download. On load, weeks more than 12 weeks old lose their check-ins and keep only their plan (attendance history), so storage stays small. The "show my time" choice is stored per browser under `whentoraid-show-local-time`, outside the guild.
 
 ## Implemented
 
 - Dark, Warcraft-inspired guild planner with responsive layouts.
-- First-run setup: name the guild, pick its timezone and raid hours, and add yourself with a main character. Guild settings can start over. The demo generates 24 sample players with fresh randomized availability and three raid plans for every week touching the current calendar year, opening on the current week. Past raids include sample attendance; future raids do not. Demo check-ins survive the usual history cleanup, so the whole year remains available after reload or backup restore.
+- First-run setup: name the guild, pick its timezone and raid hours, and add yourself with a main character. Guild settings can start over. Signed out, a link from Discord leads to sign-in rather than to a guild saved in the browser, and every page of a browser-only guild says that nothing there reaches the online guild or Discord.
 - Switch between raids in the planner or Guild settings. Each has its own name, size, role targets, duration, weekly roster, locks, and attendance. Role targets must add up to the selected raid's size. Bench fairness is per raid; member attendance records include all raids.
-- Guild members page: add, rename, and remove players (with their main character and optional Discord ID), see each player's check-in status and attendance record (when attendance tracking is on), and "Act as" any player to fill in their availability and characters. The sidebar has the same switcher.
+- Guild members page: add, rename, and remove players (with their main character and optional Discord ID), see each player's check-in status and attendance record (when attendance tracking is on), and, in a browser-only guild, "Act as" any player to fill in their availability and characters. The sidebar has the same switcher. Online guilds have it switched off for now (`src/lib/features.js`).
 - Guild name, timezone, raid hours, and a weekly check-in deadline are editable in Guild settings. Changing hours keeps the chosen session at the same clock time.
 - Check-ins panel: who has not answered, the deadline, and "Copy reminder for Discord", which @mentions players with a saved Discord ID and shows the deadline in each reader's timezone.
 - After the raid: mark the raid cancelled from the planner. Cancelled raids do not count toward attendance or bench fairness. Attendance tracking (attended, late, or no-show for each rostered player) is off by default; officers turn it on in Guild settings, which also shows attendance records on Guild members and in roster details.
@@ -213,7 +211,7 @@ Members and characters are stored once. Each week holds only check-ins (availabi
 - Visible warnings for unavailable players, unoffered characters, and mismatched roles.
 - Each week keeps its own check-ins. New weeks start with nobody checked in.
 - Backup: download the whole guild as JSON from Guild settings, and restore it there or from setup, in this or another browser.
-- Undo for removing a player, deleting a character, restoring a backup, loading the demo guild, and erasing the guild.
+- Undo for removing a player, deleting a character, restoring a backup, and erasing the guild.
 - Tabs stay in step: a change saved in one tab replaces the guild in the others.
 - The page, week, and selected raid are in the URL (`#/planner/2026-10-05/raid-10-1`), so reloads keep your place, Back works, and links can be shared. Existing links without a raid ID open the original `raid-20` profile.
 - "Show my time": viewers in another timezone can see the grid, suggestions, session, and deadline in their own time. Row labels marked +1 fall on the next day.
@@ -238,7 +236,7 @@ Online mode (Supabase) covers the following:
 
 Once the bot is added to a guild's Discord server, anyone in that server joins the guild as a player when they sign in (the `discord-join` Edge Function asks Discord with the bot token) or press a bot button or run `/raid` (Discord's signed interaction names them). Holding one of the guild's officer role IDs makes them an officer; losing the role does not demote, so officers change that under Guild members. Players an officer removed are not added back automatically. The Discord server ID is also used to accept roster button presses. Online edits save as they happen. If two viewers edit from the same revision, the second save is rejected and their view reloads; they must review and reapply their change. Online guilds need a connection: offline, the page loads but changes are not saved. Online guilds can post rosters and reminders to Discord (see [Host it](#host-it)); Blizzard import is not implemented. In browser-only mode, stored Discord IDs are used only for @mentions. Do not enter secrets anywhere in the app.
 
-The grid is shown in the guild's timezone, within its raid hours (the demo guild uses America/Los_Angeles, noon–midnight). "Act as" stands in for sign-in: anyone using this browser can act as any player. Availability is stored in UTC. Grid columns are always the guild's days; in "show my time" mode only the labels change. There is no multi-night roster optimization. On touch screens, dragging a finger across the availability grid paints cells (swipe the time labels or outside the grid to scroll). Roster cards are moved by pressing and holding, then dragging; the page scrolls when the card nears the top or bottom edge. Touch behavior is verified with Chromium touch emulation, not yet on physical iOS or Android devices.
+The grid is shown in the guild's timezone, within its raid hours. In a browser-only guild, "Act as" stands in for sign-in: anyone using this browser can act as any player. Availability is stored in UTC. Grid columns are always the guild's days; in "show my time" mode only the labels change. There is no multi-night roster optimization. On touch screens, dragging a finger across the availability grid paints cells (swipe the time labels or outside the grid to scroll). Roster cards are moved by pressing and holding, then dragging; the page scrolls when the card nears the top or bottom edge. Touch behavior is verified with Chromium touch emulation, not yet on physical iOS or Android devices.
 
 Role slots, required utilities, firm (not tentative) availability, backup depth, and the raid's roster priority (bench fairness by default, or mains, or preferred times) are the optimization criteria; optional class limits are never exceeded by suggestions. Bench fairness counts how many of the last 4 weeks a player was free for the saved plan but left off it; past sessions are assumed to have run for the current raid duration. It does not optimize encounter mechanics, resistances, player skill, or gear. When bench history is also equal, ties still favor players earlier in the member list. Class diversity is shown for officer review. A character's stored role can be manually overridden, which intentionally triggers a warning.
 

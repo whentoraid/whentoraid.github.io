@@ -26,8 +26,6 @@ vi.mock('../lib/toast.svelte.js', () => ({ showToast: vi.fn() }))
 const { openGuild, remote, retryDiscordJoin } = await import('../lib/remote/sync.svelte.js')
 const { showToast } = await import('../lib/toast.svelte.js')
 const { default: OnlineAccount } = await import('./OnlineAccount.svelte')
-const { app } = await import('../lib/app.svelte.js')
-const { createDemoState } = await import('../lib/seed.js')
 
 test('a signed-in player without a guild sees the Discord join path', () => {
   remote.guilds = []
@@ -46,19 +44,6 @@ test('a failed Discord check stays visible and can be retried', async () => {
   await fireEvent.click(screen.getByRole('button', { name: 'Check my Discord server again' }))
   expect(retryDiscordJoin).toHaveBeenCalledOnce()
   remote.joinError = null
-})
-
-test('a sample guild offers owner setup without moving its sample data online', async () => {
-  app.data = createDemoState()
-  app.showSetup = false
-  remote.guildId = 'g1'
-  remote.guilds = [{ id: 'g1', name: 'The After Hours (demo)' }]
-  render(OnlineAccount)
-  expect(screen.queryByRole('button', { name: /Move .* online/ })).toBeNull()
-  await fireEvent.click(screen.getByRole('button', { name: 'Start your real guild' }))
-  expect(app.showSetup).toBe(true)
-  app.showSetup = false
-  app.data = null
 })
 
 test('a failed account action shows its error inside the panel, not in a toast', async () => {

@@ -9,6 +9,7 @@
   import { availabilitySource, scheduleFreshness } from '../lib/personal-raids.js'
   import { todayIso } from '../lib/time.js'
   import { setCurrentMember } from '../lib/members.js'
+  import { EDIT_AS_OTHER_PLAYERS } from '../lib/features.js'
   import { charactersOf, getCheckin, memberById, setCurrentWeek, tracksAttendance } from '../lib/model.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import { showToast } from '../lib/toast.svelte.js'
@@ -187,7 +188,11 @@
             {#if showAttendance}<td data-label="Attendance">{record ?? '—'}</td>{/if}
             {#if canManage()}
               <td class="row-actions">
-                <button disabled={isMe} onclick={() => actAs(member)}>{isMe ? 'Acting as' : 'Act as'}</button>
+                {#if !remote.guildId || EDIT_AS_OTHER_PLAYERS}
+                  <button disabled={isMe} onclick={() => actAs(member)}
+                    >{isMe ? 'Acting as' : 'Act as'}</button
+                  >
+                {/if}
                 <button onclick={() => (editing = { memberId: member.id })} aria-label="Edit {member.name}"
                   >Edit</button
                 >
@@ -211,8 +216,9 @@
   {#if !remote.guildId}
     Everything is saved in this browser. “Act as” stands in for sign-in until your guild is online.
   {:else if canManage()}
-    Players join with the invite link above, or you can add a player’s Discord ID yourself. As an officer you
-    can act as anyone to fill in their availability.
+    Players join with the invite link above, or you can add a player’s Discord ID yourself.{EDIT_AS_OTHER_PLAYERS
+      ? ' As an officer you can act as anyone to fill in their availability.'
+      : ' Each player fills in their own availability and characters.'}
   {:else}
     Officers manage the player list. You can edit your own availability and characters.
   {/if}

@@ -53,7 +53,6 @@
       () => createOnlineGuild($state.snapshot(app.data)),
       'Your guild is online. Invite players with the invite link on Guild members.',
     )
-  const sampleGuild = $derived(Boolean(app.data?.demoYear) || /\(demo\)$/i.test(app.data?.guild?.name ?? ''))
 </script>
 
 {#if !remote.enabled}
@@ -130,12 +129,9 @@
   {/if}
 
   <div class="buttons spaced-top">
-    {#if sampleGuild && !app.showSetup}
-      <button class="primary" onclick={() => (app.showSetup = true)}>Start your real guild</button>
-    {/if}
     {#if remote.guildId}
       <button disabled={busy} onclick={() => run(leaveGuild)}>Use the guild saved in this browser</button>
-    {:else if app.data && !sampleGuild}
+    {:else if app.data}
       <button class="primary" disabled={busy} onclick={moveOnline}>Move “{app.data.guild.name}” online</button
       >
     {/if}
