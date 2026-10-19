@@ -68,6 +68,7 @@
     Sign in with Discord to plan with your guild online. Everyone sees the same roster, and each player fills
     in their own availability.
   </p>
+  {#if remote.signInError}<p class="warning" role="alert">{remote.signInError}</p>{/if}
   <button class="primary" onclick={signIn}>Sign in with Discord</button>
   {#if localTestSignInAvailable}
     <div class="local-test-sign-in spaced-top">

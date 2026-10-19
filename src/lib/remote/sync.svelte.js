@@ -15,6 +15,7 @@ import { APPLICABLE, unsavedChanges, withoutChange } from './recovery.js'
 import { viewerZone } from '../display.svelte.js'
 import { pendingDiscordConnectGuildId } from '../discord-connect.js'
 import { EDIT_AS_OTHER_PLAYERS } from '../features.js'
+import { signInError } from './auth-error.js'
 
 /**
  * Online guilds. While a guild is open, `app.data` still holds the whole guild and every change
@@ -42,6 +43,8 @@ export const remote = $state({
   /** A Discord membership check can be retried without leaving the page. */
   joinError: null,
   joining: false,
+  /** Why the last Discord sign-in came back without a session, shown beside Sign in. */
+  signInError: null,
   /** @type {{ id: string, name: string }[]} */
   guilds: [],
   /** The open online guild, or null in browser-only mode. */
@@ -442,6 +445,11 @@ function cleanAuthParams() {
 /** Start following sign-in state. Call once, when the app starts. @returns {() => void} stop */
 export function initRemote() {
   if (!supabase) return () => {}
+  const failed = signInError(location.href)
+  if (failed) {
+    remote.signInError = failed.message
+    history.replaceState(history.state, '', failed.cleanUrl)
+  }
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     // Supabase warns against awaiting other Supabase calls inside this callback.
     const generation = ++sessionGeneration
