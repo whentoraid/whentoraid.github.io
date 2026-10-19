@@ -69,6 +69,7 @@ vi.mock('./api.js', () => ({
 
 import { app } from '../app.svelte.js'
 import {
+  discardUnsavedChange,
   dismissUnsavedDraft,
   flushOnlineChanges,
   initRemote,
@@ -257,15 +258,21 @@ test('switching directly between signed-in identities replaces the guild viewer'
   expect(app.data.currentMemberId).toBe(second.id)
 
   mocked.applyError = true
-  const edited = { ...app.data, guild: { ...app.data.guild, name: 'Unsaved name' } }
+  // A player may rename themselves, so the failed edit can still be reapplied.
+  const renamed = (data) => data.members.find((m) => m.id === second.id).name
+  const edited = {
+    ...app.data,
+    members: app.data.members.map((m) => (m.id === second.id ? { ...m, name: 'Unsaved name' } : m)),
+  }
   app.data = edited
   pushChanges(edited)
   await waitFor(() => expect(remote.hasUnsavedDraft).toBe(true))
-  expect(JSON.parse(storedDraft('auth-b', guildId)).state.guild.name).toBe('Unsaved name')
+  expect(renamed(JSON.parse(storedDraft('auth-b', guildId)).state)).toBe('Unsaved name')
   await expect(signOut()).rejects.toThrow(/not saved/)
   expect(mocked.signOutCalls).toBe(0)
 
-  await waitFor(() => expect(app.data.guild.name).toBe(state.guild.name))
+  await waitFor(() => expect(renamed(app.data)).toBe(second.name))
+  expect(remote.changes).toMatchObject([{ title: 'Your player name', outcome: 'ready' }])
   mocked.applyError = false
   let finishSave
   mocked.applyGate = new Promise((resolve) => {
@@ -280,7 +287,7 @@ test('switching directly between signed-in identities replaces the guild viewer'
   await waitFor(() => expect(remote.memberId).toBe(first.id))
   finishSave()
   await waitFor(() => expect(mocked.applied).toBe(2))
-  expect(storedDraft('auth-b', guildId)).toBeTruthy()
+  expect(storedDraft('auth-b', guildId), 'after switching').toBeTruthy()
   expect(remote.hasUnsavedDraft).toBe(false)
 
   mocked.onAuthStateChange('SIGNED_OUT', null)
@@ -389,5 +396,63 @@ test('drafts belong to their page: open tabs keep theirs, closed tabs offer thei
   expect(localStorage.getItem(`${prefix}${guildId}:open-page`)).toBeTruthy()
 
   delete navigator.locks
+  stop()
+})
+
+test('an unsaved edit is reviewed task by task, and a slow save that landed is not offered again', async () => {
+  const guildId = 'guild-test'
+  const state = createSeedState()
+  const me = state.members[0]
+  const members = state.members.map((m) => ({
+    ...m,
+    discordId: m.id === me.id ? 'discord-r' : '',
+    officer: false,
+  }))
+  const withName = (name) => members.map((m) => (m.id === me.id ? { ...m, name } : m))
+  mocked.rows = { ...stateToRows({ ...state, members }, guildId), revision: 0 }
+  Object.assign(mocked, { fetchError: false, applyError: false, applyGate: null })
+  localStorage.setItem('whentoraid-online-guild', guildId)
+  const stop = initRemote()
+  mocked.discordId = 'discord-r'
+  mocked.onAuthStateChange('SIGNED_IN', { user: { id: 'auth-r' } })
+  await waitFor(() => expect(remote.discordId).toBe('discord-r'))
+  await waitFor(() => expect(remote.memberId).toBe(me.id))
+  await waitFor(() => expect(remote.status).toBe('saved'))
+  await flushOnlineChanges()
+
+  mocked.applyError = true
+  const applied = mocked.applied
+  const character = app.data.characters.find((c) => c.memberId === me.id)
+  const edited = {
+    ...app.data,
+    members: app.data.members.map((m) => (m.id === me.id ? { ...m, name: 'Renamed' } : m)),
+    characters: app.data.characters.map((c) => (c.id === character.id ? { ...c, spec: 'Changed' } : c)),
+  }
+  app.data = edited
+  pushChanges(edited)
+  await waitFor(() => expect(mocked.applied).toBe(applied + 1))
+  await waitFor(() => expect(remote.changes).toHaveLength(2))
+  expect(remote.changes.every((change) => change.outcome === 'ready')).toBe(true)
+
+  discardUnsavedChange(remote.changes.find((change) => change.task === 'character').id)
+  expect(remote.changes.map((change) => change.title)).toEqual(['Your player name'])
+  const kept = JSON.parse(storedDraft('auth-r', guildId)).state
+  expect(kept.characters.find((c) => c.id === character.id).spec).toBe(character.spec)
+  expect(kept.members.find((m) => m.id === me.id).name).toBe('Renamed')
+
+  // The failed save had reached the server after all: nothing is left to recover.
+  mocked.applyError = false
+  mocked.rows = { ...stateToRows({ ...state, members: withName('Renamed') }, guildId), revision: 1 }
+  mocked.onSubscription('SUBSCRIBED')
+  await waitFor(() => expect(remote.hasUnsavedDraft).toBe(false))
+  expect(storedDraft('auth-r', guildId)).toBeNull()
+  expect(remote.status).toBe('saved')
+
+  // Unreachable server: the page says it shows the last loaded version, not that an edit failed.
+  mocked.fetchError = true
+  mocked.onSubscription('SUBSCRIBED')
+  await waitFor(() => expect(remote.status).toBe('stale'))
+  mocked.fetchError = false
+  await leaveGuild()
   stop()
 })

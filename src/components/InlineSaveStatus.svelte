@@ -5,9 +5,16 @@
   const status = $derived(online ? remote.status : localSave.status)
 </script>
 
-<p class="save-status" class:warning={status === 'error'} role="status" aria-live="polite">
+<p
+  class="save-status"
+  class:warning={status === 'error' || status === 'stale'}
+  role="status"
+  aria-live="polite"
+>
   {#if status === 'saving'}
     Saving…
+  {:else if status === 'stale'}
+    Can’t reach the server. You’re seeing the last version that loaded; a change made now may not save.
   {:else if status === 'error'}
     {online
       ? 'Couldn’t save online. Review your unsaved edit above.'
