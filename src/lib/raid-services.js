@@ -117,6 +117,12 @@ export const setMyReminderPrefs = (client, guildId, { ping, quietStart, quietEnd
     p_timezone: timezone,
   })
 
+export const getRaidHistory = (client, guildId, week, raidId) =>
+  rpc(client, 'get_raid_history', { p_guild_id: guildId, p_week: week, p_raid_id: raidId })
+
+export const explainRaidChange = (client, guildId, id, reason) =>
+  rpc(client, 'explain_raid_change', { p_guild_id: guildId, p_id: id, p_reason: reason })
+
 export const getRaidBriefings = (client, guildId) =>
   rpc(client, 'get_raid_briefings', { p_guild_id: guildId })
 

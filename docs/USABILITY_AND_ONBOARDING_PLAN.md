@@ -70,7 +70,7 @@ The delivery tracker below covers all recommendations individually. Proposed lea
 | M10 | Participation limits and raid preferences     | Codex         | Claude            | —                   | On hold: user reconsidering need             |
 | M11 | Recurring availability renewal and pause      | Codex         | Claude            | Claude              | Ready for review: migration pushed           |
 | M12 | Task-level sync recovery                      | Codex         | Claude            | Claude              | Ready for review                             |
-| M13 | Attributable history and draft restoration    | Codex         | Claude            | —                   | Not started (before Nov 4)                   |
+| M13 | Attributable history and draft restoration    | Codex         | Claude            | Claude              | Ready for review: needs db push              |
 | M14 | Recurring schedule impact preview             | Claude        | Codex             | Claude              | Ready for review                             |
 | M15 | Raid-day briefing                             | Claude        | Codex             | Claude              | Ready for review: needs db push              |
 | m01 | Deadline beside the availability answer       | Claude        | Codex             | Claude              | Ready for review                             |
@@ -421,3 +421,13 @@ Suggested pre–Nov 4 slice: the checklist fix and same-order routing (done in t
 - can't be saved, because it was removed online, needs an officer, or the week's check-ins closed (with the deadline)
 
 The recovery notice (`UnsavedChanges.svelte`) offers per-change Review online version and Discard this change. Save again applies only the changes that can still be applied. A draft whose every change is already on the server is cleared with "saved after all". The comparison is skipped while a save is in flight or the latest copy is loading, so a change is never shown as saved from optimistic data. A read of stored drafts that started before this page wrote a newer one no longer replaces it. When the server cannot be reached, status is "can't reach the server", meaning a stale view, distinct from "not saved". A failed raid answer is never shown as saved. Its Try again first re-checks the roster: nothing is resent after a republish, or when the server already has the answer. The existing merge and conflict protections are unchanged. Checks: `TZ=UTC npm run check` (719 unit tests) pass; `playwright test` 69 passed. No migration or Edge Function.
+
+**Handoff — October 18, 2026; Claude; M13; Ready for review.** Branch `feat/raid-history`. Claude took this Codex-led item at the user's direction; Codex is the reviewer. Migration `20261102120000_raid_history.sql` adds `raid_history`, written only by a trigger on `plans`, so every path that saves a plan (the app, Discord and the server) is recorded with the acting member's id and name, or as WhenToRaid when no player made it. Recorded changes:
+
+- draft roster and time edits, with one officer's edits within 10 minutes merged into one entry until a reason is added
+- publishing, republishing (with the roster it replaced) and withdrawing
+- cancelling and putting a raid back on
+- attendance
+- clearing a raid's plan
+
+Entries older than six months are pruned. `get_raid_history` gives officers everything, including the roster from before each change. Players get only published changes, cancellations and reinstatements that include them, never drafts, attendance or earlier rosters. `explain_raid_change` lets officers add or edit a reason. In the planner, officers of an online guild get a collapsed "Raid history" panel per raid. It shows who did what and when, whether players see it, and the reason, plus "Restore the roster from before this". That previews who returns to and leaves the draft, and which players can't be restored (left the guild, character deleted or not theirs, role now full). It keeps the raid's current time, and only then makes it the draft. Published rosters, responses and attendance stay as they are, publishing is still a separate step, and restoring is refused once a raid has started or while it is cancelled. On Home, players see a "What changed" list under their next raid with the published changes about their own place and why. Checks: `TZ=UTC npm run check` (731 unit tests) pass; `playwright test` 69 passed; pgTAP `raid_history.test.sql` runs in CI. Rollout: `supabase db push` before merging; no Edge Functions.
