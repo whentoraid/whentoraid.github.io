@@ -653,10 +653,45 @@ describe('the delivery worker', () => {
     const body = fetchFn.mock.calls[0][1].body
     expect(body).toBeInstanceOf(FormData)
     const payloadJson = JSON.parse(body.get('payload_json'))
+    expect(payloadJson.embeds).toHaveLength(1)
     expect(payloadJson.embeds[0].image.url).toBe('attachment://raid-roster.png')
-    expect(JSON.stringify(payloadJson.embeds)).not.toMatch(/🟦|🟨|Shadow/)
-    expect(JSON.stringify(payloadJson.embeds)).toContain('**Skogerino**')
+    expect(payloadJson.embeds[0].fields).toBeUndefined()
+    expect(payloadJson.embeds[0].description).toContain('rostered')
+    expect(body.get('payload_json')).not.toMatch(/🟦|🟨|Shadow/)
+    expect(payloadJson.attachments[0].description).toContain('Skogerino (Skoog) (roster)')
+    expect(payloadJson.attachments[0].description).toContain('Oak (backup)')
     expect(payloadJson.components[0].components[0].label).toBe('Confirm')
+  })
+
+  it('keeps the text roster when an image could not describe every player', async () => {
+    const team = Array.from({ length: 40 }, (_, index) => ({
+      name: `Player ${index} ${'Longname'.repeat(4)}`,
+      class: 'Priest',
+      spec: 'Shadow',
+      role: 'DPS',
+    }))
+    const { rpc, fetchFn } = worker(
+      claimed({
+        kind: 'roster',
+        payload: { guildName: 'Guild', raidName: 'Raid', start: START, targets: [0, 0, 40], team },
+      }),
+    )
+    const renderRosterImage = vi.fn()
+    const results = await deliverQueued({
+      rpc,
+      guildId: GUILD,
+      botToken: 'bot-secret',
+      appUrl: 'https://whentoraid.example/',
+      checkChannel: vi.fn(),
+      fetchFn,
+      renderRosterImage,
+    })
+    expect(results).toEqual([{ id: JOB, status: 'sent' }])
+    expect(renderRosterImage).not.toHaveBeenCalled()
+    const embeds = JSON.parse(fetchFn.mock.calls[0][1].body).embeds
+    expect(
+      embeds.flatMap((embed) => embed.fields ?? []).some((field) => field.value.includes('Player 39')),
+    ).toBe(true)
   })
 
   it('does not post a sign-up for a raid that already started', async () => {

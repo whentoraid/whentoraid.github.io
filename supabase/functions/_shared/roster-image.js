@@ -31,7 +31,7 @@ export async function renderRosterImage(model) {
   )
   const height = Math.min(
     5000,
-    88 + sections.reduce((total, section) => total + 40 + section.members.length * 42, 0),
+    64 + sections.reduce((total, section) => total + 40 + section.members.length * 42, 0),
   )
   const content = h(
     'div',
@@ -47,7 +47,6 @@ export async function renderRosterImage(model) {
         fontFamily: 'sans-serif',
       },
     },
-    h('div', { style: { display: 'flex', fontSize: 28, fontWeight: 700, marginBottom: 14 } }, model.title),
     ...sections.map((section, sectionIndex) =>
       h(
         'div',
@@ -87,7 +86,8 @@ export async function renderRosterImage(model) {
       ),
     ),
   )
-  const response = new ImageResponse(content, { width: 900, height })
+  // Discord scales wide embed images down; 600px keeps names legible inside the card.
+  const response = new ImageResponse(content, { width: 600, height })
   if (!response.ok) throw new Error('Could not render the colored roster image.')
   return new Uint8Array(await response.arrayBuffer())
 }
