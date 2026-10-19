@@ -11,19 +11,17 @@
     { view: 'home', icon: 'home', label: 'My raids' },
     { view: 'availability', icon: 'calendar', label: 'My availability' },
     { view: 'characters', icon: 'character', label: 'My characters' },
+    { view: 'officer', icon: 'dashboard', label: 'Officer dashboard' },
     { view: 'planner', icon: 'planner', label: 'Raid planner' },
     { view: 'members', icon: 'members', label: 'Guild members' },
     { view: 'settings', icon: 'settings', label: 'Guild settings' },
   ]
-  /** Players get read-only guild pages; Guild settings is officer work. The server still enforces this. */
-  const guildItems = $derived(
-    canManage()
-      ? NAV_ITEMS.slice(3)
-      : [
-          { view: 'planner', icon: 'planner', label: 'Guild rosters' },
-          { view: 'members', icon: 'members', label: 'Guild members' },
-        ],
-  )
+  /**
+   * Players keep to their own raid week; each of their raids links to its published roster. Guild tools
+   * are officer work. The server still enforces this.
+   */
+  const guildItems = $derived(canManage() ? NAV_ITEMS.slice(3) : [])
+  const GUILD_VIEWS = NAV_ITEMS.slice(3).map((item) => item.view)
   let moreOpen = $state(false)
   let moreButton
 
@@ -78,7 +76,7 @@
     {/each}
     <button
       class="mobile-more"
-      class:active={moreOpen || ['planner', 'members', 'settings'].includes(app.view)}
+      class:active={moreOpen || (guildItems.length > 0 && GUILD_VIEWS.includes(app.view))}
       aria-expanded={moreOpen}
       aria-controls="guild-menu"
       onclick={() => (moreOpen = !moreOpen)}
@@ -87,16 +85,18 @@
   </nav>
   <div class="guild-menu" id="guild-menu">
     <p class="mobile-guild-name">{app.data.guild.name}</p>
-    <nav aria-label={canManage() ? 'Guild tools' : 'Guild'}>
-      <p class="nav-label">{canManage() ? 'GUILD TOOLS' : 'GUILD'}</p>
-      {#each guildItems as item (item.view)}
-        <button
-          class:active={app.view === item.view}
-          aria-current={app.view === item.view ? 'page' : undefined}
-          onclick={() => navigate(item.view)}><Icon name={item.icon} /><span>{item.label}</span></button
-        >
-      {/each}
-    </nav>
+    {#if guildItems.length}
+      <nav aria-label="Guild tools">
+        <p class="nav-label">GUILD TOOLS</p>
+        {#each guildItems as item (item.view)}
+          <button
+            class:active={app.view === item.view}
+            aria-current={app.view === item.view ? 'page' : undefined}
+            onclick={() => navigate(item.view)}><Icon name={item.icon} /><span>{item.label}</span></button
+          >
+        {/each}
+      </nav>
+    {/if}
     <div class="aside-bottom">
       <span
         class="live-dot"

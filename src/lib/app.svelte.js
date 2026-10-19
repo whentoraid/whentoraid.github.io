@@ -36,7 +36,7 @@ export const app = $state({
   /** The dashboard row an officer left from, so the planner can lead back to it. */
   /** @type {string | null} */
   returnTo: null,
-  /** The dashboard row to bring into view on return; Home clears it once shown. */
+  /** The dashboard row to bring into view on return; the officer dashboard clears it once shown. */
   /** @type {string | null} */
   dashboardFocus: null,
   /** @type {string | null} */

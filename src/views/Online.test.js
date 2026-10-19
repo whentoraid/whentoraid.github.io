@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte'
+import { fireEvent, render, screen } from '@testing-library/svelte'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import App from '../App.svelte'
 import { app } from '../lib/app.svelte.js'
@@ -44,13 +44,17 @@ describe('online guild, as a player', () => {
     expect(localStorage.getItem('whentoraid-v3')).toBeNull()
   })
 
-  test('players can review raid rules but cannot edit or submit them', () => {
-    app.view = 'settings'
-    render(App)
-    expect(screen.getByRole('group', { name: 'Guild and raid rules' }).disabled).toBe(true)
-    expect(screen.queryByRole('button', { name: 'Save settings' })).toBeNull()
-    expect(screen.getByText(/Only officers can change guild settings/)).toBeTruthy()
-  })
+  test.each(['settings', 'members', 'officer'])(
+    'a player opening %s by URL is pointed back to My raids',
+    async (view) => {
+      app.view = view
+      render(App)
+      expect(screen.getByRole('heading', { level: 1, name: 'This page is for officers' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Save settings' })).toBeNull()
+      await fireEvent.click(screen.getByRole('button', { name: 'Go to My raids' }))
+      expect(app.view).toBe('home')
+    },
+  )
 
   test('officers keep every control', () => {
     remote.officer = true

@@ -94,11 +94,29 @@ test('a response given before the raid time changed is not shown as current', as
   expect(within(next).queryByText(/Old/)).toBeNull()
 })
 
-test('an officer sees their own next raid before the guild dashboard', () => {
+test('an officer’s My raids stays about their own raids and links to the officer dashboard', async () => {
   render(Home)
-  const mine = screen.getByRole('region', { name: 'Next raid assignment' })
-  const guild = screen.getByRole('region', { name: 'Officer dashboard' })
-  expect(mine.compareDocumentPosition(guild) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.queryByRole('region', { name: 'Officer dashboard' })).toBeNull()
+  const jump = screen.getByRole('navigation', { name: 'On this page' })
+  await fireEvent.click(within(jump).getByRole('button', { name: /Open officer dashboard/ }))
+  expect(app.view).toBe('officer')
+})
+
+test('the On this page bar jumps to and focuses each part of the page', async () => {
+  render(Home)
+  const jump = screen.getByRole('navigation', { name: 'On this page' })
+  await fireEvent.click(within(jump).getByRole('button', { name: 'Availability' }))
+  expect(document.activeElement).toBe(screen.getByRole('region', { name: 'This week’s check-in' }))
+  await fireEvent.click(within(jump).getByRole('button', { name: 'Month' }))
+  expect(document.activeElement.id).toBe('home-month')
+})
+
+test('a rostered player’s answer buttons come before the raid details', () => {
+  render(Home)
+  const next = screen.getByRole('region', { name: 'Next raid assignment' })
+  const answer = within(next).getByRole('button', { name: 'I’ll be there' })
+  const character = within(next).getByText('YOUR CHARACTER')
+  expect(answer.compareDocumentPosition(character) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 })
 
 test('a player answers a raid in one tap, and only that raid changes', async () => {
@@ -113,27 +131,6 @@ test('a player answers a raid in one tap, and only that raid changes', async () 
   )
 })
 
-test('a dashboard issue opens the planner at the tool that resolves it', async () => {
-  render(Home)
-  const dashboard = screen.getByRole('region', { name: 'Officer dashboard' })
-  await fireEvent.click(
-    within(dashboard).getByRole('button', { name: /^Find Tank candidates: 20-player Raid/ }),
-  )
-  expect(app.view).toBe('planner')
-  expect(app.plannerIntent).toEqual({ section: 'roster', focus: 'add', role: 'Tank' })
-  expect(app.returnTo).toBe(`${SEED_WEEK}/raid-20`)
-  expect(app.data.currentRaidId).toBe('raid-20')
-})
-
-test('returning from the planner brings the raid the officer left from back into focus', () => {
-  app.dashboardFocus = `${SEED_WEEK}/raid-20`
-  render(Home)
-  const dashboard = screen.getByRole('region', { name: 'Officer dashboard' })
-  const row = dashboard.querySelector(`[data-row="${SEED_WEEK}/raid-20"]`)
-  expect(row.contains(document.activeElement)).toBe(true)
-  expect(app.dashboardFocus).toBeNull()
-})
-
 test('a usual schedule due for review is confirmed from Home in one tap', async () => {
   app.data.templates = {
     m0: { ...templateFromRanges(SEED_WEEK, [], app.data.guild), confirmedAt: '2026-07-01' },
@@ -146,14 +143,16 @@ test('a usual schedule due for review is confirmed from Home in one tap', async 
   expect(screen.queryByRole('group', { name: 'Review your usual schedule' })).toBeNull()
 })
 
-test('an online player with a first assignment is offered the calendar link beside it', () => {
+test('an online player with a first assignment can open the calendar link from their raid', async () => {
   Object.assign(remote, { guildId: 'guild-1', memberId: 'm0', officer: false })
   try {
     render(Home)
     const next = screen.getByRole('region', { name: 'Next raid assignment' })
-    expect(within(next).getByRole('button', { name: /Follow your raids in your calendar/ })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Add your raids to your calendar' })).toBeTruthy()
-    expect(screen.queryByText('Calendar link', { selector: 'summary' })).toBeNull()
+    const summary = screen.getByText('Calendar link', { selector: 'summary' })
+    expect(summary.closest('details').open).toBe(false)
+    await fireEvent.click(within(next).getByRole('button', { name: /Follow your raids in your calendar/ }))
+    expect(summary.closest('details').open).toBe(true)
+    expect(document.activeElement).toBe(summary)
   } finally {
     Object.assign(remote, { guildId: null, memberId: null, officer: false })
   }

@@ -450,12 +450,12 @@ describe('Planner opened from an officer-dashboard issue', () => {
     expect(document.activeElement).toBe(heading)
   })
 
-  test('Back to officer dashboard returns Home to the row the officer came from', async () => {
+  test('Back to officer dashboard returns to the row the officer came from', async () => {
     app.returnTo = `${SEED_WEEK}/raid-20`
     app.view = 'planner'
     render(Planner)
     await fireEvent.click(screen.getByRole('button', { name: /Back to officer dashboard/ }))
-    expect(app.view).toBe('home')
+    expect(app.view).toBe('officer')
     expect(app.dashboardFocus).toBe(`${SEED_WEEK}/raid-20`)
   })
 

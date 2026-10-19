@@ -10,12 +10,21 @@ vi.mock('../lib/remote/sync.svelte.js', () => ({
   remote: { guildId: 'test', status: 'saved' },
 }))
 
-test('a player sees read-only guild pages and no Guild settings', () => {
+test('a player sees only their own raid week: raids, availability and characters', () => {
   app.data = createSeedState()
   render(Sidebar)
-  const guild = screen.getByRole('navigation', { name: 'Guild' })
-  expect(within(guild).getByRole('button', { name: 'Guild rosters' })).toBeTruthy()
-  expect(within(guild).getByRole('button', { name: 'Guild members' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Guild settings' })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Raid planner' })).toBeNull()
+  const mine = screen.getByRole('navigation', { name: 'Your raid week' })
+  for (const label of ['My raids', 'My availability', 'My characters']) {
+    expect(within(mine).getByRole('button', { name: label })).toBeTruthy()
+  }
+  expect(screen.queryByRole('navigation', { name: 'Guild tools' })).toBeNull()
+  for (const label of [
+    'Officer dashboard',
+    'Raid planner',
+    'Guild rosters',
+    'Guild members',
+    'Guild settings',
+  ]) {
+    expect(screen.queryByRole('button', { name: label })).toBeNull()
+  }
 })

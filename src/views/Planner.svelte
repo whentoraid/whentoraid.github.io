@@ -128,7 +128,7 @@
 
   function backToDashboard() {
     app.dashboardFocus = app.returnTo
-    app.view = 'home'
+    app.view = 'officer'
   }
   const tabs = $derived([
     ...(!viewPublished ? [{ id: 'schedule', label: 'Schedule' }] : []),

@@ -4,7 +4,7 @@
   import { hasUnsavedChanges, requestLeave } from './lib/leave-guard.js'
   import { setCurrentWeek } from './lib/model.js'
   import { DEFAULT_RAID_ID, setCurrentRaid } from './lib/raids.js'
-  import { formatHash, parseHash } from './lib/route.js'
+  import { formatHash, OFFICER_VIEWS, parseHash } from './lib/route.js'
   import { canManage, initRemote, pushChanges, remote } from './lib/remote/sync.svelte.js'
   import { captureInvite, invite, loadInvite } from './lib/remote/invite.svelte.js'
   import { backupJson, sameGuild, saveState, watchOtherTabs } from './lib/storage.js'
@@ -20,6 +20,8 @@
   import Availability from './views/Availability.svelte'
   import Characters from './views/Characters.svelte'
   import Members from './views/Members.svelte'
+  import Officer from './views/Officer.svelte'
+  import OfficerOnly from './components/OfficerOnly.svelte'
   import Planner from './views/Planner.svelte'
   import Settings from './views/Settings.svelte'
   import Setup from './views/Setup.svelte'
@@ -31,6 +33,7 @@
     planner: 'Raid planner',
     availability: 'My availability',
     characters: 'My characters',
+    officer: 'Officer dashboard',
     members: 'Guild members',
     settings: 'Guild settings',
   }
@@ -208,8 +211,12 @@
       {#if remote.hasUnsavedDraft}<UnsavedChanges />{/if}
       <div inert={remote.hasUnsavedDraft}>
         <EditingAsBanner />
-        {#if app.view === 'home'}
+        {#if OFFICER_VIEWS.includes(app.view) && !canManage()}
+          <OfficerOnly />
+        {:else if app.view === 'home'}
           <Home />
+        {:else if app.view === 'officer'}
+          <Officer />
         {:else if app.view === 'availability'}
           <Availability />
         {:else if app.view === 'characters'}
