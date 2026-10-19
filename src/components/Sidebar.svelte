@@ -4,6 +4,7 @@
   import { setCurrentMember } from '../lib/members.js'
   import { memberById } from '../lib/model.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
+  import { EDIT_AS_OTHER_PLAYERS } from '../lib/features.js'
   import Icon from './Icon.svelte'
   import { localSave } from '../lib/save-status.svelte.js'
 
@@ -115,7 +116,7 @@
           : 'Saved in this browser'}
       <div class="user">
         <span class="avatar" aria-hidden="true">{initials}</span>
-        {#if canManage()}
+        {#if canManage() && (!remote.guildId || EDIT_AS_OTHER_PLAYERS)}
           <label class="field acting-as">
             {remote.guildId ? 'Editing as' : 'Acting as'}
             <select value={app.data.currentMemberId} onchange={switchMember}>
@@ -125,7 +126,9 @@
             </select>
           </label>
         {:else}
-          <div class="acting-as">{me?.name ?? 'Signed in'}<small>Player</small></div>
+          <div class="acting-as">
+            {me?.name ?? 'Signed in'}<small>{remote.officer ? 'Officer' : 'Player'}</small>
+          </div>
         {/if}
       </div>
       <nav class="legal-links" aria-label="Legal">

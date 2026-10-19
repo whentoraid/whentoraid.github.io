@@ -61,7 +61,14 @@ describe('online guild, as a player', () => {
     app.view = 'members'
     render(App)
     expect(screen.getByRole('button', { name: '+ Add player' })).toBeTruthy()
-    expect(screen.getByLabelText('Editing as')).toBeTruthy()
+  })
+
+  test('officers fill in only their own week while editing as others is set aside', () => {
+    remote.officer = true
+    app.view = 'members'
+    render(App)
+    expect(screen.queryByLabelText('Editing as')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Act as' })).toBeNull()
   })
 
   test('a bot-only guild can reach automatic Discord sign-up settings', () => {

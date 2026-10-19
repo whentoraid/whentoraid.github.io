@@ -150,6 +150,12 @@ describe('loadSaved', () => {
     saveState(createSeedState())
     expect(localStorage.getItem(UNREADABLE_KEY)).toBe('{not json')
   })
+
+  test('forgets a retired sample guild left in the browser', () => {
+    saveState({ ...createSeedState(), demoYear: 2026 })
+    expect(loadSaved()).toEqual({ state: null, unreadable: null })
+    expect(localStorage.getItem('whentoraid-v3')).toBeNull()
+  })
 })
 
 describe('unreadableReason', () => {

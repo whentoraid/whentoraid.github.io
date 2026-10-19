@@ -105,10 +105,9 @@ test('a published roster link opens the published view', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'No published roster yet' })).toBeVisible()
 })
 
-test('the sample guild is available from the optional setup section', async ({ page }) => {
+test('setup no longer offers a sample guild', async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem('whentoraid-v3'))
   await page.goto('./')
-  await page.getByText('Explore a sample guild').click()
-  await page.getByRole('button', { name: 'Explore the demo guild' }).click()
-  await expect(page.getByText(/Demo guild loaded/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Set up your guild' })).toBeVisible()
+  await expect(page.getByText('Explore a sample guild')).toHaveCount(0)
 })

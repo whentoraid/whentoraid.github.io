@@ -5,8 +5,8 @@
   import { app } from '../lib/app.svelte.js'
   import { END_HOUR_OPTIONS, readCharacterFields, START_HOUR_OPTIONS } from '../lib/forms.js'
   import { timeZoneOptions } from '../lib/guild.js'
-  import { createDemoState } from '../lib/seed.js'
   import { createOnlineGuild, remote } from '../lib/remote/sync.svelte.js'
+  import { hasGuildLink } from '../lib/remote/guild-link.js'
   import { createGuildState } from '../lib/setup.js'
   import { downloadText } from '../lib/download.js'
   import { unreadableReason } from '../lib/storage.js'
@@ -54,13 +54,6 @@
     } finally {
       creating = false
     }
-  }
-
-  function loadDemo() {
-    app.showSetup = false
-    app.view = 'planner'
-    app.data = createDemoState()
-    showToast('Demo guild loaded. It is saved only in this browser; start over from Guild settings.')
   }
 
   function restore(state) {
@@ -196,20 +189,8 @@
       <button onclick={() => (app.showSetup = false)}>Back to {app.data.guild.name}</button>
     {/if}
 
-    {#if !remote.guildId}
-      <details class="panel spaced-top">
-        <summary><h2>Explore a sample guild</h2></summary>
-        <p class="note">
-          Demo: sample players and schedules, saved only in this browser. No invitations or real Discord posts
-          are sent.
-        </p>
-        <p>
-          Explore 24 sample players with a full calendar year of randomized availability and plans for all
-          three raids. Every load creates a fresh demo.
-        </p>
-        <button onclick={loadDemo}>Explore the demo guild</button>
-      </details>
-
+    <!-- A player arriving from a Discord link came for their guild, not a backup. -->
+    {#if !remote.guildId && !hasGuildLink()}
       <section class="panel spaced-top">
         <h2>Have a backup?</h2>
         <p>Restore a guild downloaded from Guild settings in this or another browser.</p>

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import { createSeedState } from '../src/lib/seed.js'
 
 test.beforeEach(async ({ page }) => {
-  // A stable fixture keeps roster assertions independent from the randomized demo.
+  // A stable fixture keeps roster assertions stable.
   await page.addInitScript(
     (state) => localStorage.setItem('whentoraid-v3', JSON.stringify(state)),
     createSeedState(),
@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Roster publication' })).toBeVisible()
 })
 
-test('the demo week suggests a full raid and groups the bench', async ({ page }) => {
+test('the sample week suggests a full raid and groups the bench', async ({ page }) => {
   const top = page.getByRole('button', { name: /TOP SUGGESTION/ })
   await expect(top).toContainText('20 / 20 roles filled')
   await page.getByRole('tab', { name: /^Roster/ }).click()

@@ -999,10 +999,6 @@
         </div>{/if}
     </div>
   {/if}
-
-  {#if app.data.demoYear}<p class="demo-note">
-      Demo guild · Sample availability and raid plans for {app.data.demoYear}.
-    </p>{/if}
 </div>
 
 <AddPlayerDialog

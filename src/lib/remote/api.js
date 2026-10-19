@@ -79,12 +79,11 @@ export async function fetchGuild(client, guildId, sinceWeek) {
     const before = await readRevision()
     const guilds = check(await client.from('guilds').select('*').eq('id', guildId))
     if (!guilds.length) throw friendlyError({ code: 'PGRST116' })
-    const fromWeek = guilds[0].settings.demoYear ? '0001-01-01' : sinceWeek
     const [members, characters, checkins, plans, templates] = await Promise.all([
       byGuild('members'),
       byGuild('characters'),
       fetchAll(
-        () => client.from('checkins').select('*').eq('guild_id', guildId).gte('week', fromWeek),
+        () => client.from('checkins').select('*').eq('guild_id', guildId).gte('week', sinceWeek),
         'checkins',
       ),
       byGuild('plans'),

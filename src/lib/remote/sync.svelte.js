@@ -14,6 +14,7 @@ import { diffRows, mergeRows, newGuildPayload, rowsToState, stateToRows, TABLES 
 import { APPLICABLE, unsavedChanges, withoutChange } from './recovery.js'
 import { viewerZone } from '../display.svelte.js'
 import { pendingDiscordConnectGuildId } from '../discord-connect.js'
+import { EDIT_AS_OTHER_PLAYERS } from '../features.js'
 
 /**
  * Online guilds. While a guild is open, `app.data` still holds the whole guild and every change
@@ -466,8 +467,7 @@ async function onSession(session, generation) {
     const discordId = await myDiscordId(supabase)
     if (generation !== sessionGeneration) return
     remote.discordId = discordId
-    // Joining from Discord runs beside the guild list. A player pinned to the old online demo
-    // waits too, so their newly connected real guild can become the default.
+    // Joining from Discord runs beside the guild list.
     const joining = (hasPendingInvite() ? Promise.resolve([]) : joinFromDiscord(supabase)).then(
       (ids) => ({ ids }),
       (error) => ({ ids: [], error }),
@@ -475,8 +475,7 @@ async function onSession(session, generation) {
     let guilds = await listGuilds(supabase)
     if (generation !== sessionGeneration) return
     let joinedNow = []
-    if (guilds.length && !(guilds.length === 1 && isDemoGuild(guilds[0])))
-      void showJoinedGuilds(joining, generation)
+    if (guilds.length) void showJoinedGuilds(joining, generation)
     else {
       const joined = await joining
       if (generation !== sessionGeneration) return
@@ -491,17 +490,7 @@ async function onSession(session, generation) {
     const member = (id) => guilds.some((g) => g.id === id)
     if (requested && !member(requested.guildId))
       showToast('That roster link is for a guild you have not joined. Ask an officer for an invite.')
-    // An old saved demo never keeps a player from their one real guild.
-    const realGuilds = guilds.filter((guild) => !isDemoGuild(guild))
-    const savedGuild = guilds.find((guild) => guild.id === saved)
-    const fallback =
-      savedGuild && !isDemoGuild(savedGuild)
-        ? saved
-        : realGuilds.length === 1
-          ? realGuilds[0].id
-          : guilds.length === 1
-            ? guilds[0].id
-            : null
+    const fallback = member(saved) ? saved : guilds.length === 1 ? guilds[0].id : null
     const chosen =
       requested && member(requested.guildId) ? requested.guildId : member(connecting) ? connecting : fallback
     if (chosen) {
@@ -515,10 +504,6 @@ async function onSession(session, generation) {
   } finally {
     if (generation === sessionGeneration) remote.ready = true
   }
-}
-
-function isDemoGuild(guild) {
-  return /\(demo\)$/i.test(guild?.name ?? '')
 }
 
 /**
@@ -547,14 +532,8 @@ export async function retryDiscordJoin() {
     const ids = await joinFromDiscord(supabase)
     const guilds = await listGuilds(supabase)
     remote.guilds = guilds
-    const realGuilds = guilds.filter((guild) => !isDemoGuild(guild))
     const current = guilds.find((guild) => guild.id === remote.guildId)
-    const chosen =
-      realGuilds.length === 1 && (!current || isDemoGuild(current))
-        ? realGuilds[0]
-        : !current && guilds.length === 1
-          ? guilds[0]
-          : null
+    const chosen = !current && guilds.length === 1 ? guilds[0] : null
     if (chosen) {
       await openGuild(chosen.id)
       if (ids.includes(chosen.id)) welcomeNewMember(app.data.guild.name)
@@ -638,7 +617,8 @@ function withViewer(state) {
   const me = state.members.find((m) => m.discordId && m.discordId === remote.discordId)
   remote.memberId = me?.id ?? null
   remote.officer = Boolean(me?.officer)
-  const keepsActingAs = remote.officer && state.members.some((m) => m.id === state.currentMemberId)
+  const keepsActingAs =
+    EDIT_AS_OTHER_PLAYERS && remote.officer && state.members.some((m) => m.id === state.currentMemberId)
   return {
     ...state,
     currentMemberId: keepsActingAs ? state.currentMemberId : (me?.id ?? state.currentMemberId),

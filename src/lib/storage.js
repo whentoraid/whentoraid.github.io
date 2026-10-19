@@ -280,6 +280,11 @@ export function loadState() {
 export function loadSaved() {
   const raw = readStored(STORAGE_KEY)
   const state = parseState(raw)
+  // The sample guild was retired; a copy left in a browser must not pass for the player's guild.
+  if (state?.demoYear) {
+    clearState()
+    return { state: null, unreadable: null }
+  }
   if (state || raw === null) return { state, unreadable: null }
   try {
     localStorage.setItem(UNREADABLE_KEY, raw)
@@ -360,7 +365,7 @@ export function backupJson(state) {
 }
 
 /**
- * Largest backup accepted. A year-long demo guild is under 1 MB, and browser storage holds roughly 5 MB,
+ * Largest backup accepted. A guild with a year of history is under 1 MB, and browser storage holds roughly 5 MB,
  * so anything past this is not a guild we could keep anyway.
  */
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024

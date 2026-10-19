@@ -777,11 +777,6 @@ footer span {
   border-radius: 4px;
   padding: 3px 7px;
 }
-.demo-note {
-  font-size: 11px;
-  margin-top: 28px;
-  color: var(--muted);
-}
 .empty-week,
 .empty-state {
   margin: 20px 0;

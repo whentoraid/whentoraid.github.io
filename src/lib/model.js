@@ -178,7 +178,6 @@ export const CHECKIN_HISTORY_WEEKS = 12
  * nothing is old enough to prune.
  */
 export function pruneOldWeeks(state, thisWeekIso, keepWeeks = CHECKIN_HISTORY_WEEKS) {
-  if (state.demoYear) return state
   const cutoff = addDays(thisWeekIso, -7 * keepWeeks)
   const isOld = ([weekIso, week]) => weekIso < cutoff && Object.keys(week.checkins).length > 0
   if (!Object.entries(state.weeks).some(isOld)) return state

@@ -60,9 +60,8 @@ describe('first-run setup', () => {
     expect(app.data).toBeNull()
   })
 
-  test('the sample guild is available from optional setup', async () => {
+  test('setup no longer offers a sample guild', () => {
     render(App)
-    await fireEvent.click(screen.getByRole('button', { name: 'Explore the demo guild' }))
-    expect(app.data.members).toHaveLength(24)
+    expect(screen.queryByRole('button', { name: 'Explore the demo guild' })).toBeNull()
   })
 })

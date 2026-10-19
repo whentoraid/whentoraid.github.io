@@ -47,7 +47,7 @@ export function newGuildPayload(state, discordId) {
       timezone: state.guild.timezone,
       dayStartHour: state.guild.dayStartHour,
       slotsPerDay: state.guild.slotsPerDay,
-      settings: { ...state.settings, ...(state.demoYear ? { demoYear: state.demoYear } : {}) },
+      settings: state.settings,
       discordServerId: state.guild.discordServerId,
       officerRoleIds: state.guild.officerRoleIds,
     },
@@ -71,7 +71,6 @@ export function stateToRows(state, guildId) {
           raids: settings.raids,
           checkinDeadline: settings.checkinDeadline ?? null,
           trackAttendance: settings.trackAttendance === true,
-          ...(state.demoYear ? { demoYear: state.demoYear } : {}),
         },
         discord_server_id: guild.discordServerId ?? '',
         officer_role_ids: guild.officerRoleIds ?? '',
@@ -198,7 +197,6 @@ export function rowsToState(rows, viewer) {
     currentRaidId: raids.some((raid) => raid.id === viewer.currentRaidId)
       ? viewer.currentRaidId
       : (raids.find((raid) => raid.id === DEFAULT_RAID_ID) ?? raids[0]).id,
-    ...(guild.settings.demoYear ? { demoYear: guild.settings.demoYear } : {}),
     currentMemberId: known ? viewer.currentMemberId : (members[0]?.id ?? ''),
     guild: {
       name: guild.name,
