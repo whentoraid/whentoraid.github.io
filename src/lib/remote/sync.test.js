@@ -258,11 +258,13 @@ test('switching directly between signed-in identities replaces the guild viewer'
   expect(app.data.currentMemberId).toBe(second.id)
 
   mocked.applyError = true
-  // A player may rename themselves, so the failed edit can still be reapplied.
-  const renamed = (data) => data.members.find((m) => m.id === second.id).name
+  // A player may change their own character, so the failed edit can still be reapplied.
+  const characterId = app.data.characters.find((c) => c.memberId === second.id).id
+  const renamed = (data) => data.characters.find((c) => c.id === characterId).name
+  const originalName = renamed(app.data)
   const edited = {
     ...app.data,
-    members: app.data.members.map((m) => (m.id === second.id ? { ...m, name: 'Unsaved name' } : m)),
+    characters: app.data.characters.map((c) => (c.id === characterId ? { ...c, name: 'Unsaved name' } : c)),
   }
   app.data = edited
   pushChanges(edited)
@@ -271,8 +273,8 @@ test('switching directly between signed-in identities replaces the guild viewer'
   await expect(signOut()).rejects.toThrow(/not saved/)
   expect(mocked.signOutCalls).toBe(0)
 
-  await waitFor(() => expect(renamed(app.data)).toBe(second.name))
-  expect(remote.changes).toMatchObject([{ title: 'Your player name', outcome: 'ready' }])
+  await waitFor(() => expect(renamed(app.data)).toBe(originalName))
+  expect(remote.changes).toMatchObject([{ title: 'Your character Unsaved name', outcome: 'ready' }])
   mocked.applyError = false
   let finishSave
   mocked.applyGate = new Promise((resolve) => {
@@ -406,7 +408,8 @@ test('an unsaved edit is reviewed task by task, and a slow save that landed is n
   const members = state.members.map((m) => ({
     ...m,
     discordId: m.id === me.id ? 'discord-r' : '',
-    officer: false,
+    // Only officers may rename players.
+    officer: m.id === me.id,
   }))
   const withName = (name) => members.map((m) => (m.id === me.id ? { ...m, name } : m))
   mocked.rows = { ...stateToRows({ ...state, members }, guildId), revision: 0 }

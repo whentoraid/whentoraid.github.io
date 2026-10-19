@@ -111,6 +111,9 @@ test('discarding one change keeps the others', () => {
   )
   const [rename, availability] = describeFor(draft, base)
   expect(rename.title).toBe('Your player name')
+  // Only officers may rename players, themselves included.
+  expect(rename.outcome).toBe('forbidden')
+  expect(describeFor(draft, base, { officer: true })[0].outcome).toBe('ready')
   const left = withoutChange(base, draft, availability.id)
   expect(describeFor(left, base).map((change) => change.id)).toEqual([rename.id])
 })
