@@ -2,7 +2,10 @@ import { isIsoDate, mondayOf } from './time.js'
 import { DEFAULT_RAID_ID } from './raids.js'
 
 /** Every page, in sidebar order. The first is the default. */
-export const VIEWS = ['home', 'planner', 'availability', 'characters', 'members', 'settings']
+export const VIEWS = ['home', 'planner', 'availability', 'characters', 'officer', 'members', 'settings']
+
+/** Guild tools only officers open. Players reach published rosters from their own raids instead. */
+export const OFFICER_VIEWS = ['officer', 'members', 'settings']
 
 /**
  * The page and week named by a URL hash such as `#/planner/2026-10-05`. Hash routing works on any

@@ -9,6 +9,7 @@
     members:
       'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM2 21v-2a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v2M17 4a4 4 0 0 1 0 7m1 3a5 5 0 0 1 4 5v2',
     settings: 'M4 7h16M4 17h16M8 4v6m8 4v6',
+    dashboard: 'M4 4h7v9H4ZM13 4h7v5h-7ZM13 11h7v9h-7ZM4 15h7v5H4Z',
     more: 'M5 11v2m7-2v2m7-2v2',
     lock: 'M6 10h12v11H6ZM8 10V7a4 4 0 0 1 8 0v3m-4 5v2',
     unlock: 'M6 10h12v11H6ZM8 10V7a4 4 0 0 1 7-2m-3 10v2',

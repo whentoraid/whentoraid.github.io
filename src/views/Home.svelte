@@ -10,11 +10,8 @@
   import RaidRecord from '../components/RaidRecord.svelte'
   import RaidBriefing from '../components/RaidBriefing.svelte'
   import RaidChangeLog from '../components/RaidChangeLog.svelte'
-  import RecordCorrections from '../components/RecordCorrections.svelte'
-  import { recordFlagsOnline } from '../lib/record-flags.svelte.js'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
   import CalendarSubscription from '../components/CalendarSubscription.svelte'
-  import OfficerDashboard from '../components/OfficerDashboard.svelte'
   import RaidMonth from '../components/RaidMonth.svelte'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import { app } from '../lib/app.svelte.js'
@@ -67,8 +64,23 @@
   const online = $derived(Boolean(remote.guildId) && remote.memberId === memberId)
   let calendarPanel = $state()
   function showCalendar() {
-    calendarPanel?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-    calendarPanel?.querySelector('button')?.focus({ preventScroll: true })
+    calendarPanel.open = true
+    calendarPanel.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    calendarPanel.querySelector('summary')?.focus({ preventScroll: true })
+  }
+
+  /** The page is long, especially on a phone; these jump straight to each part of it. */
+  const sections = $derived([
+    { id: 'home-next', label: 'Next raid' },
+    { id: 'home-availability', label: 'Availability' },
+    ...(later.length ? [{ id: 'home-upcoming', label: 'Upcoming' }] : []),
+    { id: 'home-month', label: 'Month' },
+    ...(online ? [{ id: 'home-settings', label: 'History & settings' }] : []),
+  ])
+  function jump(id) {
+    const target = document.getElementById(id)
+    target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    target?.focus({ preventScroll: true })
   }
 </script>
 
@@ -78,9 +90,20 @@
   subtitle={`Your assignments and availability, in ${viewerZone.replaceAll('_', ' ')}.`}
 />
 
+<nav class="home-jump" aria-label="On this page">
+  {#each sections as section (section.id)}
+    <button onclick={() => jump(section.id)}>{section.label}</button>
+  {/each}
+  {#if canManage()}
+    <button class="text-button" onclick={() => (app.view = 'officer')}
+      >Open officer dashboard <span aria-hidden="true">→</span></button
+    >
+  {/if}
+</nav>
+
 <ActionInbox {memberId} {thisWeek} {now} onavailability={checkIn} />
 
-<div class="home-priorities">
+<div class="home-priorities jump-target" id="home-next" tabindex="-1">
   <section
     class="panel next-raid"
     aria-label="Next raid assignment"
@@ -99,6 +122,7 @@
         </div>
       </div>
       <p class="raid-time">{compactSessionLabel(next.session, viewerZone)}</p>
+      <RaidResponse item={next} {memberId} />
       {#if online}<RaidBriefing item={next} {now} />{/if}
       <div class="assignment">
         <span class="eyebrow">YOUR CHARACTER</span>
@@ -110,7 +134,6 @@
             >{next.character.spec} {next.character.class} · {next.character.realm}</small
           >{/if}
       </div>
-      <RaidResponse item={next} {memberId} />
       {#if online}<RaidChangeLog item={next} {memberId} />{/if}
       <button class="text-button" onclick={() => openRaid(next)}
         >View published roster <span aria-hidden="true">→</span></button
@@ -133,7 +156,12 @@
     {/if}
   </section>
 
-  <section class="panel home-checkin" aria-label="This week’s check-in">
+  <section
+    class="panel home-checkin jump-target"
+    id="home-availability"
+    tabindex="-1"
+    aria-label="This week’s check-in"
+  >
     <span class="eyebrow">YOUR PART IS SIMPLE</span>
     <h2>This week’s availability</h2>
     <span class="badge" class:success={checkin.checkedIn}
@@ -174,12 +202,13 @@
 
 <OnboardingChecklist {memberId} weekIso={thisWeek} />
 
-<!-- Officers see their own raid first; the guild's workload follows. -->
-{#if canManage()}<OfficerDashboard {now} />{/if}
-{#if canManage() && recordFlagsOnline()}<RecordCorrections />{/if}
-
 {#if later.length}
-  <section class="upcoming" aria-label="Upcoming published raids">
+  <section
+    class="upcoming jump-target"
+    id="home-upcoming"
+    tabindex="-1"
+    aria-label="Upcoming published raids"
+  >
     <h2>Upcoming published raids</h2>
     <ul>
       {#each later as item (`${item.weekIso}:${item.raidId}`)}
@@ -198,46 +227,92 @@
                 : 'You are not on this roster'}
             </p>
           </div>
-          <button aria-label={`View roster for ${item.raid.name}`} onclick={() => openRaid(item)}
-            >View roster</button
-          >
           {#if item.assignment}<RaidResponse {item} {memberId} />
           {:else if standbyOnline() && remote.memberId === memberId}<StandbyOffer
               {item}
               {memberId}
               {now}
             />{/if}
+          <button aria-label={`View roster for ${item.raid.name}`} onclick={() => openRaid(item)}
+            >View roster</button
+          >
         </li>
       {/each}
     </ul>
   </section>
 {/if}
 
-<div class="spaced-top"><RaidRecord {memberId} {thisWeek} {now} /></div>
-
-<RaidMonth />
-
-{#if online && assigned.length}
-  <div class="spaced-top" bind:this={calendarPanel}><CalendarSubscription /></div>
-{:else if online}
-  <!-- Still reachable before a first roster, e.g. to turn off an old link. -->
-  <details class="spaced-top calendar-later">
-    <summary>Calendar link</summary>
-    <p class="note">
-      Once an officer puts you on a roster, your raids can follow you into your calendar app.
-    </p>
-    <CalendarSubscription />
-  </details>
-{/if}
+<div class="spaced-top jump-target" id="home-month" tabindex="-1"><RaidMonth /></div>
 
 {#if online}
-  <div class="spaced-top"><ReminderPreferences discordLinked={Boolean(member?.discordId)} /></div>
+  <section
+    class="spaced-top home-settings jump-target"
+    id="home-settings"
+    tabindex="-1"
+    aria-labelledby="home-settings-heading"
+  >
+    <h2 id="home-settings-heading">Your history and settings</h2>
+    <RaidRecord {memberId} {thisWeek} {now} />
+    <!-- Still reachable before a first roster, e.g. to turn off an old link. -->
+    <details class="panel calendar-link" bind:this={calendarPanel}>
+      <summary>Calendar link</summary>
+      {#if !assigned.length}
+        <p class="note">
+          Once an officer puts you on a roster, your raids can follow you into your calendar app.
+        </p>
+      {/if}
+      <CalendarSubscription />
+    </details>
+    <ReminderPreferences discordLinked={Boolean(member?.discordId)} />
+  </section>
+{:else}
+  <div class="spaced-top"><RaidRecord {memberId} {thisWeek} {now} /></div>
 {/if}
 
 <style>
-  .calendar-later summary {
+  .home-jump {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 8px;
+    margin: 0 0 1rem;
+    padding: 8px 0;
+    overflow-x: auto;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .home-jump button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+  .home-jump .text-button {
+    margin-left: auto;
+  }
+  /* On phones officers reach the dashboard from More; the bar keeps to this page. */
+  @media (max-width: 760px) {
+    .home-jump .text-button {
+      display: none;
+    }
+  }
+  .jump-target {
+    scroll-margin-top: 72px;
+  }
+  .jump-target:focus {
+    outline: none;
+  }
+  .home-settings {
+    display: grid;
+    gap: 12px;
+  }
+  .home-settings h2 {
+    margin: 0;
+  }
+  .calendar-link summary {
     cursor: pointer;
-    color: var(--muted);
   }
   .schedule-review {
     margin: 0.75rem 0;

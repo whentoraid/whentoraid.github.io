@@ -13,6 +13,8 @@ test.beforeEach(async ({ page }) => {
 
 test('officers see upcoming raids that need attention and a month calendar', async ({ page }) => {
   await page.goto('./#/home')
+  await expect(page.getByRole('region', { name: 'Officer dashboard' })).toHaveCount(0)
+  await navigate(page, 'Officer dashboard')
   const dashboard = page.getByRole('region', { name: 'Officer dashboard' })
   await expect(dashboard.getByRole('heading', { name: 'Upcoming raids' })).toBeVisible()
   await expect(dashboard.getByText('6 need attention')).toBeVisible()
