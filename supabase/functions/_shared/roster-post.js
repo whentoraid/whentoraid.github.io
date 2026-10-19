@@ -88,7 +88,7 @@ function describe(payload, { budgetRoles, total }) {
 }
 
 function rosterFields({ roles, other }, standby, specEmojis) {
-  const rosterLine = (entry) => entryLine(entry, { specEmojis })
+  const rosterLine = (entry) => entryLine(entry, { specEmojis, showSpec: false })
   const standbyGroups = displayRoles(
     SIGNUP_ROLES.map((role) => ({
       role,

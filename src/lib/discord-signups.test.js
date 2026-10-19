@@ -618,7 +618,7 @@ describe('the delivery worker', () => {
     expect(body.allowed_mentions).toEqual({ parse: [], users: [] })
   })
 
-  it('keeps player names, specs and controls in one native Discord roster card', async () => {
+  it('keeps player names, spec icons and controls in one native Discord roster card', async () => {
     const { rpc, fetchFn } = worker(
       claimed({
         kind: 'roster',
@@ -648,8 +648,9 @@ describe('the delivery worker', () => {
     expect(payloadJson.embeds[0].image).toBeUndefined()
     expect(payloadJson.embeds[0].description).toContain('rostered')
     const fields = payloadJson.embeds[0].fields.map((field) => field.value).join('\n')
-    expect(fields).toContain('**Skogerino** (Skoog) Shadow')
-    expect(fields).toContain('**Oak** Shadow')
+    expect(fields).toContain('**Skogerino** (Skoog)')
+    expect(fields).toContain('**Oak**')
+    expect(fields).not.toContain('Shadow')
     expect(fields).not.toContain('🟦')
     expect(payloadJson.components[0].components[0].label).toBe('Confirm')
   })
