@@ -17,6 +17,7 @@
   import RaidSelector from '../components/RaidSelector.svelte'
   import RaidResponsesPanel from '../components/RaidResponsesPanel.svelte'
   import StandbyOffersPanel from '../components/StandbyOffersPanel.svelte'
+  import RaidHistoryPanel from '../components/RaidHistoryPanel.svelte'
   import SignupsPanel from '../components/SignupsPanel.svelte'
   import WeeklyOverview from '../components/WeeklyOverview.svelte'
   import { tick } from 'svelte'
@@ -936,6 +937,9 @@
           onmark={markAttendance}
           onall={markEveryone}
         />
+      {/if}
+      {#if canManage() && remote.guildId && !viewPublished}
+        <RaidHistoryPanel {weekIso} raidId={app.data.currentRaidId} {zone} />
       {/if}
     {:else}<div class="panel empty-state">
         <h2>No published roster yet</h2>

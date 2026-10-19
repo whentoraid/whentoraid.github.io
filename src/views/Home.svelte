@@ -9,6 +9,7 @@
   import ReminderPreferences from '../components/ReminderPreferences.svelte'
   import RaidRecord from '../components/RaidRecord.svelte'
   import RaidBriefing from '../components/RaidBriefing.svelte'
+  import RaidChangeLog from '../components/RaidChangeLog.svelte'
   import RecordCorrections from '../components/RecordCorrections.svelte'
   import { recordFlagsOnline } from '../lib/record-flags.svelte.js'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
@@ -110,6 +111,7 @@
           >{/if}
       </div>
       <RaidResponse item={next} {memberId} />
+      {#if online}<RaidChangeLog item={next} {memberId} />{/if}
       <button class="text-button" onclick={() => openRaid(next)}
         >View published roster <span aria-hidden="true">→</span></button
       >
