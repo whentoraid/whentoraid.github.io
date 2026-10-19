@@ -4,7 +4,7 @@
  * after a press). Storage, the channel check and network calls are injected, so Vitest runs it too.
  */
 import { deliverMessages, reminderMentionIds, reminderMessages } from './raid-service-core.js'
-import { rosterMessages, rosterImageModel } from './roster-post.js'
+import { rosterMessages } from './roster-post.js'
 import { signupMessages } from './signup-post.js'
 import { rosterComponents, signupComponents } from './discord-interactions.js'
 import { checkChannelInServer } from './discord-connect.js'
@@ -13,7 +13,7 @@ import { checkChannelInServer } from './discord-connect.js'
 export const MAX_DELIVERIES = 10
 
 /** What to send for one claimed job, or null when the job no longer needs a message. */
-async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage }) {
+async function messagesFor(job, { rpc, appUrl, loadSpecEmojis }) {
   if (job.kind === 'roster') {
     if (job.action === 'delete') return { messages: [], mentionIds: [], components: [] }
     const payload =
@@ -24,28 +24,6 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage
     const specEmojis =
       job.channel_id && !payload.cancelled && !payload.withdrawn ? await loadSpecEmojis() : {}
     const messages = rosterMessages(payload, mentionIds, { specEmojis })
-    if (renderRosterImage && job.channel_id && !payload.cancelled && !payload.withdrawn) {
-      const model = rosterImageModel(payload, specEmojis)
-      const description = model.sections
-        .flatMap((section) =>
-          section.members.map(
-            (member) =>
-              `${section.title}: ${member.name} (${member.color === 'yellow' ? 'backup' : 'roster'})`,
-          ),
-        )
-        .join('; ')
-      const height =
-        64 +
-        model.sections
-          .filter((section) => section.members.length)
-          .reduce((total, section) => total + 40 + section.members.length * 42, 0)
-      if (messages.length === 1 && height <= 5000 && description.length <= 1024) {
-        const bytes = await renderRosterImage(model)
-        messages[0].image = { filename: 'raid-roster.png', description, bytes }
-        messages[0].embeds[0].image = { url: 'attachment://raid-roster.png' }
-        delete messages[0].embeds[0].fields
-      }
-    }
     return { messages, mentionIds, components }
   }
   if (job.kind === 'signup') {
@@ -79,10 +57,9 @@ async function targetFor(job, { botToken, appUrl, checkChannel, checked }) {
   if (!botToken || !appUrl) throw new Error('The WhenToRaid Discord bot is not configured on this server.')
   // Sign-up and roster cards are embeds, which need one more channel permission than text posts.
   const needEmbeds = job.kind === 'signup' || job.kind === 'roster'
-  const needAttachments = job.kind === 'roster'
-  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}/${needAttachments}`
+  const key = `${job.guild_id}/${job.channel_id}/${needEmbeds}`
   if (!checked.has(key)) {
-    await checkChannel(job.guild_id, job.channel_id, { needEmbeds, needAttachments })
+    await checkChannel(job.guild_id, job.channel_id, { needEmbeds })
     checked.add(key)
   }
   return { type: 'bot', channelId: job.channel_id, token: botToken }
@@ -143,7 +120,6 @@ export async function deliverQueued({
   checkChannel,
   fetchFn = fetch,
   loadSpecEmojis = async () => ({}),
-  renderRosterImage = null,
   max = MAX_DELIVERIES,
   log = (message) => console.error(message),
 }) {
@@ -155,7 +131,6 @@ export async function deliverQueued({
     checkChannel,
     fetchFn,
     loadSpecEmojis,
-    renderRosterImage,
     log,
     checked: new Set(),
   }

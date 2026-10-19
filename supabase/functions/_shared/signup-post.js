@@ -30,7 +30,7 @@ const FOOTERS = {
   cancelled: 'This raid has been cancelled',
 }
 
-export function entryLine(entry, { withRole = false, showSpec = true, specEmojis = {} } = {}) {
+export function entryLine(entry, { withRole = false, specEmojis = {} } = {}) {
   const emojiName = specEmojiName(entry.class, entry.spec)
   const emojiId = emojiName && specEmojis[emojiName]
   const mark = /^\d{17,20}$/.test(emojiId ?? '')
@@ -38,11 +38,7 @@ export function entryLine(entry, { withRole = false, showSpec = true, specEmojis
     : Object.hasOwn(CLASS_MARKS, entry.class)
       ? CLASS_MARKS[entry.class]
       : '▫️'
-  const build = showSpec
-    ? withRole
-      ? [entry.spec, entry.role].filter(Boolean).join(' ')
-      : (entry.spec ?? '')
-    : ''
+  const build = withRole ? [entry.spec, entry.role].filter(Boolean).join(' ') : (entry.spec ?? '')
   const late = entry.status === 'late' ? ' · late' : ''
   const detail = build ? ` ${escapeDiscord(build)}` : ''
   return `\`${entry.number}\` ${mark} ${playerName(entry, { bold: true })}${detail}${late}`

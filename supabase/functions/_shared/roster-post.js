@@ -9,7 +9,6 @@ import { ROLE_HEADINGS, displayRoles, damageSummary } from './raid-presentation.
 import { SIGNUP_ROLES } from './signup-lineup.js'
 import { roleNeeds } from './raid-readiness.js'
 import { listFields, fieldPages } from './discord-lists.js'
-import { specEmojiName } from './spec-icons.js'
 import { safeVoiceLink } from './raid-briefing.js'
 
 /** Discord accepts at most 100 user mentions, and 2000 characters, per message. */
@@ -89,7 +88,7 @@ function describe(payload, { budgetRoles, total }) {
 }
 
 function rosterFields({ roles, other }, standby, specEmojis) {
-  const rosterLine = (entry) => entryLine(entry, { specEmojis, showSpec: false })
+  const rosterLine = (entry) => entryLine(entry, { specEmojis })
   const standbyGroups = displayRoles(
     SIGNUP_ROLES.map((role) => ({
       role,
@@ -123,65 +122,6 @@ function rosterFields({ roles, other }, standby, specEmojis) {
       ),
     )
   return fields
-}
-
-/** Color is carried by the image; the text fields remain available for assistive readers. */
-export function rosterImageModel(payload, specEmojis = {}) {
-  const groups = lineup(payload)
-  const standby = payload.standby ?? []
-  const imageHeadings = {
-    Tank: 'Tanks',
-    Healer: 'Healers',
-    Melee: 'Melee DPS',
-    Ranged: 'Ranged DPS',
-    Unknown: 'DPS · spec needed',
-  }
-  const standbyGroups = displayRoles(
-    SIGNUP_ROLES.map((role) => ({
-      role,
-      members: standby.filter((entry) => entry.role === role),
-    })),
-  )
-  const sections = [
-    ...groups.roles.map(({ role, members }) => ({
-      title: imageHeadings[role] ?? role,
-      members: [...members, ...(standbyGroups.find((group) => group.role === role)?.members ?? [])],
-    })),
-    ...(standbyGroups.some((group) => group.role === 'Unknown') &&
-    !groups.roles.some((group) => group.role === 'Unknown')
-      ? [
-          {
-            title: imageHeadings.Unknown,
-            members: standbyGroups.find((group) => group.role === 'Unknown').members,
-          },
-        ]
-      : []),
-    ...(groups.other.length || standby.some((entry) => !SIGNUP_ROLES.includes(entry.role))
-      ? [
-          {
-            title: 'No role',
-            members: [...groups.other, ...standby.filter((entry) => !SIGNUP_ROLES.includes(entry.role))],
-          },
-        ]
-      : []),
-  ]
-  return {
-    sections: sections.map(({ title, members }) => ({
-      title,
-      members: members.map((entry) => {
-        const name = String(entry.name || entry.player || 'Unknown player').slice(0, 80)
-        const player =
-          entry.player && entry.player !== entry.name ? ` (${String(entry.player).slice(0, 80)})` : ''
-        const emojiId = specEmojis[specEmojiName(entry.class, entry.spec)]
-        return {
-          text: `${name}${player}`,
-          name: `${name}${player}`,
-          color: standby.includes(entry) ? 'yellow' : 'blue',
-          emojiId: /^\d{17,20}$/.test(emojiId ?? '') ? emojiId : null,
-        }
-      }),
-    })),
-  }
 }
 
 /** As many valid mentions as fit in one message's text. */
