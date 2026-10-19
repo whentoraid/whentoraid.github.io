@@ -206,6 +206,8 @@ export async function deliverMessages(
     }
     if (ids[index]) {
       try {
+        // An edit without an image must also remove any attachment from an earlier roster card.
+        if (!image) body.attachments = []
         await request('PATCH', route.message(ids[index]), body, image)
         continue
       } catch (error) {

@@ -88,23 +88,47 @@ function describe(payload, { budgetRoles, total }) {
   ].join('\n')
 }
 
-function rosterFields({ roles, other }, specEmojis) {
-  const rosterLine = (entry) => entryLine(entry, { specEmojis })
+function rosterFields({ roles, other }, standby, specEmojis) {
+  const rosterLine = (entry) => entryLine(entry, { specEmojis, showSpec: false })
+  const standbyGroups = displayRoles(
+    SIGNUP_ROLES.map((role) => ({
+      role,
+      members: standby.filter((entry) => entry.role === role),
+    })),
+  )
+  const numberedStandby = (members) => members.map((entry, index) => ({ ...entry, number: index + 1 }))
   const fields = roles.flatMap(({ role, target, members }) =>
     listFields(
       `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
-      members.map(rosterLine),
+      [...members, ...numberedStandby(standbyGroups.find((group) => group.role === role)?.members ?? [])].map(
+        rosterLine,
+      ),
       { joiner: '\n\n' },
     ),
   )
-  if (other.length)
-    fields.push(...listFields(`❔ No role (${other.length})`, other.map(rosterLine), { joiner: '\n\n' }))
+  const unknown = standbyGroups.find((group) => group.role === 'Unknown')?.members ?? []
+  if (unknown.length && !roles.some((group) => group.role === 'Unknown'))
+    fields.push(
+      ...listFields(`${ROLE_HEADINGS.Unknown} (0)`, numberedStandby(unknown).map(rosterLine), {
+        joiner: '\n\n',
+      }),
+    )
+  const otherStandby = standby.filter((entry) => !SIGNUP_ROLES.includes(entry.role))
+  if (other.length || otherStandby.length)
+    fields.push(
+      ...listFields(
+        `❔ No role (${other.length})`,
+        [...other, ...numberedStandby(otherStandby)].map(rosterLine),
+        { joiner: '\n\n' },
+      ),
+    )
   return fields
 }
 
-/** Plain, bounded data for the colored roster image. The embed remains a readable text fallback. */
+/** Color is carried by the image; the text fields remain available for assistive readers. */
 export function rosterImageModel(payload, specEmojis = {}) {
   const groups = lineup(payload)
+  const standby = payload.standby ?? []
   const imageHeadings = {
     Tank: 'Tanks',
     Healer: 'Healers',
@@ -112,10 +136,34 @@ export function rosterImageModel(payload, specEmojis = {}) {
     Ranged: 'Ranged DPS',
     Unknown: 'DPS · spec needed',
   }
+  const standbyGroups = displayRoles(
+    SIGNUP_ROLES.map((role) => ({
+      role,
+      members: standby.filter((entry) => entry.role === role),
+    })),
+  )
   const sections = [
-    ...groups.roles.map(({ role, members }) => ({ title: imageHeadings[role] ?? role, members })),
-    ...(groups.other.length ? [{ title: 'No role', members: groups.other }] : []),
-    ...(payload.standby?.length ? [{ title: 'Available as backup', members: payload.standby }] : []),
+    ...groups.roles.map(({ role, members }) => ({
+      title: imageHeadings[role] ?? role,
+      members: [...members, ...(standbyGroups.find((group) => group.role === role)?.members ?? [])],
+    })),
+    ...(standbyGroups.some((group) => group.role === 'Unknown') &&
+    !groups.roles.some((group) => group.role === 'Unknown')
+      ? [
+          {
+            title: imageHeadings.Unknown,
+            members: standbyGroups.find((group) => group.role === 'Unknown').members,
+          },
+        ]
+      : []),
+    ...(groups.other.length || standby.some((entry) => !SIGNUP_ROLES.includes(entry.role))
+      ? [
+          {
+            title: 'No role',
+            members: [...groups.other, ...standby.filter((entry) => !SIGNUP_ROLES.includes(entry.role))],
+          },
+        ]
+      : []),
   ]
   return {
     title: String(payload.raidName ?? 'Raid').slice(0, 100),
@@ -125,15 +173,11 @@ export function rosterImageModel(payload, specEmojis = {}) {
         const name = String(entry.name || entry.player || 'Unknown player').slice(0, 80)
         const player =
           entry.player && entry.player !== entry.name ? ` (${String(entry.player).slice(0, 80)})` : ''
-        const spec = entry.spec ? ` ${String(entry.spec).slice(0, 60)}` : ''
-        const emojiName = specEmojiName(entry.class, entry.spec)
-        const emojiId = specEmojis[emojiName]
+        const emojiId = specEmojis[specEmojiName(entry.class, entry.spec)]
         return {
-          text: `${name}${player}${spec}`,
+          text: `${name}${player}`,
           name: `${name}${player}`,
-          detail: spec,
-          color:
-            title === 'Available as backup' ? 'yellow' : entry.response === 'confirmed' ? 'blue' : 'default',
+          color: standby.includes(entry) ? 'yellow' : 'blue',
           emojiId: /^\d{17,20}$/.test(emojiId ?? '') ? emojiId : null,
         }
       }),
@@ -170,15 +214,7 @@ export function rosterMessages(payload, mentionIds = [], { specEmojis = {} } = {
   }
   if (status !== 'published') return [{ content: '', embeds: [{ ...embed, description: CLOSED[status] }] }]
   const groups = lineup(payload)
-  const fields = rosterFields(groups, specEmojis)
-  if (payload.standby?.length)
-    fields.push(
-      ...listFields(
-        `Available as backup (${payload.standby.length})`,
-        payload.standby.map((entry, index) => entryLine({ ...entry, number: index + 1 }, { specEmojis })),
-        { joiner: '\n\n' },
-      ),
-    )
+  const fields = rosterFields(groups, payload.standby ?? [], specEmojis)
   const pages = fieldPages(fields)
   return pages.map((fields, index) => ({
     content: index ? '' : pingLine(mentionIds),

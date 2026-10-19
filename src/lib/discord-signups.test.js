@@ -618,7 +618,7 @@ describe('the delivery worker', () => {
     expect(body.allowed_mentions).toEqual({ parse: [], users: [] })
   })
 
-  it('renders colored names into the roster image while keeping the text and controls', async () => {
+  it('colors names in the roster image while keeping text and controls', async () => {
     const { rpc, fetchFn } = worker(
       claimed({
         kind: 'roster',
@@ -646,15 +646,15 @@ describe('the delivery worker', () => {
     const model = renderRosterImage.mock.calls[0][0]
     expect(model.sections.flatMap((section) => section.members)).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ text: 'Skogerino (Skoog) Shadow', color: 'blue' }),
-        expect.objectContaining({ text: 'Oak Shadow', color: 'yellow' }),
+        expect.objectContaining({ name: 'Skogerino (Skoog)', color: 'blue' }),
+        expect.objectContaining({ name: 'Oak', color: 'yellow' }),
       ]),
     )
     const body = fetchFn.mock.calls[0][1].body
     expect(body).toBeInstanceOf(FormData)
     const payloadJson = JSON.parse(body.get('payload_json'))
     expect(payloadJson.embeds[0].image.url).toBe('attachment://raid-roster.png')
-    expect(JSON.stringify(payloadJson.embeds)).not.toContain('🟦')
+    expect(JSON.stringify(payloadJson.embeds)).not.toMatch(/🟦|🟨|Shadow/)
     expect(JSON.stringify(payloadJson.embeds)).toContain('**Skogerino**')
     expect(payloadJson.components[0].components[0].label).toBe('Confirm')
   })

@@ -23,7 +23,7 @@ These are action counts, not measured times. Time to first useful action needs a
 | The owner had to enable `/raid` separately                                     | Bot linking installs the command; failure leaves a retry action                                      | Discord connect tests             |
 | A bot-only channel hid the sign-up post setting                                | Sign-up controls appear for a bot channel, before reminders                                          | Settings and reminder UI          |
 | The owner could enable sign-ups without a raid time                            | Connections points to the weekly schedule editor                                                     | Settings UI                       |
-| Roster image color covered the spec as well as the name                        | Status color is applied to the name in the roster image                                              | Roster model test                 |
+| Roster status needed to be clear at a glance                                   | Roster names are blue and backup names yellow in the image, with spec icons beside them              | Roster and delivery tests         |
 
 ## Live launch gate
 
@@ -40,7 +40,6 @@ Record the time from link or sign-in to first answer, the number of people needi
 
 ## Remaining product choices
 
-- Confirm the exact roster name color rule. The current image uses blue for confirmed players and yellow for backup offers.
 - Decide whether the first cohort uses automatic sign-up posts, app availability, or both as the expected first answer. The interface supports both; the owner should announce one clear path to members.
 - Confirm the currently selected bot channel is the intended announcement channel before enabling automatic posts.
 
