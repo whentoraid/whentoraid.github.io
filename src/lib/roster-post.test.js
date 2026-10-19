@@ -41,9 +41,9 @@ describe('roster card', () => {
     )
     expect(embed.description).toContain('**Still needed:** 2 healers, 6 DPS')
     const fields = Object.fromEntries(embed.fields.map((field) => [field.name, field.value]))
-    expect(fields['🛡️ Tanks (1/1)']).toBe('`1` 🟫 **Tankus** Protection')
+    expect(fields['🛡️ Tanks (1/1)']).toBe('`1` 🟫 **Tankus**')
     expect(fields['💚 Healers (0/2)']).toBe('None')
-    expect(fields['⚔️ Melee DPS (1)']).toBe('`2` 🟨 **Skoogerino** (Skooger) Combat')
+    expect(fields['⚔️ Melee DPS (1)']).toBe('`2` 🟨 **Skoogerino** (Skooger)')
     expect(fields['🏹 Ranged DPS (0)']).toBe('None')
     expect(embed.fields.every((field) => field.inline === false)).toBe(true)
     expect(embed.description).toContain('⚔️ Melee DPS **1** · 🏹 Ranged DPS **0**')
@@ -135,11 +135,11 @@ describe('roster card', () => {
     )
     const field = messages[0].embeds[0].fields.find((field) => field.name.startsWith('🏹'))
     expect(field.value).toBe(
-      `\`1\` <:wtr_priest_shadow:${ID(3)}> **Skuggerino** Shadow\n\n\`2\` <:wtr_priest_shadow:${ID(3)}> **Second** Shadow`,
+      `\`1\` <:wtr_priest_shadow:${ID(3)}> **Skuggerino**\n\n\`2\` <:wtr_priest_shadow:${ID(3)}> **Second**`,
     )
     expect(field.value).not.toContain('⬜')
   })
-  it('leaves square markers off the text roster and assigns name colors in the image', () => {
+  it('colors roster and backup names in the image without redundant spec text', () => {
     const [message] = rosterMessages(
       roster({
         team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
@@ -147,30 +147,24 @@ describe('roster card', () => {
       }),
     )
     const values = message.embeds[0].fields.map((field) => field.value).join('\n')
-    expect(values).not.toContain('🟦')
-    expect(values).not.toContain('🟨')
-    expect(values).toContain('**Tankus** Protection')
-    expect(values).toContain('**Oak** Shadow')
+    expect(values).toContain('**Tankus**')
+    expect(values).toContain('**Oak**')
+    expect(values).not.toMatch(/🟦|🟨|Protection|Shadow/)
     const model = rosterImageModel(
       roster({
         team: [{ name: 'Tankus', class: 'Warrior', spec: 'Protection', role: 'Tank', response: 'confirmed' }],
         standby: [{ name: 'Oak', class: 'Priest', spec: 'Shadow', role: 'DPS' }],
       }),
+      { wtr_priest_shadow: ID(3) },
     )
     expect(model.sections.flatMap((section) => section.members)).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          text: 'Tankus Protection',
-          name: 'Tankus',
-          detail: ' Protection',
-          color: 'blue',
-        }),
-        expect.objectContaining({ text: 'Oak Shadow', name: 'Oak', detail: ' Shadow', color: 'yellow' }),
+        expect.objectContaining({ name: 'Tankus', color: 'blue' }),
+        expect.objectContaining({ name: 'Oak', color: 'yellow', emojiId: ID(3) }),
       ]),
     )
-    expect(message.embeds[0].fields.some((field) => field.name.includes('Available as backup (1)'))).toBe(
-      true,
-    )
+    expect(model.sections.some((section) => section.title.includes('backup'))).toBe(false)
+    expect(message.embeds[0].fields.some((field) => /backup|available/i.test(field.name))).toBe(false)
   })
 })
 

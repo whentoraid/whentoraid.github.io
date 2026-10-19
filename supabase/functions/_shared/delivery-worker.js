@@ -30,7 +30,12 @@ async function messagesFor(job, { rpc, appUrl, loadSpecEmojis, renderRosterImage
       messages[0].image = {
         filename: 'raid-roster.png',
         description: model.sections
-          .flatMap((section) => section.members.map((member) => `${section.title}: ${member.text}`))
+          .flatMap((section) =>
+            section.members.map(
+              (member) =>
+                `${section.title}: ${member.name} (${member.color === 'yellow' ? 'backup' : 'roster'})`,
+            ),
+          )
           .join('; ')
           .slice(0, 1024),
         bytes,

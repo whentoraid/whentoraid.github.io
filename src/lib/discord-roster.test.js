@@ -186,7 +186,7 @@ describe('complete named raid lists', () => {
     expect(saved.at(-1)).toHaveLength(1)
   })
 
-  it('uploads and replaces the colored roster image on message edits', async () => {
+  it('removes an old roster image attachment when the edited roster uses text', async () => {
     const requests = []
     const fetchFn = async (url, init) => {
       requests.push({ url, ...init })
@@ -203,8 +203,12 @@ describe('complete named raid lists', () => {
     }
     const ids = await deliverMessages(target, [message], [], { fetchFn, checkpoint: async () => {} })
     await deliverMessages(target, [message], ids, { fetchFn, checkpoint: async () => {} })
-    expect(requests.map((request) => request.method)).toEqual(['POST', 'PATCH'])
-    for (const request of requests) {
+    await deliverMessages(target, [{ embeds: [{ description: '🟦 **Tankus** Protection' }] }], ids, {
+      fetchFn,
+      checkpoint: async () => {},
+    })
+    expect(requests.map((request) => request.method)).toEqual(['POST', 'PATCH', 'PATCH'])
+    for (const request of requests.slice(0, 2)) {
       expect(request.headers['Content-Type']).toBeUndefined()
       expect(request.body).toBeInstanceOf(FormData)
       const payload = JSON.parse(request.body.get('payload_json'))
@@ -214,5 +218,9 @@ describe('complete named raid lists', () => {
       expect(payload.embeds[0].image.url).toBe('attachment://raid-roster.png')
       expect(request.body.get('files[0]').name).toBe('raid-roster.png')
     }
+    expect(JSON.parse(requests[2].body)).toMatchObject({
+      embeds: [{ description: '🟦 **Tankus** Protection' }],
+      attachments: [],
+    })
   })
 })
