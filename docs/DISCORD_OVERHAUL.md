@@ -101,6 +101,10 @@ join (automatic on their first press), set up characters, sign up, and confirm.
 
 Officers still build and publish rosters on the website.
 
+Every sign-up post also has a second row of buttons, **My characters** and **My availability**,
+which open the same private replies as `/raid characters` and `/raid availability`, so players never
+need to type a command. Open posts pick up the row the next time they update (any sign-up press).
+
 ## Usual raid times in Discord
 
 `/raid availability` lets Discord-only players count when officers choose raid times. It edits the
