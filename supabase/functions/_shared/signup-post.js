@@ -1,11 +1,11 @@
 /**
- * Signup cards with full-width role sections, bench, tentative and absent players. Complete lists continue
+ * Signup cards with role sections in two columns (Tanks | Healers, Melee | Ranged), bench, tentative and absent players. Complete lists continue
  * in additional messages when necessary; names are never omitted. Never pings.
  */
 import { escapeDiscord } from './raid-service-core.js'
 import { signupLineup } from './signup-lineup.js'
 import { signupReadiness, readinessText } from './raid-readiness.js'
-import { listFields, fieldPages } from './discord-lists.js'
+import { listFields, columnFields, fieldPages } from './discord-lists.js'
 import { playerName } from './discord-roster.js'
 import { ROLE_HEADINGS, displayRoles, damageSummary } from './raid-presentation.js'
 import { specEmojiName } from './spec-icons.js'
@@ -84,16 +84,16 @@ function lineupFields(lineup, specEmojis) {
   const add = (name, items, options = {}) => {
     fields.push(...listFields(name, items, options))
   }
-  if (lineup.coming) {
-    for (const { role, target, members } of displayRoles(lineup.roles)) {
-      const count = `${members.length}${target ? `/${target}` : ''}`
-      add(
-        `${ROLE_HEADINGS[role]} (${count})`,
-        members.map((entry) => entryLine(entry, { specEmojis })),
-        { joiner: '\n\n' },
-      )
-    }
-  }
+  if (lineup.coming)
+    fields.push(
+      ...columnFields(
+        displayRoles(lineup.roles).map(({ role, target, members }) => ({
+          name: `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
+          items: members.map((entry) => entryLine(entry, { specEmojis })),
+          options: { joiner: '\n\n' },
+        })),
+      ),
+    )
   if (lineup.other.length)
     add(
       `❔ No role (${lineup.other.length})`,
