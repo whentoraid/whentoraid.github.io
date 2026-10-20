@@ -88,8 +88,8 @@ export const CLASS_SPEC_CHOICES = {
 }
 const CLASSES = Object.keys(CLASS_SPEC_CHOICES)
 
-/** Who is asking, as the character calls take it: only from the signed interaction. */
-function identity(interaction, applicationId) {
+/** Who is asking, as the player-scoped calls take it: only from the signed interaction, on a bot message. */
+export function signedPlayer(interaction, applicationId) {
   const user = interaction.member?.user?.id
   const { guild_id: server, channel_id: channel, message } = interaction
   if (![interaction.id, server, channel, user].every((id) => SNOWFLAKE.test(id ?? ''))) return null
@@ -177,7 +177,7 @@ function parseMenu(interaction, who) {
  *   characterId?: string, label?: string, interactionId?: string }}
  */
 export function parseCharacterInteraction(interaction, applicationId) {
-  const who = identity(interaction, applicationId)
+  const who = signedPlayer(interaction, applicationId)
   if (!who || typeof interaction.data?.custom_id !== 'string') return null
   if (interaction.type === MODAL_SUBMIT) return parseForm(interaction, who)
   if (interaction.type !== COMPONENT) return null
@@ -277,7 +277,7 @@ export function characterForm({ context, classIndex, specIndex, choice }, realm)
 }
 
 /** Worded as the other /raid replies. */
-const LOOKUP_OUTCOMES = {
+export const LOOKUP_OUTCOMES = {
   'not-member':
     'Your Discord account is not linked to a WhenToRaid guild in this server. Ask an officer for an invite link.',
   ambiguous:

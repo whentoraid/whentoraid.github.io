@@ -12,6 +12,7 @@ const COMMANDS = {
   roster: 'List every name on the roster, bench, tentative list, and absence list',
   readiness: 'Officer report: role gaps and outstanding roster confirmations',
   characters: 'Add your characters, choose your main, or delete one',
+  availability: 'Set the days and times you can usually raid',
   help: 'Learn how to sign up and manage your raids',
 }
 export const RAID_COMMAND = {
@@ -86,7 +87,7 @@ export function parseRaidCommand(interaction) {
   for (const option of parameters) {
     const isRaid = option?.name === 'raid' && command.name === 'roster'
     if (
-      ['next', 'characters', 'help'].includes(command.name) ||
+      ['next', 'characters', 'availability', 'help'].includes(command.name) ||
       option?.type !== 4 ||
       (!isRaid && option.name !== 'page') ||
       seen.has(option.name) ||
@@ -235,6 +236,7 @@ export function raidCommandReply(command, data, appUrl) {
         '`/raid roster` — every roster, bench, tentative, and absent name. Use `raid` from /raid upcoming and `page` for long lists.',
         '`/raid readiness` — officer report on role gaps and confirmations.',
         '`/raid characters` — add your characters, choose your main, or delete one. No website needed.',
+        '`/raid availability` — set the days and times you can usually raid, so officers can plan around you.',
         'Use **Sign up**, **Late**, **Tentative**, or **Absent** on a signup post. Pick your character, then change spec for that raid if needed. New players add their character right there.',
         'A signup is provisional. Officers publish the final roster. **Confirm** on its post confirms your roster place, or offers you as a backup if you are not rostered.',
         'Times display in your Discord timezone. These command replies are visible only to you.',

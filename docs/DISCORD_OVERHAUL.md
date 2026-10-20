@@ -12,6 +12,7 @@ The bot should answer three questions without making a player leave Discord: **W
 | `/raid roster [raid] [page]` | Every player and character name on the roster, bench, tentative list, and absence list. Choose a raid number from `/raid upcoming`; the default is the next raid. |
 | `/raid readiness [page]`     | Officer-only report: published roster role gaps, confirmed/unconfirmed/unavailable counts, and separate signup coverage.                                          |
 | `/raid characters`           | List your characters; add one, choose your main, or delete one. See [Character setup in Discord](#character-setup-in-discord).                                    |
+| `/raid availability`         | Set the days and times you can usually raid. See [Usual raid times in Discord](#usual-raid-times-in-discord).                                                     |
 | `/raid help`                 | A player guide to commands, character/spec selection, provisional signups, and roster confirmation.                                                               |
 
 Every command reply is private. Signup cards now state the exact missing roles and call out slotted late arrivals, tentative players, and players without a role. A full signup list is never presented as proof that the raid is ready. Bench signups do not fill another role's shortage, and provisional signup order does not override the officers' published roster.
@@ -98,7 +99,32 @@ join (automatic on their first press), set up characters, sign up, and confirm.
   player and guild come from the signed interaction, resolved like `/raid` commands; menu ids carry
   no user or guild ids. Players can only change their own characters.
 
-Officers still build and publish rosters on the website, and weekly availability is still set there.
+Officers still build and publish rosters on the website.
+
+## Usual raid times in Discord
+
+`/raid availability` lets Discord-only players count when officers choose raid times. It edits the
+player's **usual schedule**, the same one "save as usual schedule" writes in the app, which fills in
+every week the player has not answered.
+
+- The private reply lists the player's usual times per day, in guild time. A days menu, **From**
+  and **Until** menus (on the hour, inside the guild's planning hours) and two buttons follow:
+  **Available these times** and **Not available these days**. Saving changes only the days picked,
+  so "weekdays 8–11, weekends 2–11" takes two saves.
+- Choosing from a menu only redraws the controls; the picks travel in the controls' ids, so only
+  saving reaches the database.
+- Saving matches the app: the schedule starts this week, or next week once this week's check-ins
+  have closed (so a closed week keeps exactly its times); the schedule it replaces is kept as
+  `previous`; it is confirmed today, starts unpaused and keeps the player's review interval. An
+  ended schedule is not shown or carried forward. Weeks the player already answered keep their
+  answers, and the reply says so.
+- If the guild changes its planning hours while the menus are open, saving changes nothing and
+  shows fresh menus. A schedule saved under old guild hours is not shifted; the player sets it again.
+- `discord_availability` and `set_availability_from_discord` are callable only by the
+  `raid-interactions` Edge Function, with the player resolved like the other `/raid` commands.
+
+To roll this out: apply `20261105120000_discord_availability.sql`, deploy `raid-interactions` and
+`discord-connect`, then click **Retry / update raid commands** once so `/raid availability` appears.
 
 To roll this out:
 
