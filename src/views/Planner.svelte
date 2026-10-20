@@ -2,24 +2,19 @@
   import SectionTabs from '../components/SectionTabs.svelte'
   import AddPlayerDialog from '../components/AddPlayerDialog.svelte'
   import AttendancePanel from '../components/AttendancePanel.svelte'
-  import TradeoffComparison from '../components/TradeoffComparison.svelte'
   import { PRIORITY_LABELS } from '../lib/tradeoffs.js'
-  import CheckinPanel from '../components/CheckinPanel.svelte'
-  import Heatmap from '../components/Heatmap.svelte'
-  import Modal from '../components/Modal.svelte'
+  import ManualCopyModal from '../components/ManualCopyModal.svelte'
   import PageTitle from '../components/PageTitle.svelte'
+  import PlannerResponses from '../components/PlannerResponses.svelte'
+  import PlannerSchedule from '../components/PlannerSchedule.svelte'
   import PlannerStats from '../components/PlannerStats.svelte'
   import PlayerDialog from '../components/PlayerDialog.svelte'
-  import ReadinessPanel from '../components/ReadinessPanel.svelte'
+  import PublishIssues from '../components/PublishIssues.svelte'
+  import ReplacementDialog from '../components/ReplacementDialog.svelte'
   import RosterBoard from '../components/RosterBoard.svelte'
-  import SuggestionCards from '../components/SuggestionCards.svelte'
   import WeekBar from '../components/WeekBar.svelte'
   import RaidSelector from '../components/RaidSelector.svelte'
-  import RaidResponsesPanel from '../components/RaidResponsesPanel.svelte'
-  import StandbyOffersPanel from '../components/StandbyOffersPanel.svelte'
   import RaidHistoryPanel from '../components/RaidHistoryPanel.svelte'
-  import SignupsPanel from '../components/SignupsPanel.svelte'
-  import WeeklyOverview from '../components/WeeklyOverview.svelte'
   import { tick } from 'svelte'
   import {
     copyPreviousRoster,
@@ -39,14 +34,7 @@
   import { backups, conflicts, isAvailable } from '../lib/engine.js'
   import { displayZone, viewerZone } from '../lib/display.svelte.js'
   import { clampStartSlot, formatSessionHeading, formatSessionIn, slotWindow } from '../lib/grid.js'
-  import {
-    characterById,
-    memberById,
-    getWeek,
-    setCurrentWeek,
-    setPlan,
-    tracksAttendance,
-  } from '../lib/model.js'
+  import { characterById, getWeek, setCurrentWeek, setPlan, tracksAttendance } from '../lib/model.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import {
     benchMember,
@@ -59,32 +47,19 @@
     toggleLock,
     topDistinctDays,
   } from '../lib/planning.js'
-  import { rosterDiscord, rosterMentions, rosterText, splitForDiscord } from '../lib/roster-export.js'
-  import {
-    discordChannel,
-    hasDiscordChannel,
-    loadDiscordChannel,
-    postKey,
-    rememberPost,
-  } from '../lib/discord-channel.svelte.js'
+  import { rosterDiscord, rosterText, splitForDiscord } from '../lib/roster-export.js'
+  import { discordChannel, hasDiscordChannel } from '../lib/discord-channel.svelte.js'
+  import { createRosterDiscord } from '../lib/roster-discord.svelte.js'
   import { compositionIssues, raidRules } from '../lib/composition-rules.js'
   import { publishedRosterUrl } from '../lib/route.js'
-  import { deleteFromWebhook, postToWebhook } from '../lib/discord-webhook.js'
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
-  import { loadRaidResponses, responseKey } from '../lib/raid-responses.svelte.js'
   import { reachableStandby } from '../lib/standby.js'
-  import { standbyOnline, standbyWeek } from '../lib/standby.svelte.js'
+  import { standbyWeek } from '../lib/standby.svelte.js'
   import {
-    delivery,
-    deliveryKey,
     deliveryStatus,
     needsRetry,
-    queueAndSend,
-    refreshDelivery,
     retryDelivery,
-    sendQueued,
     usesServerDelivery,
-    watchDelivery,
   } from '../lib/discord-delivery.svelte.js'
 
   let activeSection = $state('schedule')
@@ -169,64 +144,6 @@
       ),
     ),
   )
-  const replacementEntry = $derived(context.plan.team.find((entry) => entry.memberId === replacementTarget))
-  const replacements = $derived(
-    replacementEntry
-      ? players
-          .filter(
-            (player) =>
-              !context.plan.team.some((entry) => entry.memberId === player.id) &&
-              isAvailable(player, context.plan),
-          )
-          .flatMap((player) =>
-            player.characters
-              .filter((character) => character.offered && character.role === replacementEntry.role)
-              .map((character) => ({ player, character, standby: onStandby.has(player.id) })),
-          )
-          // Players who said they're on standby come first.
-          .sort((a, b) => Number(b.standby) - Number(a.standby))
-      : [],
-  )
-
-  /** Officers see how players answered the published roster; republishing asks everyone again. */
-  let responses = $state({ key: null, byMember: {}, error: '', checkedAt: null })
-  let checkingResponses = $state(false)
-  /** Bumped to fetch again: responses are not part of live guild sync. */
-  let responsesTick = $state(0)
-  const responsesKey = $derived(published ? responseKey(weekIso, app.data.currentRaidId, published) : null)
-  $effect(() => {
-    const key = responsesKey
-    void responsesTick
-    if (!key || !canManage()) return
-    const raidId = app.data.currentRaidId
-    checkingResponses = true
-    loadRaidResponses(weekIso, raidId, published)
-      .then((byMember) => {
-        if (key === responsesKey) responses = { key, byMember, error: '', checkedAt: Date.now() }
-      })
-      .catch((error) => {
-        // Keep the last answers on screen when a background refresh fails.
-        if (key === responsesKey)
-          responses = {
-            ...responses,
-            key,
-            byMember: responses.key === key ? responses.byMember : {},
-            error: error.message,
-          }
-      })
-      .finally(() => {
-        if (key === responsesKey) checkingResponses = false
-      })
-  })
-  /** Check again every minute while officers watch the Responses tab and the page is visible. */
-  const RESPONSES_REFRESH_MS = 60_000
-  $effect(() => {
-    if (section !== 'responses' || !responsesKey || !canManage()) return
-    const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') responsesTick += 1
-    }, RESPONSES_REFRESH_MS)
-    return () => clearInterval(timer)
-  })
   const inDraft = (memberId) => context.plan.team.some((entry) => entry.memberId === memberId)
 
   function replaceMember(memberId) {
@@ -253,9 +170,8 @@
     return true
   }
 
-  function confirmReplacement(memberId, characterId) {
-    if (replaceInDraft(replacementTarget, { memberId, characterId, role: replacementEntry.role }))
-      replacementTarget = null
+  function confirmReplacement(entry) {
+    if (replaceInDraft(replacementTarget, entry)) replacementTarget = null
   }
 
   /** An accepted offer goes in the draft while the vacated player is still there to swap out. */
@@ -314,8 +230,8 @@
     )
     if (!hasDiscordChannel()) return
     // A roster already in Discord follows what was just published; a new one is posted unless unticked.
-    if (postedIds.length) void followPublication(postToDiscord)
-    else if (postOnPublish) void postToDiscord()
+    if (discord.postedIds.length) void discord.follow(discord.post)
+    else if (postOnPublish) void discord.post()
   }
 
   function withdraw() {
@@ -324,7 +240,7 @@
     app.data = withdrawPlan(app.data)
     showPublished = false
     offerUndo('Published roster withdrawn. Your draft is kept.', previous)
-    if (hasDiscordChannel() && postedIds.length) void followPublication(withdrawDiscordPost)
+    if (hasDiscordChannel() && discord.postedIds.length) void discord.follow(discord.withdraw)
   }
 
   const totalSlots = $derived(settings.targets.reduce((sum, n) => sum + n, 0))
@@ -463,7 +379,7 @@
     ensureSaved()
     app.data = setCancelled(app.data, weekIso, cancelled)
     showToast(cancelled ? 'Raid marked as cancelled' : 'Raid marked as held')
-    if (published && hasDiscordChannel() && postedIds.length) void followPublication(postToDiscord)
+    if (published && hasDiscordChannel() && discord.postedIds.length) void discord.follow(discord.post)
   }
 
   /** Messages to copy by hand when the clipboard API is unavailable (e.g. not a secure context). */
@@ -497,116 +413,18 @@
     copyText(rosterDiscord(app.data, plan, players), 'Roster copied. Paste it into Discord.')
   }
 
-  $effect(() => {
-    if (canManage()) void loadDiscordChannel()
-  })
-
-  const discordKey = $derived(postKey(weekIso, app.data.currentRaidId))
-  const postedIds = $derived(discordChannel.posts[discordKey] ?? [])
-  let posting = $state(false)
   /** Whether publishing a roster that is not in Discord yet also posts it there. */
   let postOnPublish = $state(true)
-
-  $effect(() => {
-    if (canManage() && usesServerDelivery() && hasDiscordChannel())
-      void watchDelivery(weekIso, app.data.currentRaidId)
-  })
-  /** Only the raid on screen: a slow reload for another raid never shows here. */
-  const shownDelivery = $derived(
-    delivery.key === deliveryKey(weekIso, app.data.currentRaidId) ? delivery.latest : null,
+  const discord = createRosterDiscord(
+    () => ({
+      week: weekIso,
+      raidId: app.data.currentRaidId,
+      published,
+      cancelled: savedPlan?.cancelled ?? false,
+      players,
+    }),
+    { officersOnly },
   )
-  // A queued or sending post is checked again until it settles (the scheduler may send it).
-  const DELIVERY_POLL_MS = 15_000
-  $effect(() => {
-    const status = shownDelivery?.status
-    if (status !== 'pending' && status !== 'sending') return
-    const week = weekIso
-    const raidId = app.data.currentRaidId
-    const timer = setInterval(() => void refreshDelivery(week, raidId), DELIVERY_POLL_MS)
-    return () => clearInterval(timer)
-  })
-
-  /**
-   * Keep a roster already in Discord in step with what was just saved. Online, the save itself
-   * queued the edit on the server, so this only asks the worker to send it now.
-   */
-  async function followPublication(browserPost) {
-    if (!usesServerDelivery()) return browserPost()
-    await serverAction(() => sendQueued(weekIso, app.data.currentRaidId))
-  }
-
-  async function serverAction(run) {
-    posting = true
-    try {
-      const message = await run()
-      if (message) showToast(message)
-    } finally {
-      posting = false
-    }
-  }
-
-  /** Post the published roster to the guild's Discord channel, or update the earlier post. */
-  async function postToDiscord() {
-    if (officersOnly() || !published || posting) return
-    if (usesServerDelivery()) return serverAction(() => queueAndSend(weekIso, app.data.currentRaidId, 'post'))
-    const key = discordKey
-    const confirmed = { ...published, locked: [], saved: true, cancelled: savedPlan?.cancelled ?? false }
-    const mentions = discordChannel.mentionPlayers
-      ? rosterMentions(app.data, confirmed)
-      : { ids: [], line: '' }
-    const text = [rosterDiscord(app.data, confirmed, players), mentions.line].filter(Boolean).join('\n\n')
-    const previousIds = discordChannel.posts[key] ?? []
-    posting = true
-    try {
-      const ids = await postToWebhook(discordChannel.webhookUrl, splitForDiscord(text), {
-        previousIds,
-        mentionIds: mentions.ids,
-      })
-      await rememberPost(key, ids)
-      showToast(previousIds.length ? 'Discord post updated.' : 'Roster posted to Discord.')
-    } catch (error) {
-      showToast(error.message)
-    } finally {
-      posting = false
-    }
-  }
-
-  async function deleteDiscordPost() {
-    if (officersOnly() || posting) return
-    if (usesServerDelivery())
-      return serverAction(() => queueAndSend(weekIso, app.data.currentRaidId, 'delete'))
-    const key = discordKey
-    posting = true
-    try {
-      await deleteFromWebhook(discordChannel.webhookUrl, discordChannel.posts[key] ?? [])
-      await rememberPost(key, [])
-      showToast('Discord post deleted.')
-    } catch (error) {
-      showToast(error.message)
-    } finally {
-      posting = false
-    }
-  }
-
-  async function withdrawDiscordPost() {
-    if (posting) return
-    posting = true
-    try {
-      const ids = await postToWebhook(
-        discordChannel.webhookUrl,
-        [
-          '**ROSTER WITHDRAWN**\nThe officers are revising this raid. Check WhenToRaid for the next published roster.',
-        ],
-        { previousIds: discordChannel.posts[discordKey] ?? [] },
-      )
-      await rememberPost(discordKey, ids)
-      showToast('Discord post updated: roster withdrawn.')
-    } catch (error) {
-      showToast(error.message)
-    } finally {
-      posting = false
-    }
-  }
 
   /** A link to this published roster for guild members; it opens the guild after signing in. */
   async function copyRosterLink() {
@@ -627,8 +445,6 @@
     downloadText(`whentoraid-${settings.id}-${weekIso}.ics`, rosterIcs(app.data, plan), 'text/calendar')
   }
 </script>
-
-<svelte:window onfocus={() => (responsesTick += 1)} />
 
 <div class="planner-page">
   <PageTitle
@@ -679,7 +495,7 @@
               disabled={published && !draftChanged}
               onclick={publish}>{published ? 'Publish draft changes' : 'Publish roster'}</button
             >{/if}
-          {#if !viewPublished && hasDiscordChannel() && !postedIds.length}<label class="checkbox-row"
+          {#if !viewPublished && hasDiscordChannel() && !discord.postedIds.length}<label class="checkbox-row"
               ><input type="checkbox" bind:checked={postOnPublish} />Also post to Discord</label
             >{/if}
         </div>
@@ -696,8 +512,8 @@
         {viewPublished
           ? 'Viewing the published roster. Player confirmations are separate.'
           : 'Editing the draft. Changes save automatically.'}
-        {#if canManage() && hasDiscordChannel() && postedIds.length}Posted to Discord; publishing draft
-          changes updates the post.
+        {#if canManage() && hasDiscordChannel() && discord.postedIds.length}Posted to Discord; publishing
+          draft changes updates the post.
         {:else if canManage() && discordChannel.loaded && !hasDiscordChannel()}Set a Discord channel in Guild
           settings to post rosters there directly.{/if}
       </p>
@@ -707,11 +523,12 @@
       {#if canManage()}
         <div class="buttons">
           {#if published}<button onclick={withdraw}>Withdraw published roster</button>{/if}
-          {#if hasDiscordChannel() && published}<button disabled={posting} onclick={postToDiscord}
-              >{postedIds.length ? 'Update Discord post' : 'Post to Discord'}</button
+          {#if hasDiscordChannel() && published}<button disabled={discord.posting} onclick={discord.post}
+              >{discord.postedIds.length ? 'Update Discord post' : 'Post to Discord'}</button
             >{/if}
-          {#if hasDiscordChannel() && postedIds.length}<button onclick={deleteDiscordPost} disabled={posting}
-              >Delete Discord post</button
+          {#if hasDiscordChannel() && discord.postedIds.length}<button
+              onclick={discord.remove}
+              disabled={discord.posting}>Delete Discord post</button
             >{/if}
         </div>
         {#if plan.team.length}<label class="checkbox-row"
@@ -723,12 +540,12 @@
           >{/if}
       {/if}
     </details>
-    {#if canManage() && usesServerDelivery() && deliveryStatus(shownDelivery)}
-      <p class:warning={needsRetry(shownDelivery)} role="status">
-        {deliveryStatus(shownDelivery)}
-        {#if needsRetry(shownDelivery)}<button
-            disabled={posting}
-            onclick={() => serverAction(() => retryDelivery(weekIso, app.data.currentRaidId))}
+    {#if canManage() && usesServerDelivery() && deliveryStatus(discord.delivery)}
+      <p class:warning={needsRetry(discord.delivery)} role="status">
+        {deliveryStatus(discord.delivery)}
+        {#if needsRetry(discord.delivery)}<button
+            disabled={discord.posting}
+            onclick={() => discord.serverAction(() => retryDelivery(weekIso, app.data.currentRaidId))}
             >Retry Discord post</button
           >{/if}
       </p>
@@ -752,37 +569,15 @@
       </details>
     {/if}
     {#if canManage() && !viewPublished && showIssues && issues.length}
-      <section role="alert" class="publication-review">
-        <h3 id="publish-check" tabindex="-1">Resolve before publishing</h3>
-        <ul>
-          {#each issues as issue, i (i)}
-            <li>
-              <span>{issue.message}</span>
-              {#if issue.memberId}
-                <button onclick={() => (dialog = { kind: 'player', memberId: issue.memberId })}
-                  >Review {memberById(app.data, issue.memberId)?.name ?? 'player'}</button
-                >
-              {:else if issue.kind === 'capacity'}
-                <button onclick={() => (dialog = { kind: 'add', role: issue.role })}
-                  >Review {issue.role} slots</button
-                >
-              {:else if issue.kind === 'empty'}
-                <button onclick={() => (dialog = { kind: 'add', role: ROLES[0] })}>Add a player</button>
-              {:else if issue.kind === 'cancelled'}
-                <button onclick={() => markCancelled(false)}>Restore raid</button>
-              {/if}
-              {#if issue.kind === 'overlap'}
-                <button
-                  onclick={() => {
-                    app.data = setCurrentRaid(setCurrentWeek(app.data, issue.week), issue.raidId)
-                    showIssues = false
-                  }}>Open overlapping raid</button
-                >
-              {/if}
-            </li>
-          {/each}
-        </ul>
-      </section>
+      <PublishIssues
+        {issues}
+        ondialog={(next) => (dialog = next)}
+        onrestore={() => markCancelled(false)}
+        onopenoverlap={(issue) => {
+          app.data = setCurrentRaid(setCurrentWeek(app.data, issue.week), issue.raidId)
+          showIssues = false
+        }}
+      />
     {/if}
   </section>
 
@@ -814,75 +609,35 @@
       aria-labelledby="planner-tab-schedule"
       hidden={section !== 'schedule'}
     >
-      <div class="schedule-layout">
-        <div>
-          <div class="section-head">
-            <div>
-              <span class="eyebrow gold">FIND YOUR RAID NIGHT</span>
-              <h2>The best windows</h2>
-              <p class="subtitle">Choose a time, then fine-tune your roster.</p>
-            </div>
-          </div>
-          <SuggestionCards
-            suggestions={topDays}
-            {checkedInCount}
-            {totalSlots}
-            targets={settings.targets}
-            selectedStart={plan.start}
-            {zone}
-            onchoose={chooseSuggestion}
-          />
-          <TradeoffComparison
-            suggestions={topDays}
-            all={context.suggestions}
-            {savedPlan}
-            {players}
-            {zone}
-            priorityLabel={PRIORITY_LABELS[raidRules(getRaid(app.data)).priority]}
-          />
-          <div class="schedule-next">
-            <span>Selected: <strong>{sessionLabel}</strong></span><button
-              class="primary"
-              onclick={() => (activeSection = 'roster')}>Review roster →</button
-            >
-          </div>
-          <details class="disclosure availability-map">
-            <summary><span>Explore guild availability</span><small>Compare every start time</small></summary>
-            <div class="disclosure-content">
-              <h3>Guild availability</h3>
-              <p class="small-text">Each cell shows a full session starting at that time.</p>
-              <Heatmap
-                {weekIso}
-                grid={guild}
-                {players}
-                suggestions={context.suggestions}
-                targets={settings.targets}
-                selection={plan}
-                durationSlots={settings.durationSlots}
-                onselect={moveSession}
-              />
-            </div>
-          </details>
-          <details class="disclosure">
-            <summary>This week’s other raids</summary><WeeklyOverview publishedOnly={viewPublished} />
-          </details>
-        </div>
-        <div class="planning-side">
-          <CheckinPanel oncopy={copyText} />
-          <ReadinessPanel
-            {sessionLabel}
-            {roleCounts}
-            {readyCounts}
-            targets={settings.targets}
-            {availableCount}
-            backupsLabel={formatBackups(planBackups)}
-            backupsOk={planThinnest > 0}
-            lockedCount={plan.locked.length}
-            {problemCount}
-            {classCount}
-          />
-        </div>
-      </div>
+      <PlannerSchedule
+        {weekIso}
+        {guild}
+        {settings}
+        {plan}
+        {savedPlan}
+        {players}
+        suggestions={context.suggestions}
+        {topDays}
+        {checkedInCount}
+        {totalSlots}
+        {zone}
+        {sessionLabel}
+        priorityLabel={PRIORITY_LABELS[raidRules(getRaid(app.data)).priority]}
+        readiness={{
+          roleCounts,
+          readyCounts,
+          availableCount,
+          backupsLabel: formatBackups(planBackups),
+          backupsOk: planThinnest > 0,
+          lockedCount: plan.locked.length,
+          problemCount,
+          classCount,
+        }}
+        oncopy={copyText}
+        onchoose={chooseSuggestion}
+        onmove={moveSession}
+        onreview={() => (activeSection = 'roster')}
+      />
     </div>
   {/if}
 
@@ -966,47 +721,22 @@
       aria-labelledby="planner-tab-responses"
       hidden={section !== 'responses'}
     >
-      {#if usesServerDelivery()}
-        <SignupsPanel week={weekIso} raidId={app.data.currentRaidId} canManage={canManage()} />
-      {/if}
-      {#if published && !savedPlan?.cancelled}
-        {#if responses.key === responsesKey}
-          <RaidResponsesPanel
-            team={published.team}
-            byMember={responses.byMember}
-            error={responses.error}
-            checkedAt={responses.checkedAt}
-            checking={checkingResponses}
-            {zone}
-            canReplace={inDraft}
-            onreplace={replaceMember}
-            onrefresh={() => (responsesTick += 1)}
-          />
-          {#if standbyOnline()}
-            <StandbyOffersPanel
-              week={weekIso}
-              raidId={app.data.currentRaidId}
-              {published}
-              byMember={responses.byMember}
-              canPlace={canPlaceOffer}
-              onplace={placeAcceptedOffer}
-            />
-          {/if}
-        {:else}<p role="status">Loading player responses…</p>{/if}
-      {:else}<div class="panel empty-state">
-          <h2>{savedPlan?.cancelled ? 'This raid is cancelled' : 'Publish before collecting responses'}</h2>
-          <p>
-            {savedPlan?.cancelled
-              ? 'Restore the raid to review player responses.'
-              : 'When the roster is published, players can confirm their place or tell you they can’t make it.'}
-          </p>
-          {#if !savedPlan?.cancelled}<button
-              onclick={() => {
-                showPublished = false
-                activeSection = 'roster'
-              }}>Review the draft roster</button
-            >{/if}
-        </div>{/if}
+      <PlannerResponses
+        week={weekIso}
+        raidId={app.data.currentRaidId}
+        {published}
+        cancelled={savedPlan?.cancelled ?? false}
+        active={section === 'responses'}
+        {zone}
+        canReplace={inDraft}
+        onreplace={replaceMember}
+        {canPlaceOffer}
+        onplaceoffer={placeAcceptedOffer}
+        onreviewdraft={() => {
+          showPublished = false
+          activeSection = 'roster'
+        }}
+      />
     </div>
   {/if}
 </div>
@@ -1030,52 +760,16 @@
   onclose={() => closeDialog('player')}
 />
 
-<Modal
-  open={manualCopyMessages !== null}
-  onclose={() => (manualCopyMessages = null)}
-  label="Copy for Discord"
->
-  <h2>Copy for Discord</h2>
-  <p>
-    Your browser blocked clipboard access. Select the text below and copy it{manualCopyMessages?.length > 1
-      ? ', one message at a time'
-      : ''}.
-  </p>
-  {#each manualCopyMessages ?? [] as message, i (i)}
-    {#if manualCopyMessages.length > 1}<h3>Message {i + 1} of {manualCopyMessages.length}</h3>{/if}
-    <textarea
-      class="copy-box"
-      readonly
-      rows="14"
-      aria-label="Message {i + 1}"
-      value={message}
-      onfocus={(e) => e.currentTarget.select()}></textarea>
-  {/each}
-</Modal>
+<ManualCopyModal messages={manualCopyMessages} onclose={() => (manualCopyMessages = null)} />
 
-<Modal
-  open={replacementTarget !== null}
+<ReplacementDialog
+  memberId={replacementTarget}
+  plan={context.plan}
+  {players}
+  {onStandby}
+  onconfirm={confirmReplacement}
   onclose={() => (replacementTarget = null)}
-  label={`Replace ${memberById(app.data, replacementTarget)?.name ?? 'player'}`}
->
-  <h2>Replace {memberById(app.data, replacementTarget)?.name ?? 'player'}</h2>
-  <p>Available players offering the same role, excluding other published commitments.</p>
-  <div class="modal-list">
-    {#each replacements as option (option.character.id)}
-      <button onclick={() => confirmReplacement(option.player.id, option.character.id)}>
-        <strong>{characterById(app.data, option.character.id)?.name}</strong>
-        <small
-          >{option.standby ? 'On standby · ' : ''}{memberById(app.data, option.player.id)?.name} · {option
-            .character.role}</small
-        >
-      </button>
-    {:else}
-      <p class="note">
-        No eligible replacement for this role at this time. Review availability or choose another session.
-      </p>
-    {/each}
-  </div>
-</Modal>
+/>
 
 <style>
   .publication-review {
@@ -1086,9 +780,6 @@
   }
   .publication-review li {
     margin: 0.5rem 0;
-  }
-  .publication-review li button {
-    margin: 0.25rem;
   }
   .back-link {
     margin-bottom: 0.5rem;
