@@ -270,7 +270,11 @@ describe('sign-up posts', () => {
 
   it('offers four sign-up buttons and a link, and none once the raid is closed or cancelled', () => {
     const job = { id: JOB, guild_id: GUILD, week: '2026-10-26', raid_id: 'raid-20' }
-    const [row] = signupComponents(job, payload(), 'https://whentoraid.example/app/')
+    const [row, shortcuts] = signupComponents(job, payload(), 'https://whentoraid.example/app/')
+    expect(shortcuts.components.map((c) => [c.label, c.custom_id])).toEqual([
+      ['My characters', 'wtv:characters'],
+      ['My availability', 'wtv:availability'],
+    ])
     expect(row.components.map((c) => c.label)).toEqual([
       'Sign up',
       'Late',
@@ -286,6 +290,47 @@ describe('sign-up posts', () => {
     expect(signupComponents(job, payload({ closed: true }), 'https://whentoraid.example')).toEqual([])
     expect(signupComponents(job, payload({ cancelled: true }), 'https://whentoraid.example')).toEqual([])
     expect(() => signupComponents(job, payload(), 'http://evil.example')).toThrow(/HTTPS/)
+  })
+})
+
+describe('My characters and My availability on the post', () => {
+  const shortcut = (view, message) => interaction({ component_type: 2, custom_id: `wtv:${view}` }, message)
+  const who = { p_discord_id: USER, p_discord_guild_id: SERVER, p_channel_id: CHANNEL }
+
+  it('opens the player’s characters privately, as /raid characters does', async () => {
+    const { response, rpc, followup } = await run(shortcut('characters'), {
+      outcome: 'ok',
+      guildName: 'Guild',
+      characters: [],
+    })
+    expect(await response.json()).toEqual({ type: 5, data: { flags: 64 } })
+    expect(rpc.mock.calls.filter(([name]) => name === 'discord_characters')).toEqual([
+      ['discord_characters', who],
+    ])
+    expect(followup.mock.calls[0][1].content).toMatch(/add your first/)
+  })
+
+  it('opens the player’s usual times privately, as /raid availability does', async () => {
+    const { rpc, followup } = await run(shortcut('availability'), {
+      outcome: 'ok',
+      timezone: 'UTC',
+      dayStartHour: 17,
+      slotsPerDay: 14,
+      hasSchedule: false,
+      slots: [],
+    })
+    expect(rpc.mock.calls.filter(([name]) => name === 'discord_availability')).toEqual([
+      ['discord_availability', who],
+    ])
+    expect(followup.mock.calls[0][1].components[0].components[0].custom_id).toBe('wad:17:14:0:-:-')
+  })
+
+  it('ignores unknown views and buttons on messages the bot did not write', async () => {
+    for (const payload of [shortcut('roster'), shortcut('characters', { id: POST, author: { id: USER } })]) {
+      const { response, rpc } = await run(payload, {})
+      expect(response.status).toBe(400)
+      expect(rpc).not.toHaveBeenCalled()
+    }
   })
 })
 

@@ -18,6 +18,7 @@ import {
   deleteConfirmReply,
   firstCharacterReply,
   parseCharacterInteraction,
+  signedPlayer,
   specMenuReply,
 } from './discord-characters.js'
 import {
@@ -39,6 +40,8 @@ const SIGNUP_BUTTON_ID = new RegExp(`^wts:${UUID}:${SIGNUP_STATUS}$`)
 const SIGNUP_MENU_ID = new RegExp(`^wtc:${UUID}:(\\d{17,20}):${SIGNUP_STATUS}$`)
 /** `wtp:<delivery id>:<post message id>` on the private "Change spec" menu. */
 const SIGNUP_SPEC_ID = new RegExp(`^wtp:${UUID}:(\\d{17,20})$`)
+/** `wtv:<view>` on a sign-up post: open a player's characters or usual times privately. */
+const PLAYER_VIEW_ID = /^wtv:(characters|availability)$/
 /** A "Change spec" option's value: `<spec>|<role>`. */
 const SPEC_VALUE = /^([^|]{1,40})\|(Tank|Healer|DPS)$/
 /** Discord rejects replays older than this; so do we. */
@@ -471,7 +474,7 @@ export async function handleDiscordInteraction(request, config) {
   if (interaction?.application_id !== applicationId) return reply({ error: 'Wrong application.' }, 401)
   if (interaction.type === PING) return reply({ type: PONG })
   const rpc = rpcAsServerMember(interaction, config.rpc, log)
-  const command = parseRaidCommand(interaction)
+  const command = parseRaidCommand(interaction) ?? parsePlayerView(interaction, applicationId)
   if (command) {
     schedule(
       (async () => {
@@ -709,8 +712,8 @@ function weekLink(appUrl, job) {
 }
 
 /**
- * Buttons for a sign-up post: Sign up, Late, Tentative, Absent and a link to the week in the app.
- * A raid that started or was cancelled gets none.
+ * Buttons for a sign-up post: Sign up, Late, Tentative, Absent and a link to the week in the app,
+ * then My characters and My availability. A raid that started or was cancelled gets none.
  */
 export function signupComponents(job, payload, appUrl) {
   if (payload?.closed || payload?.cancelled) return []
@@ -733,7 +736,33 @@ export function signupComponents(job, payload, appUrl) {
         { type: BUTTON, style: STYLE_LINK, label: 'Open in WhenToRaid', url: link },
       ],
     },
+    {
+      type: ACTION_ROW,
+      components: [
+        playerViewButton('characters', 'My characters', '👤'),
+        playerViewButton('availability', 'My availability', '📅'),
+      ],
+    },
   ]
+}
+
+const playerViewButton = (view, label, emoji) => ({
+  type: BUTTON,
+  style: STYLE_SECONDARY,
+  label,
+  emoji: { name: emoji },
+  custom_id: `wtv:${view}`,
+})
+
+/**
+ * My characters / My availability on a sign-up post: the same private reply as /raid characters and
+ * /raid availability, so players need not type a command. Identity comes from the signed press.
+ */
+export function parsePlayerView(interaction, applicationId) {
+  if (interaction.type !== COMPONENT || interaction.data?.component_type !== BUTTON) return null
+  const match = PLAYER_VIEW_ID.exec(interaction.data.custom_id ?? '')
+  const args = match && signedPlayer(interaction, applicationId)
+  return args ? { name: match[1], args } : null
 }
 
 /**
