@@ -736,27 +736,32 @@ export function signupComponents(job, payload, appUrl) {
         { type: BUTTON, style: STYLE_LINK, label: 'Open in WhenToRaid', url: link },
       ],
     },
-    {
-      type: ACTION_ROW,
-      components: [
-        playerViewButton('characters', 'My characters', '👤'),
-        playerViewButton('availability', 'My availability', '📅'),
-      ],
-    },
+    playerViewRow(),
   ]
 }
 
-const playerViewButton = (view, label, emoji) => ({
-  type: BUTTON,
-  style: STYLE_SECONDARY,
-  label,
-  emoji: { name: emoji },
-  custom_id: `wtv:${view}`,
-})
+/** The second row on sign-up and roster posts: My characters and My availability. */
+function playerViewRow() {
+  const button = (view, label, emoji) => ({
+    type: BUTTON,
+    style: STYLE_SECONDARY,
+    label,
+    emoji: { name: emoji },
+    custom_id: `wtv:${view}`,
+  })
+  return {
+    type: ACTION_ROW,
+    components: [
+      button('characters', 'My characters', '👤'),
+      button('availability', 'My availability', '📅'),
+    ],
+  }
+}
 
 /**
- * My characters / My availability on a sign-up post: the same private reply as /raid characters and
- * /raid availability, so players need not type a command. Identity comes from the signed press.
+ * My characters / My availability on a sign-up or roster post: the same private reply as
+ * /raid characters and /raid availability, so players need not type a command. Identity comes from
+ * the signed press.
  */
 export function parsePlayerView(interaction, applicationId) {
   if (interaction.type !== COMPONENT || interaction.data?.component_type !== BUTTON) return null
@@ -766,9 +771,10 @@ export function parsePlayerView(interaction, applicationId) {
 }
 
 /**
- * Buttons for a bot-posted roster: respond, and open the published roster. Bound to the delivery
- * version, so presses on an outdated post are refused rather than applied to a changed roster.
- * Cancelled and withdrawn rosters get no buttons.
+ * Buttons for a bot-posted roster: respond, and open the published roster, then My characters and
+ * My availability. The response buttons are bound to the delivery version, so presses on an
+ * outdated post are refused rather than applied to a changed roster. Cancelled and withdrawn rosters
+ * get no buttons.
  */
 export function rosterComponents(job, appUrl) {
   const base = new URL(appUrl)
@@ -791,5 +797,6 @@ export function rosterComponents(job, appUrl) {
         { type: BUTTON, style: STYLE_LINK, label: 'View roster', url: link },
       ],
     },
+    playerViewRow(),
   ]
 }
