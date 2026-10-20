@@ -1,10 +1,10 @@
 # Discord acceptance run
 
-Real-channel test of the online Discord lifecycle. Started October 16, 2026; paused after step B. **Must be finished before the November 4, 2026 release.**
+Real-channel test of the online Discord lifecycle. Started October 16, 2026; steps C to H run October 19. **All steps pass.** One check is still open: in step E, that a cancelled raid's post buttons stop accepting answers. Confirm it before the November 4, 2026 release.
 
-Historical test guild: bot channel in the **Distracted Minds** Discord server, no webhook. On 2026-10-19 the guild was reset to its owner alone (all other players, rosters, and history removed) for a fresh start.
+Test guild: bot channel in the **Distracted Minds** Discord server, no webhook. On 2026-10-19 the guild was reset to its owner alone (all other players, rosters, and history removed) and renamed **Untitled Guild**.
 
-This is a historical test log. On October 18, the owner confirmed that test raids could be reset. Their tracked Discord posts and raid records were removed, and the live guild was renamed **Distracted Minds**. Run the remaining acceptance steps with new real raid data.
+This is a historical test log. On October 18, the owner confirmed that test raids could be reset. Their tracked Discord posts and raid records were removed. Steps C onward run on new raid data: before step C, a roster was published to Discord again and confirmed from the post, so there was a live message to edit.
 
 ## Setup (done October 16)
 
@@ -14,18 +14,18 @@ This is a historical test log. On October 18, the owner confirmed that test raid
 
 ## Results
 
-| Step | Action                                             | Result                                                                                                                                                                                    |
-| ---- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A    | Publish roster with "Also post to Discord"         | **Pass.** Week 2026-10-26 / `raid-20` posted as message `1560807477124141088`; delivery `sent` on attempt 1, ~4 s after publishing; recorded in `guild_discord.posts`.                    |
-| B    | Click **Confirm**, then **Can't attend**           | **Pass.** Two interactions recorded once each; `raid_responses` ends `unavailable`, tied to publication `1792195897756`; app Responses tab matched.                                       |
-| C    | Change roster → **Publish draft changes**          | Not run. Expect the same message edited (no new post), delivery `version` 2, previous answers no longer current.                                                                          |
-| D    | **Withdraw**, then publish again                   | Not run. Expect "ROSTER WITHDRAWN", then the roster again.                                                                                                                                |
-| E    | **Cancel** the raid                                | Not run. Expect the post to show cancelled and buttons to stop accepting answers.                                                                                                         |
-| F    | Turn on check-in and upcoming reminders            | Not run. Settings → Discord reminders; with a published raid inside the lead time, expect one reminder of each kind within ~5 min and no duplicate rows (`delivery_key`) over later runs. |
-| G    | Calendar link: create, subscribe, change, turn off | Not run. Home → Create calendar link; a change shows on refresh; the link stops working after Turn off link.                                                                              |
-| H    | Disconnected viewer                                | Not run. Phone offline, edit on desktop, reconnect: the change appears without a reload.                                                                                                  |
+| Step | Action                                             | Result                                                                                                                                                                                               |
+| ---- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A    | Publish roster with "Also post to Discord"         | **Pass.** Week 2026-10-26 / `raid-20` posted as message `1560807477124141088`; delivery `sent` on attempt 1, ~4 s after publishing; recorded in `guild_discord.posts`.                               |
+| B    | Click **Confirm**, then **Can't attend**           | **Pass.** Two interactions recorded once each; `raid_responses` ends `unavailable`, tied to publication `1792195897756`; app Responses tab matched.                                                  |
+| C    | Change roster → **Publish draft changes**          | **Pass** (Oct 19). The same Discord message was edited, with no new post; the Responses tab no longer counted the earlier Confirm. Delivery `version` and `message_ids` not checked in the database. |
+| D    | **Withdraw**, then publish again                   | **Pass** (Oct 19). The post showed "ROSTER WITHDRAWN", then the roster again after republishing. Not checked in the database.                                                                        |
+| E    | **Cancel** the raid                                | **Pass for the post** (Oct 19). Ticking "Raid was cancelled" changed the Discord post to show the raid cancelled. Still to confirm: the post's buttons stop accepting answers.                       |
+| F    | Turn on check-in and upcoming reminders            | **Pass** (Oct 19). With both reminders on, one check-in reminder and one upcoming-raid reminder posted once each, with no duplicates over later scheduler runs. Not checked in the database.         |
+| G    | Calendar link: create, subscribe, change, turn off | **Pass** (Oct 19). The created link showed the published raid, reflected a republished change, and stopped working after **Turn off link**.                                                          |
+| H    | Disconnected viewer                                | **Pass** (Oct 19). With the phone offline, a change published on desktop appeared on the phone after it reconnected, without a reload.                                                               |
 
-After the run, also run the database and integration suites on the final revision (CI covers both).
+After the run, also run the database and integration suites on the final revision (CI covers both). On October 19, CI's database job passed on `main` at `1b042d3` (PR #69), the revision the run used.
 
 ## Checking results
 
