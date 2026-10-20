@@ -38,15 +38,37 @@ These items require the owner's real Discord server and a deployed build. Do the
 
 Record the time from link or sign-in to first answer, the number of people needing owner help, duplicate profiles, failed Discord checks, and the percentage of invited people who give an answer. A cohort is ready when the owner can complete the connection and the member and officer runs work without manual ID entry or unexplained reloads.
 
-## Remaining product choices
+## Launch decisions
 
-- Decide whether the first cohort uses automatic sign-up posts, app availability, or both as the expected first answer. The interface supports both; the owner should announce one clear path to members.
-- Confirm the currently selected bot channel is the intended announcement channel before enabling automatic posts.
+- **First answer: Discord sign-up posts.** Members answer the automatic sign-up post in the bot channel; that needs no app visit and is the path to announce. The app's availability grid stays available for members with complicated schedules and for officers planning ahead, but it is not the expected first step.
+- Before turning on automatic posts, confirm the selected bot channel is the announcement channel members already read.
+- Webhook posting stays under **Advanced: post with a webhook** and is untested on a real channel; the bot channel is the supported path for launch.
 
-## Hosted state, 2026-10-18
+## Member announcement
 
-- The linked WhenToRaid Supabase project is healthy; local and hosted migrations match. The Discord bot secrets and all five Edge Functions are present.
-- The only hosted guild is **Distracted Minds**, connected to the **Distracted Minds** Discord server. It has five Discord-linked members, two characters, an officer role selection, and a bot channel.
-- The owner confirmed that the old raids were tests. Seven plans and their check-ins, responses, history, calendar records, and availability template were cleared. The five tracked Discord roster messages were deleted first. No raid posts remain.
-- There is no weekly raid time. Automatic sign-up posts and reminders are off until the owner chooses the first real schedule. Member and character profiles were preserved.
-- The onboarding release passed the Pages workflow's lint, unit, browser, database, integration, and hosted schema gates. The public app and Discord Edge Functions are deployed.
+Post this in the guild's Discord once automatic sign-up posts are on (edit the day and channel):
+
+> **Raid sign-ups are moving to WhenToRaid.** Each week a sign-up post appears in #raid-signups. Press **Sign up**, **Late**, **Tentative** or **Absent** on it — that is all most of you need to do. Officers build the roster from those answers and the bot posts it in the same channel; press **Confirm** on the roster when you see your name. Want to add your characters or mark the times you can play? Sign in with Discord at https://whentoraid.github.io/ — you join the guild automatically from this server.
+
+## Raid-week rehearsal
+
+One real cycle before inviting the officers, with the owner and one test account. Reminders and automatic posts run on the scheduler, so this is the first check of timing, not just of buttons.
+
+1. Back up first: `npm run db:backup` (see [OPERATIONS.md](OPERATIONS.md)).
+2. In Guild settings, set the weekly raid time for a night this week and turn on automatic sign-up posts and reminders. Save.
+3. Wait for the scheduler (it runs every five minutes): the sign-up post should appear in the bot channel on its schedule, without anyone pressing a button in the app.
+4. Answer the sign-up from the test account in Discord; confirm the answer shows on the planner's Responses tab.
+5. Build and publish the roster; confirm the bot posts it, then republish a change and confirm the same message is edited.
+6. From the test account, report "can't make it"; offer the place to a standby player; accept it; put them in the draft and publish.
+7. Let the reminder time pass and confirm the reminder arrives once.
+8. After the raid, record attendance.
+9. Run the weekly check in [OPERATIONS.md](OPERATIONS.md): no unexpected rows in `app_errors`, no `failed` or `uncertain` deliveries.
+
+Write down anything that surprised you; each surprise is either a fix or a line in the member announcement.
+
+## Hosted state, 2026-10-19
+
+- The linked WhenToRaid Supabase project is healthy; local and hosted migrations matched at the time. The Discord bot secrets and all five Edge Functions are present, and the scheduler secret is set, so reminders and retries run.
+- The only hosted guild is **Untitled Guild** (renamed on 2026-10-19), connected to the owner's Discord server. It was cleared to its owner alone for a fresh start: one member, one character, no raids, no sign-ups, no Discord posts. The browser demo guild was removed from the app.
+- The real-Discord acceptance run (bot channel) passed every step on 2026-10-19; see [DISCORD_ACCEPTANCE_RUN.md](DISCORD_ACCEPTANCE_RUN.md).
+- There is no weekly raid time yet, so automatic sign-up posts and reminders are idle until the rehearsal above.
