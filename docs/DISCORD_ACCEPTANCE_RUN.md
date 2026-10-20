@@ -1,6 +1,6 @@
 # Discord acceptance run
 
-Real-channel test of the online Discord lifecycle. Started October 16, 2026; steps C to H run October 19. **All steps pass.** One check is still open: in step E, that a cancelled raid's post buttons stop accepting answers. Confirm it before the November 4, 2026 release.
+Real-channel test of the online Discord lifecycle. Started October 16, 2026; steps C to H run October 19. **All steps pass; the run is complete.**
 
 Test guild: bot channel in the **Distracted Minds** Discord server, no webhook. On 2026-10-19 the guild was reset to its owner alone (all other players, rosters, and history removed) and renamed **Untitled Guild**.
 
@@ -20,7 +20,7 @@ This is a historical test log. On October 18, the owner confirmed that test raid
 | B    | Click **Confirm**, then **Can't attend**           | **Pass.** Two interactions recorded once each; `raid_responses` ends `unavailable`, tied to publication `1792195897756`; app Responses tab matched.                                                  |
 | C    | Change roster → **Publish draft changes**          | **Pass** (Oct 19). The same Discord message was edited, with no new post; the Responses tab no longer counted the earlier Confirm. Delivery `version` and `message_ids` not checked in the database. |
 | D    | **Withdraw**, then publish again                   | **Pass** (Oct 19). The post showed "ROSTER WITHDRAWN", then the roster again after republishing. Not checked in the database.                                                                        |
-| E    | **Cancel** the raid                                | **Pass for the post** (Oct 19). Ticking "Raid was cancelled" changed the Discord post to show the raid cancelled. Still to confirm: the post's buttons stop accepting answers.                       |
+| E    | **Cancel** the raid                                | **Pass** (Oct 19). Ticking "Raid was cancelled" changed the Discord post to show the raid cancelled, and pressing **Confirm** on the cancelled post was refused.                                     |
 | F    | Turn on check-in and upcoming reminders            | **Pass** (Oct 19). With both reminders on, one check-in reminder and one upcoming-raid reminder posted once each, with no duplicates over later scheduler runs. Not checked in the database.         |
 | G    | Calendar link: create, subscribe, change, turn off | **Pass** (Oct 19). The created link showed the published raid, reflected a republished change, and stopped working after **Turn off link**.                                                          |
 | H    | Disconnected viewer                                | **Pass** (Oct 19). With the phone offline, a change published on desktop appeared on the phone after it reconnected, without a reload.                                                               |
