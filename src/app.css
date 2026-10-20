@@ -619,13 +619,19 @@ footer span {
   font-size: 12px;
 }
 .planner-page .title-row {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 .planner-page .weekbar {
   padding-block: 10px;
 }
+.planner-page .stats {
+  margin-block: 12px;
+}
 .planner-page .stat {
-  padding-block: 12px;
+  padding-block: 10px;
+}
+.planner-page .stat strong {
+  line-height: 1.2;
 }
 .planner-page > .section-tabs {
   margin-bottom: 18px;
@@ -634,7 +640,7 @@ footer span {
   margin-block: 14px;
 }
 .publication-bar {
-  padding: 14px 18px;
+  padding: 10px 18px;
   border: 1px solid var(--line);
   border-left: 3px solid var(--gold);
   border-radius: var(--radius);
@@ -648,7 +654,7 @@ footer span {
   flex-wrap: wrap;
 }
 .publication-options {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .publication-options > summary {
   font-size: 12px;

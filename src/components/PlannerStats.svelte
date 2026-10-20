@@ -38,7 +38,7 @@
   }
   .stat-track {
     height: 3px;
-    margin-top: 12px;
+    margin-top: 8px;
     background: var(--line);
     border-radius: 3px;
     overflow: hidden;
