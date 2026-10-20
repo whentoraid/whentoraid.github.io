@@ -85,7 +85,7 @@
           <div>
             <strong>{action.title}</strong>
             <small
-              >{action.detail}{#if when(action)}{' '}<span class="due">· {when(action)}</span>{/if}</small
+              >{action.detail}{#if when(action)}<span class="due">{` · ${when(action)}`}</span>{/if}</small
             >
           </div>
           <button class:primary={action === actions[0]} onclick={() => go(action)}
