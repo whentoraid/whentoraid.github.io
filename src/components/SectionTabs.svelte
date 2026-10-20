@@ -1,4 +1,5 @@
 <script>
+  import Icon from './Icon.svelte'
   let { id, label, tabs, value, onselect } = $props()
 
   function navigate(event, index) {
@@ -31,7 +32,9 @@
       onclick={() => onselect(tab.id)}
       onkeydown={(event) => navigate(event, index)}
     >
-      {tab.label}{#if tab.count !== undefined}<span class="tab-count">{tab.count}</span>{/if}
+      {#if tab.icon}<Icon name={tab.icon} size={17} />{/if}{tab.label}{#if tab.count !== undefined}<span
+          class="tab-count">{tab.count}</span
+        >{/if}
     </button>
   {/each}
 </div>

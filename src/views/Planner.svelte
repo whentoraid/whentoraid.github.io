@@ -131,9 +131,9 @@
     app.view = 'officer'
   }
   const tabs = $derived([
-    ...(!viewPublished ? [{ id: 'schedule', label: 'Schedule' }] : []),
-    { id: 'roster', label: 'Roster', count: plan.team.length },
-    ...(canManage() ? [{ id: 'responses', label: 'Responses' }] : []),
+    ...(!viewPublished ? [{ id: 'schedule', label: 'Schedule', icon: 'calendar' }] : []),
+    { id: 'roster', label: 'Roster', icon: 'members', count: plan.team.length },
+    ...(canManage() ? [{ id: 'responses', label: 'Responses', icon: 'check' }] : []),
   ])
   let undoChange = $state(null)
   const viewPublished = $derived(!canManage() || showPublished)
@@ -632,18 +632,21 @@
 
 <div class="planner-page">
   <PageTitle
+    icon="planner"
     eyebrow={viewPublished ? 'PUBLISHED RAID' : 'RAID PLANNER'}
     title={settings.name}
     subtitle={viewPublished && !published
       ? 'Your officers have not published this raid yet.'
       : formatSessionHeading(plan, guild.timezone, viewerZone)}
-  />
+  >
+    {#snippet action()}<RaidSelector />{/snippet}
+  </PageTitle>
 
   {#if app.returnTo}<button class="text-button back-link" onclick={backToDashboard}
       ><span aria-hidden="true">←</span> Back to officer dashboard</button
     >{/if}
 
-  <div class="planning-context"><RaidSelector /><WeekBar /></div>
+  <div class="planning-context"><WeekBar /></div>
 
   <section class="publication-bar" aria-label="Roster publication">
     <div class="publication-toolbar">
@@ -659,9 +662,15 @@
       {#if canManage()}
         <div class="buttons">
           <div class="segmented">
-            <button aria-pressed={!viewPublished} onclick={() => (showPublished = false)}>Edit draft</button>
-            <button aria-pressed={viewPublished} onclick={() => (showPublished = true)}
-              >View published roster</button
+            <button
+              aria-label="Edit draft"
+              aria-pressed={!viewPublished}
+              onclick={() => (showPublished = false)}>Draft</button
+            >
+            <button
+              aria-label="View published roster"
+              aria-pressed={viewPublished}
+              onclick={() => (showPublished = true)}>Published</button
             >
           </div>
           {#if !viewPublished}<button
@@ -809,8 +818,9 @@
         <div>
           <div class="section-head">
             <div>
+              <span class="eyebrow gold">FIND YOUR RAID NIGHT</span>
               <h2>The best windows</h2>
-              <p class="subtitle">Fill the roles first. Keep backups for the roles you need most.</p>
+              <p class="subtitle">Choose a time, then fine-tune your roster.</p>
             </div>
           </div>
           <SuggestionCards

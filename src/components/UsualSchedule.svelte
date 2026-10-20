@@ -24,6 +24,7 @@
   import { addDays, daysBetween, formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
   import { offerUndo, showToast } from '../lib/toast.svelte.js'
   import { untrack } from 'svelte'
+  import Icon from './Icon.svelte'
 
   /** The member's usual schedule: save or apply it, take a break, give it a last week, and review it. */
   let { memberId, weekIso } = $props()
@@ -130,7 +131,13 @@
 </script>
 
 <details class="usual-schedule" bind:open={expanded}>
-  <summary>Usual schedule{pause && pause.from <= thisWeek ? ' · paused' : ''}</summary>
+  <summary
+    ><span
+      ><Icon name="repeat" size={17} /> Usual schedule{pause && pause.from <= thisWeek
+        ? ' · paused'
+        : ''}</span
+    ><small>Repeat your times each week, or take a break.</small></summary
+  >
   <div class="buttons">
     <button onclick={() => changeTemplate('save')}>Save as usual schedule</button>
     {#if template}
@@ -230,6 +237,15 @@
 </details>
 
 <style>
+  summary > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  summary small {
+    padding-left: 26px;
+    margin-top: 5px;
+  }
   .schedule-part {
     margin-top: 1rem;
     padding-top: 0.75rem;

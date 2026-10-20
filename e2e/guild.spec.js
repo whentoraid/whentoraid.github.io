@@ -16,7 +16,7 @@ async function createGuild(page) {
   await page.getByLabel('Raid role').selectOption('Healer')
   await page.getByRole('button', { name: 'Create guild' }).click()
   // A new guild opens on the founder's own raid page, which guides their first steps.
-  await expect(page.getByRole('heading', { name: 'My next raid' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My raids' })).toBeVisible()
   await navigate(page, 'Guild members')
   await expect(page.getByRole('heading', { name: 'Guild members' })).toBeVisible()
 }

@@ -128,6 +128,8 @@
     focusedView = view
     void tick().then(() => {
       if (app.view !== view) return
+      // Returning from a raid restores its dashboard action; keep that more specific focus target.
+      if (view === 'officer' && document.activeElement?.closest('.officer-dashboard [data-row]')) return
       const heading = document.querySelector('#content h1')
       heading?.setAttribute('tabindex', '-1')
       heading?.focus()

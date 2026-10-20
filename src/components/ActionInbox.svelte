@@ -85,7 +85,7 @@
           <div>
             <strong>{action.title}</strong>
             <small
-              >{action.detail}{#if when(action)}<span class="due"> · {when(action)}</span>{/if}</small
+              >{action.detail}{#if when(action)}{' '}<span class="due">· {when(action)}</span>{/if}</small
             >
           </div>
           <button class:primary={action === actions[0]} onclick={() => go(action)}
@@ -127,5 +127,27 @@
   }
   .due {
     color: var(--gold);
+  }
+  @media (max-width: 760px) {
+    .action-inbox {
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    li {
+      flex-wrap: nowrap;
+      gap: 12px;
+      padding-block: 8px;
+    }
+    li div {
+      min-width: 0;
+      flex: 1;
+    }
+    li strong {
+      font-size: 13px;
+    }
+    li button {
+      flex-shrink: 0;
+      padding-inline: 10px;
+    }
   }
 </style>

@@ -9,6 +9,7 @@
   import { exactSessionLabel } from '../lib/personal-raids.js'
   import { addDays, formatMonthDay } from '../lib/time.js'
   import { DAYS } from '../lib/constants.js'
+  import Icon from './Icon.svelte'
 
   let { weekIso, grid, ranges, onpaint, oneditstart = () => {}, oneditend = () => {} } = $props()
   const zone = $derived(displayZone(grid))
@@ -85,13 +86,16 @@
 <div class="day-ranges">
   {#each days as { name, day, boundaries } (day)}
     {@const saved = rangesForDay(ranges, boundaries)}
-    <details class="day-editor">
+    <details class="day-editor" class:has-times={saved.length > 0}>
       <summary aria-label={`Edit ${name} availability`} aria-describedby={`day-summary-${day}`}
         ><span class="day-heading"
           ><strong>{name}</strong><small>{formatMonthDay(addDays(weekIso, day))}</small></span
         ><span id={`day-summary-${day}`} class="day-summary" class:has-times={saved.length > 0}
           >{saved.length ? saved.map(summaryLabel).join(' · ') : 'No times added'}</span
-        ><span class="day-edit-label" aria-hidden="true">Edit</span></summary
+        ><span class="day-edit-label" aria-hidden="true"
+          ><Icon name={saved.length ? 'clock' : 'plus'} size={14} />
+          {saved.length ? 'Edit' : 'Add times'}</span
+        ></summary
       >
       <section aria-label={`${name} availability`} class="day-editor-content">
         {#if saved.length}
@@ -150,6 +154,16 @@
 <style>
   .day-editor {
     border-bottom: 1px solid var(--line);
+    border-left: 2px solid transparent;
+    padding-inline: 12px;
+  }
+  .day-editor.has-times {
+    border-left-color: var(--green);
+    background: #90c5a307;
+  }
+  .day-editor[open] {
+    border-left-color: var(--gold);
+    background: #dbb57408;
   }
   summary {
     display: flex;
@@ -175,11 +189,15 @@
     overflow-wrap: anywhere;
   }
   .day-summary.has-times {
-    color: var(--text);
+    color: var(--green);
   }
   .day-edit-label {
     color: var(--gold);
     font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
   }
   .day-editor-content {
     padding: 0 0 20px;
@@ -223,6 +241,19 @@
     flex: 1 1 16rem;
   }
   @media (max-width: 600px) {
+    summary {
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .day-heading {
+      flex-basis: 42px;
+    }
+    .day-summary {
+      font-size: 12px;
+    }
+    .day-edit-label {
+      font-size: 11px;
+    }
     form label {
       flex-basis: 40%;
     }

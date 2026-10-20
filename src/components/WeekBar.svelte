@@ -42,7 +42,7 @@
       onclick={() => goTo(addDays(weekIso, -DAYS_PER_WEEK))}>‹</button
     >
     <label class="field">
-      Week beginning
+      <span>Week beginning</span>
       <input type="date" value={weekIso} onchange={changeWeek} />
     </label>
     <button
