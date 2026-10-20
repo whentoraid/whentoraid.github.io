@@ -1,6 +1,7 @@
 // Discord's Interactions Endpoint URL: Confirm / Tentative / Can't attend buttons
-// on bot-posted rosters, and Sign up / Late / Tentative / Absent on sign-up posts. Discord signs every
-// request; nothing here trusts a caller-supplied identity.
+// on bot-posted rosters, Sign up / Late / Tentative / Absent on sign-up posts, /raid commands, and
+// character setup menus and forms. Discord signs every request; nothing here trusts a caller-supplied
+// identity.
 // Needs DISCORD_PUBLIC_KEY and DISCORD_APPLICATION_ID; until both are set every request is refused.
 // A sign-up also refreshes its post at once, which needs DISCORD_BOT_TOKEN and WHENTORAID_APP_URL
 // (otherwise the post catches up on the next scheduled raid-dispatch run).

@@ -11,6 +11,7 @@ The bot should answer three questions without making a player leave Discord: **W
 | `/raid mine [page]`          | Personal signups, provisional bench positions, selected character/spec, late changes, and current published assignment confirmations.                             |
 | `/raid roster [raid] [page]` | Every player and character name on the roster, bench, tentative list, and absence list. Choose a raid number from `/raid upcoming`; the default is the next raid. |
 | `/raid readiness [page]`     | Officer-only report: published roster role gaps, confirmed/unconfirmed/unavailable counts, and separate signup coverage.                                          |
+| `/raid characters`           | List your characters; add one, choose your main, or delete one. See [Character setup in Discord](#character-setup-in-discord).                                    |
 | `/raid help`                 | A player guide to commands, character/spec selection, provisional signups, and roster confirmation.                                                               |
 
 Every command reply is private. Signup cards now state the exact missing roles and call out slotted late arrivals, tentative players, and players without a role. A full signup list is never presented as proof that the raid is ready. Bench signups do not fill another role's shortage, and provisional signup order does not override the officers' published roster.
@@ -48,8 +49,8 @@ way to provision all icons ahead of the first post.
 ## Roster Confirm and onboarding
 
 Apply `20261029120000_discord_roster_standby.sql` before deploying `raid-interactions` and
-`raid-dispatch`. A member with no character gets a private link to the Characters page from either
-Sign up or Confirm. A member outside the published roster who presses Confirm chooses a character
+`raid-dispatch`. A member with no character who presses Confirm gets a private link to the
+Characters page; Sign up sets the character up in Discord instead (see below). A member outside the published roster who presses Confirm chooses a character
 and appears in the existing standby list; this does not grant a roster place. The bot edits the
 roster post to show confirmed roster members with a blue square and backups with a yellow square.
 Discord embeds do not support individual text colors, so the squares carry that distinction.
@@ -71,6 +72,43 @@ To roll out this polish:
 
 References: [Discord embeds](https://docs.discord.com/developers/resources/message#embed-object),
 [application emojis](https://docs.discord.com/developers/resources/emoji#application-emojis).
+
+## Character setup in Discord
+
+Some players never want to open the website. They can now do everything a player needs in Discord:
+join (automatic on their first press), set up characters, sign up, and confirm.
+
+- **First sign-up.** A player with no character who presses **Sign up** or **Late** gets a private
+  menu instead of a website link: choose the class, then the spec (Feral Combat is offered as tank
+  and as DPS), then a short form for the name and realm. The realm is filled in with their main's,
+  or else the realm most of the guild plays on. Submitting the form adds the character as their main
+  and finishes the sign-up they pressed, with the usual confirmation and **Change spec** menu. A
+  website link stays underneath for anyone who prefers it.
+- **`/raid characters`.** A private list of the player's characters with menus to add another,
+  choose the main, and delete one. Deleting asks first and retires the character exactly as the
+  app does: past rosters and attendance keep it, the only character cannot be deleted, and deleting
+  the main makes the next character the main. As in the app, a sign-up already made with a deleted
+  character keeps it until the player presses **Sign up** again and picks another.
+- **Rules match the app.** At most 20 characters; names up to 30 characters and realms up to 60;
+  only the specs the class can play. Adding a name and realm the player already has returns that
+  character, so a repeated form cannot create duplicates. Every change bumps the guild revision, so
+  open apps reload rather than overwrite it.
+- **Access.** The database functions (`discord_characters`, `add_character_from_discord`,
+  `manage_character_from_discord`) are callable only by the `raid-interactions` Edge Function. The
+  player and guild come from the signed interaction, resolved like `/raid` commands; menu ids carry
+  no user or guild ids. Players can only change their own characters.
+
+Officers still build and publish rosters on the website, and weekly availability is still set there.
+
+To roll this out:
+
+1. Apply `20261104120000_discord_characters.sql`.
+2. Deploy `raid-interactions` (and `discord-connect`, which registers the updated `/raid` command).
+3. In Guild settings → Connections, click **Retry / update raid commands** once so Discord shows
+   `/raid characters`.
+4. Verify with an account that has no characters: press **Sign up** on a post, add a character, and
+   check it appears on the post. Then try `/raid characters`: add an alt, make it the main, and
+   delete it.
 
 ## Access and consistency
 
