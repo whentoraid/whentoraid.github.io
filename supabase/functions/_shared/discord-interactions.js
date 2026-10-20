@@ -20,6 +20,11 @@ import {
   parseCharacterInteraction,
   specMenuReply,
 } from './discord-characters.js'
+import {
+  availabilityReply,
+  availabilityResponse,
+  parseAvailabilityInteraction,
+} from './discord-availability.js'
 
 const SNOWFLAKE = /^\d{17,20}$/
 const UUID = '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
@@ -474,6 +479,8 @@ export async function handleDiscordInteraction(request, config) {
         try {
           if (command.name === 'characters')
             message = characterListReply(await rpc('discord_characters', command.args))
+          else if (command.name === 'availability')
+            message = availabilityReply(await rpc('discord_availability', command.args))
           else {
             const data = command.name === 'help' ? null : await rpc('discord_raid_overview', command.args)
             message = raidCommandReply(command, data, config.appUrl)
@@ -498,6 +505,9 @@ export async function handleDiscordInteraction(request, config) {
   const character = parseCharacterInteraction(interaction, applicationId)
   if (character)
     return handleCharacter(interaction, character, { ...config, lookup: config.rpc, rpc, followup, log })
+  const availability = parseAvailabilityInteraction(interaction, applicationId)
+  if (availability)
+    return reply(availabilityResponse(interaction, availability, { ...config, rpc, followup, log }))
   if (interaction.type !== COMPONENT) return reply({ error: 'Unsupported interaction.' }, 400)
   const signup = parseSignup(interaction, applicationId)
   if (signup)

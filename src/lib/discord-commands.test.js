@@ -193,6 +193,7 @@ describe('raid command boundary', () => {
       'roster',
       'readiness',
       'characters',
+      'availability',
       'help',
     ])
     fetchFn.mockResolvedValue(new Response('{}', { status: 429 }))
