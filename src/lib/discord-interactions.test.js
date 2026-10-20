@@ -217,7 +217,11 @@ describe('signed Discord responses', () => {
 describe('application-authored roster posts', () => {
   const job = { id: JOB, version: 2, guild_id: JOB, week: '2026-10-12', raid_id: 'raid-20', payload: {} }
   it('binds response buttons to delivery version and adds a guild-aware published roster link', () => {
-    const [row] = rosterComponents(job, 'https://whentoraid.example/app/')
+    const [row, shortcuts] = rosterComponents(job, 'https://whentoraid.example/app/')
+    expect(shortcuts.components.map((c) => [c.label, c.custom_id])).toEqual([
+      ['My characters', 'wtv:characters'],
+      ['My availability', 'wtv:availability'],
+    ])
     expect(row.components.map((c) => c.label)).toEqual([
       'Confirm',
       'Tentative',
