@@ -1,6 +1,11 @@
 import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
+import { installErrorReporting, supabaseErrorSender } from './lib/error-reporting.js'
+import { supabase } from './lib/remote/client.js'
+
+// Unexpected failures in an online guild reach the owner (see docs/OPERATIONS.md).
+if (supabase) installErrorReporting({ send: supabaseErrorSender(supabase) })
 
 mount(App, { target: document.getElementById('app') })
 
