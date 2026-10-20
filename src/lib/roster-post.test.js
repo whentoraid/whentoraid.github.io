@@ -25,7 +25,7 @@ const roster = (overrides = {}) => ({
 })
 
 describe('roster card', () => {
-  it('shows raid details and full-width sections with a separate melee/ranged breakdown', () => {
+  it('shows raid details and two-column sections with a separate melee/ranged breakdown', () => {
     const [message] = rosterMessages(roster())
     const [embed] = message.embeds
     expect(embed.author.name).toBe('Raid Test Client')
@@ -41,7 +41,13 @@ describe('roster card', () => {
     expect(fields['💚 Healers (0/2)']).toBe('None')
     expect(fields['⚔️ Melee DPS (1)']).toBe('`2` 🟨 **Skoogerino** (Skooger)')
     expect(fields['🏹 Ranged DPS (0)']).toBe('None')
-    expect(embed.fields.every((field) => field.inline === false)).toBe(true)
+    expect(embed.fields.map(({ name, inline }) => [name, inline])).toEqual([
+      ['🛡️ Tanks (1/1)', true],
+      ['💚 Healers (0/2)', true],
+      ['​', false],
+      ['⚔️ Melee DPS (1)', true],
+      ['🏹 Ranged DPS (0)', true],
+    ])
     expect(embed.description).toContain('⚔️ Melee DPS **1** · 🏹 Ranged DPS **0**')
     expect(embed.footer.text).toContain('Tentative')
   })

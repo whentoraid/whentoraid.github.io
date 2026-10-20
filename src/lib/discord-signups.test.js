@@ -179,8 +179,15 @@ describe('sign-up posts', () => {
     expect(fieldNamed(embed, '🛡️ Tanks')).toMatchObject({
       name: '🛡️ Tanks (1/2)',
       value: '`1` 🟫 **Thrall** Protection',
-      inline: false,
+      inline: true,
     })
+    expect(embed.fields.slice(0, 5).map(({ name, inline }) => [name, inline])).toEqual([
+      ['🛡️ Tanks (1/2)', true],
+      ['💚 Healers (1/4)', true],
+      ['​', false],
+      ['⚔️ Melee DPS (1)', true],
+      ['🏹 Ranged DPS (0)', true],
+    ])
     expect(fieldNamed(embed, '💚 Healers').value).toBe('`2` ⬜ **Anduin** Holy')
     expect(fieldNamed(embed, '⚔️ Melee DPS').value).toBe('`3` 🟫 **Varian** Fury · late')
     expect(fieldNamed(embed, '❔ Tentative').value).toBe('Jaina')

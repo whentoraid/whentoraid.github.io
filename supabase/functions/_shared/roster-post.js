@@ -1,5 +1,5 @@
 /**
- * Published roster cards with full-width role sections and talent spec icons.
+ * Published roster cards with role sections in two columns (Tanks | Healers, Melee | Ranged) and talent spec icons.
  * Pings go in the message text, because Discord never pings from an embed, and edits never ping
  * again (see deliverMessages). Complete lists continue in additional messages; no name is dropped.
  */
@@ -8,7 +8,7 @@ import { entryLine } from './signup-post.js'
 import { ROLE_HEADINGS, displayRoles, damageSummary } from './raid-presentation.js'
 import { SIGNUP_ROLES } from './signup-lineup.js'
 import { roleNeeds } from './raid-readiness.js'
-import { listFields, fieldPages } from './discord-lists.js'
+import { listFields, columnFields, fieldPages } from './discord-lists.js'
 import { safeVoiceLink } from './raid-briefing.js'
 
 /** Discord accepts at most 100 user mentions, and 2000 characters, per message. */
@@ -96,14 +96,15 @@ function rosterFields({ roles, other }, standby, specEmojis) {
     })),
   )
   const numberedStandby = (members) => members.map((entry, index) => ({ ...entry, number: index + 1 }))
-  const fields = roles.flatMap(({ role, target, members }) =>
-    listFields(
-      `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
-      [...members, ...numberedStandby(standbyGroups.find((group) => group.role === role)?.members ?? [])].map(
-        rosterLine,
-      ),
-      { joiner: '\n\n' },
-    ),
+  const fields = columnFields(
+    roles.map(({ role, target, members }) => ({
+      name: `${ROLE_HEADINGS[role]} (${members.length}${target ? `/${target}` : ''})`,
+      items: [
+        ...members,
+        ...numberedStandby(standbyGroups.find((group) => group.role === role)?.members ?? []),
+      ].map(rosterLine),
+      options: { joiner: '\n\n' },
+    })),
   )
   const unknown = standbyGroups.find((group) => group.role === 'Unknown')?.members ?? []
   if (unknown.length && !roles.some((group) => group.role === 'Unknown'))
