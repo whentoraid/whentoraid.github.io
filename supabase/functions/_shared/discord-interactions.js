@@ -5,11 +5,21 @@
  *
  * Identity comes only from the signed interaction: the Discord user, server, channel and message.
  * The database then checks that message belongs to the guild's current delivery and that the user
- * may answer (respond_to_discord_raid for rosters, signup_from_discord for sign-ups).
+ * may answer (respond_to_discord_raid for rosters, signup_from_discord for sign-ups). Character setup
+ * (/raid characters, and a sign-up press from a player with none) is in discord-characters.js.
  */
 
 import { parseRaidCommand, raidCommandReply } from './discord-commands.js'
 import { interactionJoinArgs } from './discord-join.js'
+import {
+  characterForm,
+  characterListReply,
+  characterNotice,
+  deleteConfirmReply,
+  firstCharacterReply,
+  parseCharacterInteraction,
+  specMenuReply,
+} from './discord-characters.js'
 
 const SNOWFLAKE = /^\d{17,20}$/
 const UUID = '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
@@ -34,6 +44,13 @@ const COMPONENT = 3
 const PONG = 1
 const DEFERRED_MESSAGE = 5
 const DEFERRED_UPDATE = 6
+const CHANNEL_MESSAGE = 4
+const UPDATE_MESSAGE = 7
+const MODAL = 9
+const INVALID_FORM =
+  'Enter a character name (up to 30 characters) and a realm (up to 60). Choose the spec again to retry.'
+/** How long the character form waits for a realm to suggest before opening without one. */
+const REALM_HINT_MS = 1500
 const EPHEMERAL = 64
 const BUTTON = 2
 const STRING_SELECT = 3
@@ -358,12 +375,16 @@ export function signupReply(result, args = {}, appUrl) {
       result.guildId,
     )
   }
-  if (result?.outcome === 'no-characters')
+  if (result?.outcome === 'no-characters') {
+    // Set the character up right here; the website stays available as a link.
+    if (args.p_delivery_id && args.p_message_id && args.p_status)
+      return firstCharacterReply(args, charactersLink(appUrl, result.guildId))
     return onboardingReply(
       'Add a character in WhenToRaid, then press Sign up again. Sign in with this Discord account.',
       appUrl,
       result.guildId,
     )
+  }
   const saved = result?.outcome === 'saved' && savedSignup(result)
   if (saved) return { content: saved, components: specMenu(result, args) }
   const content =
@@ -451,8 +472,12 @@ export async function handleDiscordInteraction(request, config) {
       (async () => {
         let message
         try {
-          const data = command.name === 'help' ? null : await rpc('discord_raid_overview', command.args)
-          message = raidCommandReply(command, data, config.appUrl)
+          if (command.name === 'characters')
+            message = characterListReply(await rpc('discord_characters', command.args))
+          else {
+            const data = command.name === 'help' ? null : await rpc('discord_raid_overview', command.args)
+            message = raidCommandReply(command, data, config.appUrl)
+          }
         } catch (error) {
           log(`command ${interaction.id} failed: ${error.message}`)
           message = {
@@ -470,6 +495,9 @@ export async function handleDiscordInteraction(request, config) {
     )
     return reply({ type: DEFERRED_MESSAGE, data: { flags: EPHEMERAL } })
   }
+  const character = parseCharacterInteraction(interaction, applicationId)
+  if (character)
+    return handleCharacter(interaction, character, { ...config, lookup: config.rpc, rpc, followup, log })
   if (interaction.type !== COMPONENT) return reply({ error: 'Unsupported interaction.' }, 400)
   const signup = parseSignup(interaction, applicationId)
   if (signup)
@@ -520,44 +548,147 @@ export async function handleDiscordInteraction(request, config) {
 }
 
 /** Save a sign-up (or its spec), answer the player privately, then bring the public post up to date. */
-function handleSignup(interaction, rpcName, args, { rpc, schedule, followup, refresh, log, appUrl }) {
-  schedule(
-    (async () => {
-      let result = null
-      try {
-        result = await rpc(rpcName, args)
-      } catch (error) {
-        log(`sign-up ${interaction.id} failed: ${error.message}`)
-      }
-      if (result?.outcome === 'saved' && (result.status === 'signed' || result.status === 'late')) {
-        try {
-          const standing = await rpc('signup_standing', {
-            p_delivery_id: args.p_delivery_id,
-            p_discord_id: args.p_discord_id,
-          })
-          result = { ...result, standing }
-        } catch (error) {
-          // The sign-up is saved; only the bench notice is missing.
-          log(`sign-up ${interaction.id} standing failed: ${error.message}`)
-        }
-      }
-      try {
-        await followup(interaction, signupReply(result, args, appUrl))
-      } catch (error) {
-        log(`sign-up ${interaction.id} reply failed: ${error.message}`)
-      }
-      if (result?.outcome !== 'saved' || !refresh) return
-      try {
-        await refresh(result.guildId)
-      } catch (error) {
-        // The post is queued either way; the scheduler sends it within minutes.
-        log(`sign-up ${interaction.id} post refresh failed: ${error.message}`)
-      }
-    })(),
-  )
+function handleSignup(interaction, rpcName, args, config) {
+  config.schedule(saveSignup(interaction, rpcName, args, config))
   // A choice from the private menu updates that menu; a press on the post gets its own private reply.
   const fromMenu = interaction.data.component_type === STRING_SELECT
   return reply(fromMenu ? { type: DEFERRED_UPDATE } : { type: DEFERRED_MESSAGE, data: { flags: EPHEMERAL } })
+}
+
+/** The work behind handleSignup. `notice` leads the private reply (a character just added). */
+async function saveSignup(interaction, rpcName, args, { rpc, followup, refresh, log, appUrl }, notice) {
+  let result = null
+  try {
+    result = await rpc(rpcName, args)
+  } catch (error) {
+    log(`sign-up ${interaction.id} failed: ${error.message}`)
+  }
+  if (result?.outcome === 'saved' && (result.status === 'signed' || result.status === 'late')) {
+    try {
+      const standing = await rpc('signup_standing', {
+        p_delivery_id: args.p_delivery_id,
+        p_discord_id: args.p_discord_id,
+      })
+      result = { ...result, standing }
+    } catch (error) {
+      // The sign-up is saved; only the bench notice is missing.
+      log(`sign-up ${interaction.id} standing failed: ${error.message}`)
+    }
+  }
+  try {
+    const message = signupReply(result, args, appUrl)
+    await followup(interaction, notice ? { ...message, content: `${notice}\n${message.content}` } : message)
+  } catch (error) {
+    log(`sign-up ${interaction.id} reply failed: ${error.message}`)
+  }
+  if (result?.outcome !== 'saved' || !refresh) return
+  try {
+    await refresh(result.guildId)
+  } catch (error) {
+    // The post is queued either way; the scheduler sends it within minutes.
+    log(`sign-up ${interaction.id} post refresh failed: ${error.message}`)
+  }
+}
+
+/**
+ * Character setup steps. Choosing a class or asking to delete answers at once by replacing the private
+ * message; choosing a spec opens the name form. Saving (the form, a main, a delete) is acknowledged
+ * and then the private message is replaced with the result: the sign-up it finished, or the list.
+ */
+function handleCharacter(interaction, action, config) {
+  if (action.kind === 'class') return reply({ type: UPDATE_MESSAGE, data: specMenuReply(action) })
+  if (action.kind === 'remove') return reply({ type: UPDATE_MESSAGE, data: deleteConfirmReply(action) })
+  if (action.kind === 'spec') return characterFormResponse(action, config)
+  if (action.kind === 'form-invalid')
+    return reply({ type: CHANNEL_MESSAGE, data: { content: INVALID_FORM, flags: EPHEMERAL } })
+  config.schedule(
+    (async () => {
+      let message
+      try {
+        message = await saveCharacterChange(interaction, action, config)
+      } catch (error) {
+        config.log(`character ${interaction.id} failed: ${error.message}`)
+        message = { content: 'That change could not be saved. Try again in a moment.', components: [] }
+      }
+      if (!message) return
+      try {
+        await config.followup(interaction, message)
+      } catch (error) {
+        config.log(`character ${interaction.id} reply failed: ${error.message}`)
+      }
+    })(),
+  )
+  return reply({ type: DEFERRED_UPDATE })
+}
+
+/**
+ * The name form, with the realm the player most likely plays on when it can be found quickly. The
+ * form must answer the interaction itself, so this skips the join (`lookup` is the plain call): the
+ * player joined when their first press reached the bot.
+ */
+async function characterFormResponse(action, { lookup, log }) {
+  let timer
+  let realm = null
+  try {
+    const data = await Promise.race([
+      lookup('discord_characters', action.who),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, REALM_HINT_MS, null)
+      }),
+    ])
+    realm = data?.realm ?? null
+  } catch (error) {
+    log(`character form realm failed: ${error.message}`)
+  } finally {
+    clearTimeout(timer)
+  }
+  return reply({ type: MODAL, data: characterForm(action, realm) })
+}
+
+/**
+ * Add, choose a main or delete, then the reply. A character added from a sign-up press signs the
+ * player up with it (that reply is sent by saveSignup, so this returns null).
+ */
+async function saveCharacterChange(interaction, action, config) {
+  const { rpc } = config
+  let notice
+  if (action.kind === 'form') {
+    const { className, spec, role } = action.choice
+    const result = await rpc('add_character_from_discord', {
+      ...action.who,
+      p_name: action.name,
+      p_realm: action.realm,
+      p_class: className,
+      p_spec: spec,
+      p_role: role,
+    })
+    notice = characterNotice(result, 'form')
+    if (action.signup) {
+      if (result?.outcome !== 'saved') return { content: notice, components: [] }
+      const args = {
+        p_interaction_id: action.interactionId,
+        ...action.who,
+        ...action.signup,
+        p_character_id: result.character.id,
+      }
+      await saveSignup(interaction, 'signup_from_discord', args, config, notice)
+      return null
+    }
+  } else if (action.kind === 'main' || action.kind === 'delete') {
+    const result = await rpc('manage_character_from_discord', {
+      ...action.who,
+      p_character_id: action.characterId,
+      p_action: action.kind === 'main' ? 'main' : 'retire',
+    })
+    notice = characterNotice(result, action.kind)
+  }
+  try {
+    return characterListReply(await rpc('discord_characters', action.who), notice)
+  } catch (error) {
+    // The change itself went through; only the refreshed list is missing.
+    config.log(`character ${interaction.id} list failed: ${error.message}`)
+    return { content: notice, components: [] }
+  }
 }
 
 /** The app page where a player sees the week they are signing up for. */
