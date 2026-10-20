@@ -13,9 +13,10 @@
 </script>
 
 <PageTitle
-  eyebrow="GUILD TOOLS"
+  icon="dashboard"
+  eyebrow="THE GUILD WAR ROOM"
   title="Officer dashboard"
-  subtitle="What each upcoming raid still needs, and anything players have asked you to check."
+  subtitle="A clear view of the weeks ahead. Keep every raid moving."
 />
 
 {#if recordFlagsOnline()}<RecordCorrections />{/if}

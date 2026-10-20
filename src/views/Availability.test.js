@@ -19,6 +19,7 @@ describe('Availability view', () => {
     const { container } = render(Availability)
     expect(screen.queryByRole('button', { name: /submit/i })).toBeNull()
     expect(container.querySelector('small[role=status]').textContent).toMatch(/Not checked in yet/)
+    await fireEvent.click(screen.getByRole('button', { name: 'Paint grid' }))
 
     const cell = container.querySelector('[data-paint-cell][data-day="4"][data-slot="12"]')
     await fireEvent.pointerDown(cell, { pointerType: 'touch', pointerId: 1 })
@@ -59,6 +60,7 @@ describe('Availability view', () => {
 
   test('a day header fills an empty day, and clears a day that has any times', async () => {
     render(Availability)
+    await fireEvent.click(screen.getByRole('button', { name: 'Paint grid' }))
     const wednesday = slotWindow(NEW_WEEK, 2, 0, app.data.guild.slotsPerDay, app.data.guild)
 
     await fireEvent.click(screen.getByRole('button', { name: 'Mark Wed available' }))
@@ -71,6 +73,7 @@ describe('Availability view', () => {
   test('clearing one day keeps the rest of the week', async () => {
     app.data = createSeedState()
     render(Availability)
+    await fireEvent.click(screen.getByRole('button', { name: 'Paint grid' }))
     const before = getCheckin(app.data, SEED_WEEK, 'm0').ranges
     const friday = slotWindow(SEED_WEEK, 4, 0, app.data.guild.slotsPerDay, app.data.guild)
     expect(before.some((r) => r.start < friday.end && r.end > friday.start)).toBe(true)
@@ -90,6 +93,7 @@ describe('Availability view', () => {
 
   test('a whole paint gesture is one undo and day clearing can also be undone', async () => {
     const { container } = render(Availability)
+    await fireEvent.click(screen.getByRole('button', { name: 'Paint grid' }))
     const cell = container.querySelector('[data-paint-cell][data-day="4"][data-slot="12"]')
     await fireEvent.pointerDown(cell, { pointerType: 'touch', pointerId: 1 })
     await fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 1 })

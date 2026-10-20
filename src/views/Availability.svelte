@@ -4,6 +4,7 @@
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
   import OnboardingChecklist from '../components/OnboardingChecklist.svelte'
   import PageTitle from '../components/PageTitle.svelte'
+  import Icon from '../components/Icon.svelte'
   import WeekBar from '../components/WeekBar.svelte'
   import RaidSelector from '../components/RaidSelector.svelte'
   import SectionTabs from '../components/SectionTabs.svelte'
@@ -43,7 +44,7 @@
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
 
   const memberId = $derived(app.data.currentMemberId)
-  const defaultEditor = globalThis.matchMedia?.('(max-width: 600px)').matches ? 'ranges' : 'grid'
+  const defaultEditor = 'ranges'
   const preferenceScope = $derived(availabilityPreferenceScope(app.data, remote))
   let preferences = $derived(
     readAvailabilityPreferences(preferenceScope, { editor: defaultEditor, section: 'times' }),
@@ -208,10 +209,16 @@
 </script>
 
 <PageTitle
+  icon="calendar"
   eyebrow="YOUR WEEK, YOUR WAY"
   title="When can you raid?"
-  subtitle="Mark the times you can stay for the entire session."
-/>
+  subtitle="Choose your times and characters."
+>
+  {#snippet action()}<span class="badge checkin-badge" class:success={checkin.checkedIn}
+      ><Icon name={checkin.checkedIn ? 'check' : 'clock'} size={15} />
+      {closed ? 'Check-ins closed' : checkin.checkedIn ? 'Checked in this week' : 'Check-in needed'}</span
+    >{/snippet}
+</PageTitle>
 
 <WeekBar />
 
@@ -272,7 +279,13 @@
     aria-labelledby="availability-tab-times"
     inert={closed}
   >
-    <h2>Weekly availability</h2>
+    <div class="availability-heading">
+      <span class="step-number">01</span>
+      <div>
+        <h2>Weekly availability</h2>
+        <p>When you can stay for the whole session.</p>
+      </div>
+    </div>
     <!-- Stays in view on long phone forms: which week this edits, what it covers, and whether it saved. -->
     <div class="availability-save">
       <p class="edit-scope">
@@ -281,51 +294,36 @@
           : `all ${app.data.settings.raids.length} raids`}
       </p>
       <InlineSaveStatus />
+      <span class="badge">{availabilitySource(app.data, weekIso, memberId)}</span>
     </div>
-    <span class="badge">{availabilitySource(app.data, weekIso, memberId)}</span>
-    <UsualSchedule {memberId} {weekIso} />
-    <details class="usual-schedule">
-      <summary>Away dates{absences.length ? ` (${absences.length})` : ''}</summary>
-      <p class="note">
-        Going on holiday? Mark the days you are away. Your usual times stay saved and come back afterwards.
-      </p>
-      <form class="away-form" onsubmit={addAbsence}>
-        <label class="field">From<input type="date" required bind:value={awayFrom} /></label>
-        <label class="field">To<input type="date" min={awayFrom} bind:value={awayTo} /></label>
-        <button>Mark away</button>
-      </form>
-      {#if absences.length}
-        <ul class="away-list">
-          {#each absences as span (span.from)}
-            <li>
-              <span
-                >{formatMonthDay(span.from)}{span.to !== span.from
-                  ? ` – ${formatMonthDay(span.to)}`
-                  : ''}</span
-              >
-              <button onclick={() => changeAbsence(span.from, span.to, false)}>Remove</button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </details>
     {#if checkin.absentDates?.length}
       <p class="note" role="status">
         Away this week: {checkin.absentDates.map((date) => formatMonthDay(date)).join(', ')}.
       </p>
     {/if}
-    <div class="buttons editor-choice" role="group" aria-label="Availability editor">
-      <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
-        >Time ranges</button
-      >
-      <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}>Paint grid</button
+    <div class="editor-toolbar">
+      <div class="buttons editor-choice segmented" role="group" aria-label="Availability editor">
+        <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
+          ><Icon name="clock" size={16} /> Time ranges</button
+        >
+        <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}
+          ><Icon name="dashboard" size={16} /> Paint grid</button
+        >
+      </div>
+      <span class="editor-hint"
+        >{editor === 'ranges' ? 'Open a day to add or edit times' : 'Click or drag to mark your times'}</span
       >
     </div>
     <div class="buttons kind-choice" role="group" aria-label="Mark times as">
-      <span>Mark as:</span>
-      <button aria-pressed={kind === 'firm'} onclick={() => (kind = 'firm')}>Available</button>
-      <button aria-pressed={kind === 'preferred'} onclick={() => (kind = 'preferred')}>Preferred</button>
-      <button aria-pressed={kind === 'tentative'} onclick={() => (kind = 'tentative')}>Tentative</button>
+      <button class="kind-firm" aria-pressed={kind === 'firm'} onclick={() => (kind = 'firm')}
+        ><Icon name="check" size={16} /> Available</button
+      >
+      <button class="kind-preferred" aria-pressed={kind === 'preferred'} onclick={() => (kind = 'preferred')}
+        ><Icon name="spark" size={16} /> Preferred</button
+      >
+      <button class="kind-tentative" aria-pressed={kind === 'tentative'} onclick={() => (kind = 'tentative')}
+        ><Icon name="clock" size={16} /> Tentative</button
+      >
     </div>
     {#if kind !== 'firm'}
       <p class="note">
@@ -360,6 +358,36 @@
       <button onclick={cantMakeIt}>Can’t make it this week</button>
       <small role="status">{status}</small>
     </div>
+    <div class="schedule-extras">
+      <UsualSchedule {memberId} {weekIso} />
+      <details class="usual-schedule away-dates">
+        <summary
+          ><span
+            ><Icon name="calendar" size={17} /> Away dates{absences.length
+              ? ` (${absences.length})`
+              : ''}</span
+          ><small>Going away? Keep your schedule and skip those dates.</small></summary
+        >
+        <form class="away-form" onsubmit={addAbsence}>
+          <label class="field">From<input type="date" required bind:value={awayFrom} /></label>
+          <label class="field">To<input type="date" min={awayFrom} bind:value={awayTo} /></label>
+          <button>Mark away</button>
+        </form>
+        {#if absences.length}
+          <ul class="away-list">
+            {#each absences as span (span.from)}
+              <li>
+                <span
+                  >{formatMonthDay(span.from)}{span.to !== span.from
+                    ? ` – ${formatMonthDay(span.to)}`
+                    : ''}</span
+                ><button onclick={() => changeAbsence(span.from, span.to, false)}>Remove</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </details>
+    </div>
   </div>
 
   <div
@@ -368,7 +396,13 @@
     role="tabpanel"
     aria-labelledby="availability-tab-characters"
   >
-    <h2>Who are you bringing?</h2>
+    <div class="availability-heading">
+      <span class="step-number">02</span>
+      <div>
+        <h2>Who are you bringing?</h2>
+        <p>Choose a raid and offer your characters.</p>
+      </div>
+    </div>
     {#if !myCharacters.length}
       <p class="note warning">Add a character before officers can include you in a roster.</p>
       <button onclick={() => (app.view = 'characters')}>Add my first character</button>
@@ -385,9 +419,19 @@
       >
       <p>Choose characters for {raid.name}. Your other raid choices stay separate.</p>
       {#each myCharacters as character (character.id)}
-        <div class="character-card" style:--class={CLASS_COLORS[character.class]}>
-          <strong>{character.name}</strong>
-          <small>{character.spec} {character.class} · {character.role}</small>
+        <div
+          class="character-card"
+          class:offered={participating && isOffered(checkin, character.id, raid.id)}
+          style:--class={CLASS_COLORS[character.class]}
+        >
+          <div class="character-identity">
+            <span class="character-avatar"><Icon name="character" size={22} /></span>
+            <div>
+              <strong>{character.name}</strong><small
+                >{character.spec} {character.class} · {character.role}</small
+              >
+            </div>
+          </div>
           <label>
             <input
               type="checkbox"
@@ -408,16 +452,27 @@
     <p class="note">
       New weeks use your usual schedule when saved. Raid and character choices are specific to each week.
     </p>
+    <div class="availability-finish">
+      <span class="step-number"><Icon name="check" size={17} /></span>
+      <div>
+        <strong>That’s your check-in.</strong>
+        <p>Your changes save automatically. When you’re selected, your assignment appears in My raids.</p>
+        <button class="text-button" onclick={() => (app.view = 'home')}
+          >View my raids <Icon name="arrow" size={15} /></button
+        >
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
   .availability-save {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--panel, #1b242b);
-    padding: 1px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding: 0;
   }
   .setup-done ul {
     margin: 0.5rem 0;
@@ -429,11 +484,164 @@
     color: var(--muted);
   }
   .editor-choice {
-    margin: 1rem 0;
+    margin: 0;
   }
   .kind-choice {
     align-items: center;
     margin: 0 0 1rem;
+  }
+  .availability-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .availability-heading p {
+    font-size: 12px;
+    margin: 4px 0 0;
+  }
+  .editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 0;
+    margin-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .editor-hint {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .editor-choice button,
+  .kind-choice button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kind-choice {
+    gap: 6px;
+  }
+  .kind-choice button {
+    flex: 1;
+    justify-content: center;
+    font-size: 12px;
+    background: transparent;
+  }
+  .kind-choice .kind-firm[aria-pressed='true'] {
+    color: var(--green);
+    border-color: var(--green);
+    background: #90c5a312;
+  }
+  .kind-choice .kind-preferred[aria-pressed='true'] {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: #dbb57412;
+  }
+  .kind-choice .kind-tentative[aria-pressed='true'] {
+    color: var(--blue);
+    border-color: var(--blue);
+    background: #98bddc12;
+  }
+  .form-actions {
+    padding-block: 18px;
+    border-block: 1px solid var(--line);
+  }
+  .form-actions small {
+    flex: 1 1 200px;
+  }
+  .schedule-extras {
+    margin-top: 20px;
+  }
+  .away-form {
+    margin-top: 18px;
+  }
+  .away-dates summary > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .away-dates summary small {
+    padding-left: 26px;
+    margin-top: 5px;
+  }
+  .character-card {
+    border-top: 1px solid var(--line);
+    border-left: 3px solid var(--class);
+    padding: 18px;
+    background: var(--panel);
+  }
+  .character-card.offered {
+    background: color-mix(in srgb, var(--class) 5%, var(--panel));
+  }
+  .character-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .character-identity > div {
+    min-width: 0;
+  }
+  .character-identity strong {
+    color: var(--class);
+  }
+  .character-avatar {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--class) 12%, var(--panel));
+    color: var(--class);
+  }
+  .availability-finish {
+    display: flex;
+    gap: 12px;
+    border-top: 1px solid var(--line);
+    margin-top: 24px;
+    padding-top: 22px;
+  }
+  .availability-finish p {
+    font-size: 12px;
+    margin: 6px 0 0;
+  }
+  .availability-finish .step-number {
+    color: var(--green);
+    border-color: #426a50;
+    background: #90c5a30a;
+  }
+  @media (max-width: 760px) {
+    .checkin-badge {
+      display: none;
+    }
+    .availability-save :global(.save-status) {
+      margin: 4px 0;
+      font-size: 12px;
+    }
+    .availability-save .edit-scope {
+      flex-basis: 100%;
+      font-size: 11px;
+    }
+    .availability-heading {
+      margin-bottom: 10px;
+    }
+    .editor-toolbar {
+      gap: 8px;
+      padding-block: 12px;
+      margin-top: 10px;
+    }
+    .editor-hint {
+      display: none;
+    }
+  }
+  @media (max-width: 400px) {
+    .kind-choice button {
+      padding-inline: 6px;
+      gap: 4px;
+      font-size: 11px;
+    }
   }
   .away-form {
     display: flex;

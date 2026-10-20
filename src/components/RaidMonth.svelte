@@ -1,5 +1,6 @@
 <script>
   import { app } from '../lib/app.svelte.js'
+  import Icon from './Icon.svelte'
   import { DAYS } from '../lib/constants.js'
   import { raidMonthEntries } from '../lib/raid-series.js'
   import { canManage } from '../lib/remote/sync.svelte.js'
@@ -51,14 +52,18 @@
 
 <section class="panel raid-month" aria-label="Raid calendar">
   <div class="heading">
-    <h2>{title}</h2>
+    <div>
+      <span class="eyebrow gold">YOUR RAID CALENDAR</span>
+      <h2>{title}</h2>
+    </div>
     <div class="buttons">
-      <button onclick={() => shift(-1)} aria-label="Previous month">←</button>
+      <button onclick={() => shift(-1)} aria-label="Previous month">‹</button>
       <button onclick={() => (month = today.slice(0, 7))}>This month</button>
-      <button onclick={() => shift(1)} aria-label="Next month">→</button>
+      <button onclick={() => shift(1)} aria-label="Next month">›</button>
     </div>
   </div>
-  <p class="note">
+  <p class="calendar-context">
+    <Icon name="clock" size={14} />
     Times in {zone.replaceAll('_', ' ')}{zone === app.data.guild.timezone
       ? ''
       : ` (guild time: ${app.data.guild.timezone.replaceAll('_', ' ')})`}.{canManage()
@@ -71,7 +76,7 @@
     {#each days as date (date)}
       {@const items = entries.filter((entry) => entry.dateIso === date)}
       <div class="day" class:today={date === today} class:empty={!items.length}>
-        <span class="date"
+        <span class="date" aria-current={date === today ? 'date' : undefined}
           ><span class="weekday-inline">{DAYS[weekdayIndex(date)]} </span>{dayOfMonth(date)}</span
         >
         {#each items as entry (`${entry.raidId}:${entry.weekIso}`)}
@@ -90,6 +95,17 @@
   .raid-month {
     margin-top: 1.5rem;
   }
+  h2 {
+    margin-top: 5px;
+    font-size: 23px;
+  }
+  .calendar-context {
+    display: flex;
+    gap: 7px;
+    align-items: baseline;
+    font-size: 12px;
+    margin: 18px 0;
+  }
   .heading {
     display: flex;
     flex-wrap: wrap;
@@ -100,28 +116,36 @@
   .month-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
+    gap: 6px;
   }
   .weekday {
     font-size: 12px;
     color: var(--muted);
     text-align: center;
+    padding-block: 8px;
   }
   .day {
     min-height: 5.5rem;
-    padding: 4px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    padding: 8px;
+    border: 1px solid #30383d;
+    background: #12171966;
+    border-radius: 8px;
     display: grid;
     align-content: start;
     gap: 4px;
   }
   .day.today {
     border-color: var(--gold);
+    background: #e0bc7e08;
+  }
+  .today .date {
+    color: var(--gold);
+    font-weight: 700;
   }
   .date {
     font-size: 12px;
     color: var(--muted);
+    text-align: left;
   }
   .weekday-inline {
     display: none;

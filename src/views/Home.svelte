@@ -1,5 +1,6 @@
 <script>
   import PageTitle from '../components/PageTitle.svelte'
+  import Icon from '../components/Icon.svelte'
   import OnboardingChecklist from '../components/OnboardingChecklist.svelte'
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
   import RaidResponse from '../components/RaidResponse.svelte'
@@ -85,10 +86,17 @@
 </script>
 
 <PageTitle
+  icon="shield"
   eyebrow={member ? `YOUR RAID WEEK · ${member.name}` : 'YOUR RAID WEEK'}
-  title="My next raid"
+  title="My raids"
   subtitle={`Your assignments and availability, in ${viewerZone.replaceAll('_', ' ')}.`}
-/>
+>
+  {#snippet action()}
+    <button class="primary title-action" onclick={checkIn}
+      ><Icon name="calendar" size={18} /> Edit my availability</button
+    >
+  {/snippet}
+</PageTitle>
 
 <nav class="home-jump" aria-label="On this page">
   {#each sections as section (section.id)}
@@ -110,6 +118,9 @@
     id={next ? raidAnchor(next.weekIso, next.raidId) : undefined}
   >
     {#if next}
+      <div class="panel-kicker">
+        <span class="eyebrow gold">YOUR NEXT RAID</span><Icon name="shield" size={20} />
+      </div>
       <div class="next-raid-heading">
         <div class="raid-date" aria-hidden="true">
           <span>{datePart(next.session.start, { weekday: 'short' })}</span><strong
@@ -144,6 +155,7 @@
         >
       {/if}
     {:else}
+      <div class="empty-raid-mark"><Icon name="shield" size={36} /></div>
       <span class="eyebrow">UP NEXT</span>
       <h2>No upcoming assignment yet</h2>
       <span class="badge">{weekStatus(app.data, thisWeek, memberId)}</span>
@@ -153,6 +165,10 @@
           ? 'Your availability is in. You’re ready for the next roster.'
           : 'Start with your availability so your officers can plan around you.'}
       </p>
+      <button class="primary" onclick={checkIn}
+        >{checkin.checkedIn ? 'Review my times' : 'Set my availability'}
+        <Icon name="arrow" size={17} /></button
+      >
     {/if}
   </section>
 
@@ -162,7 +178,9 @@
     tabindex="-1"
     aria-label="This week’s check-in"
   >
-    <span class="eyebrow">YOUR PART IS SIMPLE</span>
+    <div class="panel-kicker">
+      <span class="eyebrow">YOUR CHECK-IN</span><Icon name="calendar" size={20} />
+    </div>
     <h2>This week’s availability</h2>
     <span class="badge" class:success={checkin.checkedIn}
       >{availabilitySource(app.data, thisWeek, memberId)}</span
@@ -195,7 +213,9 @@
       </div>
     {/if}
     <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} />
-    <button class:primary={!checkin.checkedIn} onclick={checkIn}>Update my availability</button>
+    <button class="checkin-action" class:primary={!checkin.checkedIn} onclick={checkIn}
+      >Update my availability <Icon name="arrow" size={17} /></button
+    >
     <InlineSaveStatus />
   </section>
 </div>
@@ -209,7 +229,13 @@
     tabindex="-1"
     aria-label="Upcoming published raids"
   >
-    <h2>Upcoming published raids</h2>
+    <div class="section-head">
+      <div>
+        <span class="eyebrow gold">ON THE HORIZON</span>
+        <h2>Upcoming published raids</h2>
+      </div>
+      <span class="badge published">{later.length} upcoming</span>
+    </div>
     <ul>
       {#each later as item (`${item.weekIso}:${item.raidId}`)}
         <li id={raidAnchor(item.weekIso, item.raidId)}>
@@ -275,8 +301,8 @@
     top: 0;
     z-index: 5;
     display: flex;
-    gap: 8px;
-    margin: 0 0 1rem;
+    gap: 4px;
+    margin: 0 0 24px;
     padding: 8px 0;
     overflow-x: auto;
     background: var(--bg);
@@ -286,7 +312,9 @@
     flex: 0 0 auto;
     white-space: nowrap;
     padding: 6px 14px;
-    border-radius: 999px;
+    border-radius: 6px;
+    background: transparent;
+    border-color: transparent;
     font-size: 13px;
   }
   .home-jump .text-button {
@@ -326,12 +354,48 @@
   .home-priorities {
     display: grid;
     grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
-    gap: 24px;
+    gap: 20px;
     align-items: start;
   }
   .next-raid {
-    border-top: 2px solid var(--gold);
+    border: 1px solid #706044;
+    background: linear-gradient(120deg, #302b22 0%, var(--panel) 65%);
     padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel-kicker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .empty-raid-mark {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border: 1px solid #706044;
+    border-radius: 16px;
+    color: var(--gold);
+    margin-bottom: 24px;
+    background: #dbb5740a;
+  }
+  .home-checkin {
+    background: linear-gradient(150deg, #203029, var(--panel) 65%);
+    border-color: #3e5549;
+  }
+  .home-checkin .panel-kicker {
+    color: var(--green);
+  }
+  .checkin-action {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
   }
   .next-raid h2 {
     font-size: 26px;
@@ -347,8 +411,9 @@
     display: grid;
     text-align: center;
     padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
+    border: 1px solid #786342;
+    background: #dbb57410;
+    border-radius: 12px;
     color: var(--gold);
   }
   .raid-date span {
@@ -383,6 +448,10 @@
   }
   .upcoming {
     margin-top: 1.5rem;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
   }
   ul {
     display: grid;
@@ -405,6 +474,8 @@
   }
   li .upcoming-date {
     flex: 0 0 95px;
+    border-left: 2px solid var(--gold);
+    padding-left: 14px;
   }
   li p {
     margin: 4px 0;
