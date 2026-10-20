@@ -6,11 +6,13 @@ import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { connectedChannelCheck, deliverQueued } from '../_shared/delivery-worker.js'
 import { isGuildOfficer } from '../_shared/officer.js'
 import { createSpecEmojiLoader } from '../_shared/discord-spec-emojis.js'
+import { serverErrorReporter } from '../_shared/report-error.js'
 
 const URL_ = Deno.env.get('SUPABASE_URL')
 const admin = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
 })
+const log = serverErrorReporter(admin, 'raid-dispatch')
 const SCHEDULER_SECRET = Deno.env.get('RAID_DISPATCH_SECRET') ?? ''
 // Bot channels (with response buttons) need the application's bot token and the app's public address.
 const BOT_TOKEN = Deno.env.get('DISCORD_BOT_TOKEN') ?? ''
@@ -18,6 +20,7 @@ const APP_URL = Deno.env.get('WHENTORAID_APP_URL') ?? ''
 const loadSpecEmojis = createSpecEmojiLoader({
   applicationId: Deno.env.get('DISCORD_APPLICATION_ID') ?? '',
   botToken: BOT_TOKEN,
+  log,
 })
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -60,10 +63,11 @@ Deno.serve(async (request) => {
       appUrl: APP_URL,
       loadSpecEmojis,
       checkChannel: connectedChannelCheck(admin, BOT_TOKEN),
+      log,
     })
     return json({ results })
   } catch (error) {
-    console.error('dispatch failed:', error.message)
+    log(`dispatch failed: ${error.message}`)
     return json({ error: 'Discord delivery is temporarily unavailable. Your messages stay queued.' }, 503)
   }
 })

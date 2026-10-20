@@ -3,10 +3,12 @@
 // Any signed-in player may call it; it only ever adds the caller. Needs DISCORD_BOT_TOKEN.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { joinLinkedServers } from '../_shared/discord-join.js'
+import { serverErrorReporter } from '../_shared/report-error.js'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
 })
+const log = serverErrorReporter(admin, 'discord-join')
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -54,7 +56,7 @@ Deno.serve(async (request) => {
     rpc,
     log: (message) => {
       failed = true
-      console.error('discord-join', message)
+      log(message)
     },
   })
   if (failed && !guildIds.length)

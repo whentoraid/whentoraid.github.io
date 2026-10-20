@@ -2,10 +2,12 @@
 // token in the address is the credential; the database stores only its hash and can revoke it.
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { personalCalendar } from '../_shared/raid-service-core.js'
+import { serverErrorReporter } from '../_shared/report-error.js'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
 })
+const log = serverErrorReporter(admin, 'raid-calendar')
 
 const notFound = () => new Response('This calendar link no longer works.', { status: 404 })
 
@@ -17,7 +19,7 @@ Deno.serve(async (request) => {
   const { data, error } = await admin.rpc('read_raid_calendar', { p_token: token })
   if (error) {
     // Never log the token itself.
-    console.error('read_raid_calendar failed:', error.message)
+    log(`read_raid_calendar failed: ${error.message}`)
     return new Response('The calendar is temporarily unavailable.', { status: 503 })
   }
   if (data === null) return notFound()

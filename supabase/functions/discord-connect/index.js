@@ -5,10 +5,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { ConnectError, handleConnect } from '../_shared/discord-connect.js'
 import { isGuildOfficer } from '../_shared/officer.js'
+import { serverErrorReporter } from '../_shared/report-error.js'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
 })
+const log = serverErrorReporter(admin, 'discord-connect')
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -53,7 +55,7 @@ Deno.serve(async (request) => {
     )
   } catch (error) {
     if (error instanceof ConnectError) return json({ error: error.message }, error.status)
-    console.error('discord-connect failed:', error.message)
+    log(`failed: ${error.message}`)
     return json({ error: 'Discord could not be reached. Try again shortly.' }, 503)
   }
 })

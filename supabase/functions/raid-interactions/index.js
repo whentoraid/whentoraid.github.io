@@ -8,15 +8,17 @@ import { createClient } from 'npm:@supabase/supabase-js@2.117.2'
 import { handleDiscordInteraction } from '../_shared/discord-interactions.js'
 import { connectedChannelCheck, deliverQueued } from '../_shared/delivery-worker.js'
 import { createSpecEmojiLoader } from '../_shared/discord-spec-emojis.js'
+import { serverErrorReporter } from '../_shared/report-error.js'
 
 const admin = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), {
   auth: { persistSession: false },
 })
+const log = serverErrorReporter(admin, 'raid-interactions')
 const PUBLIC_KEY = Deno.env.get('DISCORD_PUBLIC_KEY') ?? ''
 const APPLICATION_ID = Deno.env.get('DISCORD_APPLICATION_ID') ?? ''
 const BOT_TOKEN = Deno.env.get('DISCORD_BOT_TOKEN') ?? ''
 const APP_URL = Deno.env.get('WHENTORAID_APP_URL') ?? ''
-const loadSpecEmojis = createSpecEmojiLoader({ applicationId: APPLICATION_ID, botToken: BOT_TOKEN })
+const loadSpecEmojis = createSpecEmojiLoader({ applicationId: APPLICATION_ID, botToken: BOT_TOKEN, log })
 /** A press needs only its own post updated; anything else queued waits for the scheduler. */
 const REFRESH_DELIVERIES = 3
 
@@ -39,6 +41,7 @@ const refresh = (guildId) =>
         loadSpecEmojis,
         checkChannel: connectedChannelCheck(admin, BOT_TOKEN),
         max: REFRESH_DELIVERIES,
+        log,
       })
 
 Deno.serve((request) => {
@@ -52,6 +55,6 @@ Deno.serve((request) => {
     refresh,
     // Keep saving after the three-second acknowledgement has been returned to Discord.
     schedule: (work) => globalThis.EdgeRuntime?.waitUntil(work) ?? work,
-    log: (message) => console.error(message),
+    log,
   })
 })
