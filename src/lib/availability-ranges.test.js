@@ -1,10 +1,57 @@
 import { describe, expect, test } from 'vitest'
-import { copyRangesToDay, dayBoundaries, rangeFromSelection, rangesForDay } from './availability-ranges.js'
+import {
+  availabilityDays,
+  copyLocalDay,
+  rangesInWindows,
+  copyRangesToDay,
+  dayBoundaries,
+  rangeFromSelection,
+  rangesForDay,
+} from './availability-ranges.js'
 import { wallTime } from './time.js'
 
 const grid = { timezone: 'America/Los_Angeles', dayStartHour: 22, slotsPerDay: 8 }
 
 describe('day range editing', () => {
+  test('viewer-local dates partition every guild window without adding time in the gaps', () => {
+    const days = availabilityDays('2026-09-28', grid, 'America/New_York')
+    expect(days[0].dateIso).toBe('2026-09-29')
+    expect(days.at(-1).dateIso).toBe('2026-10-05')
+    const all = days.flatMap((d) => d.windows)
+    const duration = all.reduce((sum, w) => sum + w.end - w.start, 0)
+    expect(duration).toBe(7 * 4 * 3600000)
+    for (const day of days)
+      for (const w of day.windows) {
+        expect(wallTime(w.start, 'America/New_York').dateIso).toBe(day.dateIso)
+        expect(wallTime(w.end - 1, 'America/New_York').dateIso).toBe(day.dateIso)
+      }
+  })
+
+  test('fall-back days include both repeated hours as separate UTC choices', () => {
+    const days = availabilityDays('2026-10-26', grid, grid.timezone)
+    const sunday = days.find((d) => d.dateIso === '2026-11-01')
+    const ones = sunday.boundaries.filter((instant) => wallTime(instant, grid.timezone).minutes === 60)
+    expect(ones).toHaveLength(2)
+    expect(ones[1] - ones[0]).toBe(3600000)
+    expect(
+      rangesInWindows([{ start: sunday.boundaries[0], end: sunday.boundaries.at(-1) }], sunday.windows),
+    ).toHaveLength(2)
+  })
+
+  test('spring-forward local dates omit nonexistent clock times', () => {
+    const days = availabilityDays('2026-03-02', { ...grid, slotsPerDay: 12 }, grid.timezone)
+    const sunday = days.find((d) => d.dateIso === '2026-03-08')
+    expect(sunday.boundaries.some((instant) => wallTime(instant, grid.timezone).minutes === 150)).toBe(false)
+  })
+
+  test('copying a displayed date keeps local times and clips to the target windows', () => {
+    const days = availabilityDays('2026-10-26', grid, grid.timezone)
+    const sunday = days.find((d) => d.dateIso === '2026-11-01')
+    const monday = days.find((d) => d.dateIso === '2026-11-02')
+    const copied = copyLocalDay(sunday.windows, sunday, monday, grid.timezone)
+    expect(copied).toEqual(monday.windows)
+    expect(copied[0].end - copied[0].start).toBe(2 * 3600000)
+  })
   test('copying an overnight range keeps wall-clock times across a fall clock change', () => {
     const boundaries = dayBoundaries('2026-10-26', 5, grid)
     const original = [{ start: boundaries[0], end: boundaries.at(-1) }]

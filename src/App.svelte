@@ -19,6 +19,7 @@
   import OnlineAccount from './components/OnlineAccount.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Toast from './components/Toast.svelte'
+  import FeedbackDialog from './components/FeedbackDialog.svelte'
   import UnsavedChanges from './components/UnsavedChanges.svelte'
   import Availability from './views/Availability.svelte'
   import Characters from './views/Characters.svelte'
@@ -59,6 +60,7 @@
   const showGuild = $derived(Boolean(app.data) && !app.showSetup && !signInForLink)
 
   let discordOpen = $state(false)
+  let feedbackOpen = $state(false)
   let storageWarningShown = false
   /** Set when another tab saved with a newer app version: saving here would overwrite its data. */
   let savingPaused = false
@@ -190,7 +192,7 @@
       document.getElementById('content')?.focus()
     }}>Skip to content</a
   >
-  <Sidebar />
+  <Sidebar onfeedback={() => (feedbackOpen = true)} />
 
   <main>
     <header>
@@ -251,6 +253,7 @@
 {/if}
 
 <Toast />
+<FeedbackDialog open={feedbackOpen} onclose={() => (feedbackOpen = false)} />
 
 <JoinGuildDialog />
 

@@ -53,23 +53,21 @@
     <p class="week-range" aria-live="polite">{weekLabel}</p>
   </div>
   <div class="right">
-    {#if viewerZone !== guild.timezone}
-      <label class="checkbox-row">
-        <input
-          type="checkbox"
-          checked={display.localTime}
-          onchange={(e) => setLocalTime(e.currentTarget.checked)}
-        />
-        Use my timezone ({viewerZone.replaceAll('_', ' ')})
-      </label>
-    {/if}
-    <small
-      >Times in {zone.replaceAll('_', ' ')}{zone === guild.timezone
-        ? ''
-        : ` · guild time is ${guild.timezone.replaceAll('_', ' ')}`}</small
-    >
     <details class="time-details">
-      <summary>Time details</summary><small>{hoursLabel} · 30-minute slots · +1 = next day</small>
+      <summary>Times in {zone.replaceAll('_', ' ')}</summary>
+      {#if viewerZone !== guild.timezone}
+        <label class="checkbox-row">
+          <input
+            type="checkbox"
+            checked={display.localTime}
+            aria-label={`Use my timezone (${viewerZone.replaceAll('_', ' ')})`}
+            onchange={(e) => setLocalTime(e.currentTarget.checked)}
+          />
+          Use my timezone
+        </label>
+      {/if}
+      <small>{hoursLabel} · 30-minute slots · +1 = next day</small>
+      {#if zone !== guild.timezone}<small>Guild time is {guild.timezone.replaceAll('_', ' ')}</small>{/if}
     </details>
     {#if labelsVary}
       <small class="gold"
@@ -78,3 +76,24 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .time-details summary {
+    min-height: 44px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--text);
+  }
+  .time-details summary::after {
+    content: '▾';
+    color: var(--gold);
+  }
+  .time-details[open] summary::after {
+    content: '▴';
+  }
+  .time-details small {
+    display: block;
+    margin-block: 6px;
+  }
+</style>

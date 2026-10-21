@@ -1,6 +1,6 @@
 <script>
   import { app } from '../lib/app.svelte.js'
-  import { viewerZone } from '../lib/display.svelte.js'
+  import { displayZone } from '../lib/display.svelte.js'
   import { characterById, charactersOf } from '../lib/model.js'
   import { offerStatus, standbyUntilOptions, timeLeft } from '../lib/standby.js'
   import { answerOffer, loadStandbyWeek, setStandby, standbyWeek } from '../lib/standby.svelte.js'
@@ -36,7 +36,7 @@
 
   const at = (instant) =>
     new Intl.DateTimeFormat('en-US', {
-      timeZone: viewerZone,
+      timeZone: displayZone(app.data.guild),
       weekday: 'short',
       hour: 'numeric',
       minute: '2-digit',

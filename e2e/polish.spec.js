@@ -55,6 +55,7 @@ test('availability starts with readable days, remembers the paint editor, and ke
 }) => {
   await page.goto('./#/home')
   await page.getByRole('button', { name: 'Edit my availability', exact: true }).click()
+  await page.getByText('Editing options', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Time ranges', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',

@@ -32,8 +32,9 @@
   import { ROLES } from '../lib/constants.js'
   import { downloadText } from '../lib/download.js'
   import { backups, conflicts, isAvailable } from '../lib/engine.js'
-  import { displayZone, viewerZone } from '../lib/display.svelte.js'
-  import { clampStartSlot, formatSessionHeading, formatSessionIn, slotWindow } from '../lib/grid.js'
+  import { displayZone } from '../lib/display.svelte.js'
+  import { clampStartSlot, formatSessionIn, slotWindow } from '../lib/grid.js'
+  import { compactSessionLabel } from '../lib/personal-raids.js'
   import { characterById, getWeek, setCurrentWeek, setPlan, tracksAttendance } from '../lib/model.js'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import {
@@ -453,7 +454,7 @@
     title={settings.name}
     subtitle={viewPublished && !published
       ? 'Your officers have not published this raid yet.'
-      : formatSessionHeading(plan, guild.timezone, viewerZone)}
+      : compactSessionLabel(plan, zone)}
   >
     {#snippet action()}<RaidSelector />{/snippet}
   </PageTitle>

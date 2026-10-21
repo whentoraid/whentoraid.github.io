@@ -25,6 +25,7 @@ test('a member adds their first character, gives availability, and returns to th
   await page.getByRole('button', { name: 'Continue to availability' }).click()
   await expect(page.getByRole('heading', { name: 'When can you raid?' })).toBeVisible()
   await expect(page.getByText('Saved in this browser', { exact: true }).last()).toBeInViewport()
+  await page.getByText('Editing options', { exact: true }).click()
   await page.getByRole('button', { name: 'Time ranges', exact: true }).click()
   await page.getByRole('button', { name: 'Can’t make it this week' }).click()
   await expect(page.getByText('Checked in · not available this week', { exact: true })).toBeVisible()
@@ -34,11 +35,13 @@ test('a member adds their first character, gives availability, and returns to th
   await expect(page.getByLabel('Realm', { exact: true })).toHaveValue('Whitemane')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await navigate(page, 'My availability')
+  await page.getByText('Editing options', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Time ranges', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
   await page.reload()
+  await page.getByText('Editing options', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Time ranges', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',

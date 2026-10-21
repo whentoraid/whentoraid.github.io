@@ -95,11 +95,27 @@ export function onboardingSteps(state, memberId, weekIso = state.currentWeek) {
 
 /**
  * "Fri, Oct 23 · 7:00 – 10:00 PM PDT" for a session that starts and ends on the same local day;
- * the exact label when it crosses midnight, where the second date matters.
+ * Add the ending weekday overnight; preserve full dates and offsets across clock changes.
  */
 export function compactSessionLabel({ start, end }, zone) {
   const day = (instant) => new Date(instant).toLocaleDateString('en-CA', { timeZone: zone })
-  if (day(start) !== day(end)) return exactSessionLabel({ start, end }, zone)
+  const shortZone = (instant) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'short' })
+      .formatToParts(instant)
+      .find((part) => part.type === 'timeZoneName').value
+  if (end - start >= 24 * 3600000 || shortZone(start) !== shortZone(end))
+    return exactSessionLabel({ start, end }, zone)
+  if (day(start) !== day(end)) {
+    const date = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
+    const clock = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' })
+    const weekday = new Intl.DateTimeFormat('en-US', { timeZone: zone, weekday: 'short' })
+    return `${date.format(start)} · ${clock.format(start)}–${weekday.format(end)} ${clock.format(end)} ${shortZone(end)}`
+  }
   const date = new Date(start).toLocaleDateString('en-US', {
     timeZone: zone,
     weekday: 'short',

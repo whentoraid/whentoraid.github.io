@@ -8,6 +8,7 @@
   import WeekBar from '../components/WeekBar.svelte'
   import RaidSelector from '../components/RaidSelector.svelte'
   import SectionTabs from '../components/SectionTabs.svelte'
+  import UsualScheduleEditor from '../components/UsualScheduleEditor.svelte'
   import UsualSchedule from '../components/UsualSchedule.svelte'
   import { getRaid } from '../lib/raids.js'
   import { app } from '../lib/app.svelte.js'
@@ -35,6 +36,7 @@
     isOffered,
     markUnavailable,
     restoreCheckin,
+    saveAvailabilityTemplate,
     setAbsenceDates,
     setAvailabilityKind,
     setCharacterOffered,
@@ -102,6 +104,27 @@
 
   /** What painting marks. Preferred times are firm; tentative times never count as firm. */
   let kind = $state('firm')
+  let usualOpen = $state(false)
+  let editingOptionsOpen = $state(false)
+  const usual = $derived(own(app.data.templates, memberId))
+  function editThisWeek() {
+    chooseView('section', 'times')
+    document.querySelector('.day-editor summary, .availability-times [role=grid] button')?.focus()
+  }
+  function markAway() {
+    chooseView('section', 'times')
+    const panel = document.querySelector('.away-dates')
+    if (panel) {
+      panel.open = true
+      panel.querySelector('input')?.focus()
+    }
+  }
+  function repeatWeek() {
+    if (closed) return
+    const previous = app.data
+    app.data = saveAvailabilityTemplate(app.data, weekIso, memberId)
+    offerUndo('These times now repeat each week. Existing weekly answers are kept.', previous)
+  }
   const KIND_LABELS = { firm: 'available', preferred: 'preferred', tentative: 'tentative' }
   const kindRanges = $derived(
     kind === 'preferred'
@@ -222,6 +245,27 @@
 
 <WeekBar />
 
+<section class="schedule-summary" aria-label="Your usual schedule">
+  {#if usual}
+    <div>
+      <strong>{checkin.paused ? 'Usual schedule paused' : 'Your usual schedule is saved'}</strong>
+      <small
+        >{availabilitySource(app.data, weekIso, memberId)} · One-off changes keep future weeks unchanged.</small
+      >
+    </div>
+    <div class="buttons">
+      <button disabled={closed} onclick={editThisWeek}>Change this week</button>
+      <button onclick={() => (usualOpen = true)}>Change my usual schedule</button>
+      <button disabled={closed} onclick={markAway}>Mark away</button>
+    </div>
+  {:else if checkin.ranges.length && !closed}
+    <button onclick={repeatWeek}>Repeat these times each week</button>
+  {:else}
+    <button onclick={() => (usualOpen = true)}>Set my usual schedule</button>
+  {/if}
+</section>
+<UsualScheduleEditor open={usualOpen} onclose={() => (usualOpen = false)} {memberId} />
+
 {#if !myCharacters.length}
   <OnboardingChecklist {memberId} {weekIso} />
 {:else if firstVisit && !answered}
@@ -280,10 +324,8 @@
     inert={closed}
   >
     <div class="availability-heading">
-      <span class="step-number">01</span>
       <div>
         <h2>Weekly availability</h2>
-        <p>When you can stay for the whole session.</p>
       </div>
     </div>
     <!-- Stays in view on long phone forms: which week this edits, what it covers, and whether it saved. -->
@@ -294,44 +336,59 @@
           : `all ${app.data.settings.raids.length} raids`}
       </p>
       <InlineSaveStatus />
-      <span class="badge">{availabilitySource(app.data, weekIso, memberId)}</span>
     </div>
     {#if checkin.absentDates?.length}
       <p class="note" role="status">
         Away this week: {checkin.absentDates.map((date) => formatMonthDay(date)).join(', ')}.
       </p>
     {/if}
-    <div class="editor-toolbar">
-      <div class="buttons editor-choice segmented" role="group" aria-label="Availability editor">
-        <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
-          ><Icon name="clock" size={16} /> Time ranges</button
-        >
-        <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}
-          ><Icon name="dashboard" size={16} /> Paint grid</button
+    <details
+      class="editor-options"
+      open={editingOptionsOpen || editor === 'grid' || kind !== 'firm'}
+      ontoggle={(event) => (editingOptionsOpen = event.currentTarget.open)}
+    >
+      <summary
+        ><span>Editing options</span>
+        <span>· {kind === 'firm' ? 'Available times' : KIND_LABELS[kind]}</span></summary
+      >
+      <div class="editor-toolbar">
+        <div class="buttons editor-choice segmented" role="group" aria-label="Availability editor">
+          <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
+            ><Icon name="clock" size={16} /> Time ranges</button
+          >
+          <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}
+            ><Icon name="dashboard" size={16} /> Paint grid</button
+          >
+        </div>
+        <span class="editor-hint"
+          >{editor === 'ranges'
+            ? 'Open a day to add or edit times'
+            : 'Click or drag to mark your times'}</span
         >
       </div>
-      <span class="editor-hint"
-        >{editor === 'ranges' ? 'Open a day to add or edit times' : 'Click or drag to mark your times'}</span
-      >
-    </div>
-    <div class="buttons kind-choice" role="group" aria-label="Mark times as">
-      <button class="kind-firm" aria-pressed={kind === 'firm'} onclick={() => (kind = 'firm')}
-        ><Icon name="check" size={16} /> Available</button
-      >
-      <button class="kind-preferred" aria-pressed={kind === 'preferred'} onclick={() => (kind = 'preferred')}
-        ><Icon name="spark" size={16} /> Preferred</button
-      >
-      <button class="kind-tentative" aria-pressed={kind === 'tentative'} onclick={() => (kind = 'tentative')}
-        ><Icon name="clock" size={16} /> Tentative</button
-      >
-    </div>
-    {#if kind !== 'firm'}
-      <p class="note">
-        {kind === 'preferred'
-          ? 'Preferred times are times you can definitely make and would most like to raid.'
-          : 'Tentative times are maybes. Officers see them, but you are only rostered there if they confirm with you.'}
-      </p>
-    {/if}
+      <div class="buttons kind-choice" role="group" aria-label="Mark times as">
+        <button class="kind-firm" aria-pressed={kind === 'firm'} onclick={() => (kind = 'firm')}
+          ><Icon name="check" size={16} /> Available</button
+        >
+        <button
+          class="kind-preferred"
+          aria-pressed={kind === 'preferred'}
+          onclick={() => (kind = 'preferred')}><Icon name="spark" size={16} /> Preferred</button
+        >
+        <button
+          class="kind-tentative"
+          aria-pressed={kind === 'tentative'}
+          onclick={() => (kind = 'tentative')}><Icon name="clock" size={16} /> Tentative</button
+        >
+      </div>
+      {#if kind !== 'firm'}
+        <p class="note">
+          {kind === 'preferred'
+            ? 'Preferred times are times you can definitely make and would most like to raid.'
+            : 'Tentative times are maybes. Officers see them, but you are only rostered there if they confirm with you.'}
+        </p>
+      {/if}
+    </details>
     {#if editor === 'ranges'}
       <AvailabilityRanges
         {weekIso}
@@ -466,6 +523,35 @@
 </div>
 
 <style>
+  .schedule-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 12px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .schedule-summary small {
+    font-size: 13px;
+  }
+  .editor-options {
+    margin-block: 8px 12px;
+  }
+  .editor-options > summary {
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--gold);
+  }
+  .editor-options > summary span {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
   .availability-save {
     display: flex;
     flex-wrap: wrap;
@@ -622,7 +708,7 @@
     }
     .availability-save .edit-scope {
       flex-basis: 100%;
-      font-size: 11px;
+      font-size: 13px;
     }
     .availability-heading {
       margin-bottom: 10px;
@@ -640,7 +726,7 @@
     .kind-choice button {
       padding-inline: 6px;
       gap: 4px;
-      font-size: 11px;
+      font-size: 13px;
     }
   }
   .away-form {

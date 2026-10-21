@@ -2,7 +2,7 @@
   import { app } from '../lib/app.svelte.js'
   import { memberActions } from '../lib/action-inbox.js'
   import { formatDeadline } from '../lib/checkins.js'
-  import { viewerZone } from '../lib/display.svelte.js'
+  import { displayZone } from '../lib/display.svelte.js'
   import { personalRaids } from '../lib/personal-raids.js'
   import { loadRaidResponses, responsesSaved } from '../lib/raid-responses.svelte.js'
   import { remote } from '../lib/remote/sync.svelte.js'
@@ -13,7 +13,8 @@
    * M06: a short list of what the player still has to do. Each item clears itself once it is done,
    * in the app or on Discord, because it is read back from the same records.
    */
-  let { memberId, thisWeek, now, onavailability } = $props()
+  let { memberId, thisWeek, now, onavailability, hideConfirm = false } = $props()
+  const zone = $derived(displayZone(app.data.guild))
 
   const upcoming = $derived(personalRaids(app.data, memberId, now))
   const raidKey = (item) => `${item.weekIso}:${item.raidId}`
@@ -46,17 +47,21 @@
   })
   const offers = $derived(offersOnline ? offerWeeks.flatMap((week) => standbyWeek(week)?.offers ?? []) : [])
 
-  const actions = $derived(memberActions(app.data, memberId, { now, thisWeek, responses, offers }))
+  const actions = $derived(
+    memberActions(app.data, memberId, { now, thisWeek, responses, offers }).filter(
+      (action) => !hideConfirm || action.kind !== 'confirm',
+    ),
+  )
 
   const BUTTONS = {
     offer: 'Answer',
-    confirm: 'Confirm',
+    confirm: 'Review and confirm',
     availability: 'Give availability',
     schedule: 'Review',
   }
   const at = (instant) =>
     new Intl.DateTimeFormat('en-US', {
-      timeZone: viewerZone,
+      timeZone: zone,
       weekday: 'short',
       hour: 'numeric',
       minute: '2-digit',
@@ -64,7 +69,7 @@
   function when(action) {
     if (action.due === null) return ''
     if (action.kind === 'offer') return timeLeft(action.due, now)
-    if (action.kind === 'availability') return `Due ${formatDeadline(action.due, viewerZone)}`
+    if (action.kind === 'availability') return `Due ${formatDeadline(action.due, zone)}`
     return `Raid starts ${at(action.due)}`
   }
 

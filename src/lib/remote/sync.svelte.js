@@ -803,6 +803,11 @@ function scheduleReload(delay = RELOAD_DEBOUNCE_MS) {
   reloadTimer = setTimeout(reload, delay)
 }
 
+/** An atomic event command changed server-owned rows; read them without enqueueing a second write. */
+export function refreshOnlineGuild() {
+  if (remote.guildId) scheduleReload(0)
+}
+
 /**
  * Fetch the guild and show it, unless our own writes are still in flight or the player changed
  * something meanwhile (then try again shortly, so the fresh copy includes those writes).

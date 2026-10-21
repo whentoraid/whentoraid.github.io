@@ -1,20 +1,24 @@
 <script>
   import { displayZone } from '../lib/display.svelte.js'
   import {
-    copyRangesToDay,
-    dayBoundaries,
+    availabilityDays,
+    copyLocalDay,
+    rangesInWindows,
     rangeFromSelection,
-    rangesForDay,
   } from '../lib/availability-ranges.js'
-  import { exactSessionLabel } from '../lib/personal-raids.js'
-  import { addDays, formatMonthDay } from '../lib/time.js'
+  import { compactSessionLabel, exactSessionLabel } from '../lib/personal-raids.js'
+  import { formatMonthDay, wallTime, weekdayIndex } from '../lib/time.js'
   import { DAYS } from '../lib/constants.js'
   import Icon from './Icon.svelte'
 
   let { weekIso, grid, ranges, onpaint, oneditstart = () => {}, oneditend = () => {} } = $props()
   const zone = $derived(displayZone(grid))
   const days = $derived(
-    DAYS.map((name, day) => ({ name, day, boundaries: dayBoundaries(weekIso, day, grid) })),
+    availabilityDays(weekIso, grid, zone).map((entry, day) => ({
+      ...entry,
+      day,
+      name: DAYS[weekdayIndex(entry.dateIso)],
+    })),
   )
   let error = $state('')
   let copyTargets = $state({})
@@ -22,7 +26,7 @@
 
   function copyDay(day) {
     const target = copyTargets[day] ?? (day === 0 ? 1 : 0)
-    const intervals = copyRangesToDay(ranges, weekIso, day, target, grid)
+    const intervals = copyLocalDay(ranges, days[day], days[Number(target)], zone)
     if (!intervals.length) {
       error = 'These times do not fit the selected day. Add times for that day instead.'
       return
@@ -31,20 +35,25 @@
     oneditstart()
     for (const interval of intervals) onpaint(interval, true)
     oneditend()
-    copied = `${DAYS[day]} times added to ${DAYS[target]}. Existing times were kept.`
+    copied = `${days[day].name} times added to ${days[Number(target)].name}. Existing times were kept.`
   }
 
   function summaryLabel(interval) {
-    const sameZone = zone === grid.timezone
-    if (!sameZone) return exactSessionLabel(interval, zone)
-    const format = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' })
-    const date = new Intl.DateTimeFormat('en-CA', {
+    return compactSessionLabel(interval, zone)
+  }
+  function clockLabel(instant, dateIso, boundaries) {
+    const offset = (value) =>
+      new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'short' })
+        .formatToParts(value)
+        .find((part) => part.type === 'timeZoneName').value
+    const changesClock = offset(boundaries[0]) !== offset(boundaries.at(-1))
+    const time = new Intl.DateTimeFormat('en-US', {
       timeZone: zone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    return `${format.format(interval.start)}–${format.format(interval.end)}${date.format(interval.start) !== date.format(interval.end) ? ' (+1 day)' : ''}`
+      hour: 'numeric',
+      minute: '2-digit',
+      ...(changesClock ? { timeZoneName: 'short' } : {}),
+    }).format(instant)
+    return wallTime(instant, zone).dateIso === dateIso ? time : `${time} (next day)`
   }
 
   function label(instant) {
@@ -59,7 +68,7 @@
     }).format(instant)
   }
 
-  function add(event, boundaries) {
+  function add(event, boundaries, windows) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const interval = rangeFromSelection(boundaries, form.get('start'), form.get('end'))
@@ -67,7 +76,9 @@
       error = 'Choose an end time after the start time.'
       return
     }
-    edit(interval, true)
+    oneditstart()
+    for (const part of rangesInWindows([interval], windows)) onpaint(part, true)
+    oneditend()
   }
 
   function edit(interval, available) {
@@ -78,19 +89,19 @@
   }
 </script>
 
-{#if zone !== grid.timezone}<p class="note">
-    Days follow {grid.timezone}. Times show your local date in {zone}.
-  </p>{/if}
 {#if error}<p role="alert" class="warning">{error}</p>{/if}
 {#if copied}<p role="status" class="copy-status">{copied}</p>{/if}
 <div class="day-ranges">
-  {#each days as { name, day, boundaries } (day)}
-    {@const saved = rangesForDay(ranges, boundaries)}
+  {#each days as { name, day, dateIso, windows, boundaries } (dateIso)}
+    {@const saved = rangesInWindows(ranges, windows)}
     <details class="day-editor" class:has-times={saved.length > 0}>
-      <summary aria-label={`Edit ${name} availability`} aria-describedby={`day-summary-${day}`}
-        ><span class="day-heading"
-          ><strong>{name}</strong><small>{formatMonthDay(addDays(weekIso, day))}</small></span
-        ><span id={`day-summary-${day}`} class="day-summary" class:has-times={saved.length > 0}
+      <summary
+        aria-label={`Edit ${name} availability${days.findIndex((entry) => entry.name === name) !== day ? ` (${formatMonthDay(dateIso)})` : ''}`}
+        aria-describedby={`day-summary-${day}`}
+        ><span class="day-heading"><strong>{name}</strong><small>{formatMonthDay(dateIso)}</small></span><span
+          id={`day-summary-${day}`}
+          class="day-summary"
+          class:has-times={saved.length > 0}
           >{saved.length ? saved.map(summaryLabel).join(' · ') : 'No times added'}</span
         ><span class="day-edit-label" aria-hidden="true"
           ><Icon name={saved.length ? 'clock' : 'plus'} size={14} />
@@ -110,11 +121,13 @@
             {/each}
           </ul>
         {:else}<p class="note">No times added</p>{/if}
-        <form onsubmit={(event) => add(event, boundaries)}>
+        <p class="note">{formatMonthDay(dateIso)} · {zone.replaceAll('_', ' ')}</p>
+        <form onsubmit={(event) => add(event, boundaries, windows)}>
           <label class="field"
             >{name} from<select name="start"
-              >{#each boundaries.slice(0, -1) as instant (instant)}<option value={instant}
-                  >{label(instant)}</option
+              >{#each boundaries.slice(0, -1) as instant (instant)}<option
+                  value={instant}
+                  title={label(instant)}>{clockLabel(instant, dateIso, boundaries)}</option
                 >{/each}</select
             ></label
           >
@@ -122,7 +135,8 @@
             >{name} until<select name="end"
               >{#each boundaries.slice(1) as instant (instant)}<option
                   value={instant}
-                  selected={instant === boundaries.at(-1)}>{label(instant)}</option
+                  selected={instant === boundaries.at(-1)}
+                  title={label(instant)}>{clockLabel(instant, dateIso, boundaries)}</option
                 >{/each}</select
             ></label
           >
@@ -139,8 +153,8 @@
               >Copy {name} times to<select
                 value={copyTargets[day] ?? (day === 0 ? 1 : 0)}
                 onchange={(event) => (copyTargets[day] = Number(event.currentTarget.value))}
-                >{#each DAYS as targetName, target (targetName)}{#if target !== day}<option value={target}
-                      >{targetName}</option
+                >{#each days as targetDay, target (targetDay.dateIso)}{#if target !== day}<option
+                      value={target}>{targetDay.name} · {formatMonthDay(targetDay.dateIso)}</option
                     >{/if}{/each}</select
               ></label
             ><button type="button" onclick={() => copyDay(day)}>Copy {name} times</button>
@@ -249,13 +263,13 @@
       flex-basis: 42px;
     }
     .day-summary {
-      font-size: 12px;
+      font-size: 13px;
     }
     .day-edit-label {
-      font-size: 11px;
+      font-size: 13px;
     }
     form label {
-      flex-basis: 40%;
+      flex-basis: 100%;
     }
   }
 </style>

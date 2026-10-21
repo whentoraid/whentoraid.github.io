@@ -8,6 +8,8 @@
   import Icon from './Icon.svelte'
   import { localSave } from '../lib/save-status.svelte.js'
 
+  let { onfeedback = () => {} } = $props()
+
   const NAV_ITEMS = [
     { view: 'home', icon: 'home', label: 'My raids' },
     { view: 'availability', icon: 'calendar', label: 'My availability' },
@@ -99,6 +101,15 @@
       </nav>
     {/if}
     <div class="aside-bottom">
+      <button
+        class="feedback-link"
+        onclick={() => {
+          moreOpen = false
+          onfeedback()
+        }}
+      >
+        Something confusing? Send feedback
+      </button>
       <span
         class="live-dot"
         class:warn={['error', 'stale'].includes(remote.guildId ? remote.status : localSave.status)}
@@ -137,3 +148,12 @@
     </div>
   </div>
 </aside>
+
+<style>
+  .feedback-link {
+    width: 100%;
+    margin-bottom: 16px;
+    text-align: left;
+    font-size: 13px;
+  }
+</style>

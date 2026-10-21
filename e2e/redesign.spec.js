@@ -30,6 +30,7 @@ test('the planner brings each task into view and tabs work from the keyboard', a
 
 test('collapsed days can be edited and copied without losing existing availability', async ({ page }) => {
   await page.goto('./#/availability')
+  await page.getByText('Editing options', { exact: true }).click()
   await page.getByRole('button', { name: 'Time ranges', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Fri from', exact: true })).toBeHidden()
   await page.getByLabel('Edit Fri availability', { exact: true }).click()
