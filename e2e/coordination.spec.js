@@ -11,27 +11,22 @@ test.beforeEach(async ({ page }) => {
   }, createSeedState())
 })
 
-test.describe('in the guild timezone', () => {
-  // The planner header shows the viewer's local time; pin it so CI (UTC) matches.
-  test.use({ timezoneId: 'America/Los_Angeles' })
-
-  test('officers see upcoming raids that need attention and a month calendar', async ({ page }) => {
-    await page.goto('./#/home')
-    await expect(page.getByRole('region', { name: 'Officer dashboard' })).toHaveCount(0)
-    await navigate(page, 'Officer dashboard')
-    const dashboard = page.getByRole('region', { name: 'Officer dashboard' })
-    await expect(dashboard.getByRole('heading', { name: 'Upcoming raids' })).toBeVisible()
-    await expect(dashboard.getByText('6 need attention')).toBeVisible()
-    await expect(dashboard.getByText('Not planned yet').first()).toBeVisible()
-    await dashboard.getByRole('button', { name: /^Open 20-player Raid, week of Sep 28/ }).click()
-    await expect(page.getByRole('heading', { name: '20-player Raid', level: 1 })).toBeVisible()
-    await expect(page.locator('.title-row .subtitle')).toContainText(/Oct 2.*PM/)
-    await expect(page.locator('.time-details > summary')).toContainText('Times in')
-    await navigate(page, 'My raids')
-    await expect(
-      page.getByRole('region', { name: 'Raid calendar' }).getByRole('heading', { name: 'September 2026' }),
-    ).toBeVisible()
-  })
+test('officers see upcoming raids that need attention and a month calendar', async ({ page }) => {
+  await page.goto('./#/home')
+  await expect(page.getByRole('region', { name: 'Officer dashboard' })).toHaveCount(0)
+  await navigate(page, 'Officer dashboard')
+  const dashboard = page.getByRole('region', { name: 'Officer dashboard' })
+  await expect(dashboard.getByRole('heading', { name: 'Upcoming raids' })).toBeVisible()
+  await expect(dashboard.getByText('6 need attention')).toBeVisible()
+  await expect(dashboard.getByText('Not planned yet').first()).toBeVisible()
+  await dashboard.getByRole('button', { name: /^Open 20-player Raid, week of Sep 28/ }).click()
+  await expect(page.getByRole('heading', { name: '20-player Raid', level: 1 })).toBeVisible()
+  await expect(page.locator('.title-row .subtitle')).toContainText(/Oct 2.*PM/)
+  await expect(page.locator('.time-details > summary')).toContainText('Times in')
+  await navigate(page, 'My raids')
+  await expect(
+    page.getByRole('region', { name: 'Raid calendar' }).getByRole('heading', { name: 'September 2026' }),
+  ).toBeVisible()
 })
 
 test('a weekly schedule creates drafts without publishing, and rules are saved per raid', async ({
