@@ -56,7 +56,7 @@
       display: none;
     }
     .stat-track {
-      margin-top: 5px;
+      display: none;
     }
   }
 </style>

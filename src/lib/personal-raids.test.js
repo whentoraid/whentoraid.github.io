@@ -81,13 +81,22 @@ describe('personal raid dashboard', () => {
     expect(availabilityDone(withSchedule)).toBe(true)
   })
 
-  test('compact labels show one date for a same-day session and fall back across midnight', () => {
+  test('compact labels show the ending weekday across midnight', () => {
     const evening = { start: Date.parse('2026-10-24T02:00Z'), end: Date.parse('2026-10-24T05:00Z') }
     // ICU separates the range with narrow no-break spaces.
     const label = compactSessionLabel(evening, 'America/Los_Angeles').replace(/\s/g, ' ')
     expect(label).toBe('Fri, Oct 23 · 7:00 – 10:00 PM PDT')
     const late = { start: Date.parse('2026-10-24T23:00Z'), end: Date.parse('2026-10-25T01:00Z') }
-    expect(compactSessionLabel(late, 'UTC')).toBe(exactSessionLabel(late, 'UTC'))
+    expect(compactSessionLabel(late, 'UTC')).toBe('Sat, Oct 24 · 11:00 PM–Sun 1:00 AM UTC')
+  })
+
+  test('clock changes and long sessions retain both full dates and timezone offsets', () => {
+    const dst = { start: Date.parse('2026-11-01T07:00Z'), end: Date.parse('2026-11-01T11:00Z') }
+    expect(compactSessionLabel(dst, 'America/Los_Angeles')).toBe(
+      exactSessionLabel(dst, 'America/Los_Angeles'),
+    )
+    const long = { start: dst.start, end: dst.start + 86400000 }
+    expect(compactSessionLabel(long, 'UTC')).toBe(exactSessionLabel(long, 'UTC'))
   })
 
   test('exact labels include both dates when a local session crosses midnight', () => {

@@ -16,12 +16,13 @@
   import RaidMonth from '../components/RaidMonth.svelte'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import { app } from '../lib/app.svelte.js'
-  import { viewerZone } from '../lib/display.svelte.js'
+  import { displayZone } from '../lib/display.svelte.js'
   import { confirmAvailabilityTemplate, getCheckin, memberById } from '../lib/model.js'
   import { templateConfirmedOn, templateNeedsReview } from '../lib/availability-template.js'
   import { own } from '../lib/ids.js'
   import { showToast } from '../lib/toast.svelte.js'
   import { personalRaids, availabilitySource, compactSessionLabel } from '../lib/personal-raids.js'
+  import { announcedRaids } from '../lib/raid-answers.js'
   import { weekStatus } from '../lib/raid-status.js'
   import { standbyOnline } from '../lib/standby.svelte.js'
   import { formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
@@ -31,6 +32,7 @@
     const timer = setInterval(() => (now = Date.now()), 60_000)
     return () => clearInterval(timer)
   })
+  const zone = $derived(displayZone(app.data.guild))
   const memberId = $derived(app.data.currentMemberId)
   const member = $derived(memberById(app.data, memberId))
   const thisWeek = $derived(mondayOf(todayIso(app.data.guild.timezone, now)))
@@ -38,9 +40,21 @@
   const assigned = $derived(upcoming.filter((item) => item.assignment))
   const next = $derived(assigned[0])
   const checkin = $derived(getCheckin(app.data, thisWeek, memberId))
-  const later = $derived(upcoming.filter((item) => item !== next))
+  const later = $derived(
+    upcoming.filter(
+      (item) => item !== next && (item.assignment || item.weekIso !== thisWeek || item.session.start <= now),
+    ),
+  )
+  const assignedIds = $derived(
+    assigned.filter((item) => item.weekIso === thisWeek).map((item) => item.raidId),
+  )
+  const hasSignups = $derived(
+    announcedRaids(app.data, thisWeek).some(
+      (item) => item.start > now && !assignedIds.includes(item.raid.id),
+    ),
+  )
   const datePart = (instant, options) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: viewerZone, ...options }).format(instant)
+    new Intl.DateTimeFormat('en-US', { timeZone: zone, ...options }).format(instant)
 
   function openRaid(item) {
     app.data = { ...app.data, currentWeek: item.weekIso, currentRaidId: item.raidId }
@@ -89,14 +103,86 @@
   icon="shield"
   eyebrow={member ? `YOUR RAID WEEK · ${member.name}` : 'YOUR RAID WEEK'}
   title="My raids"
-  subtitle={`Your assignments and availability, in ${viewerZone.replaceAll('_', ' ')}.`}
+  subtitle={`Your assignments and availability, in ${zone.replaceAll('_', ' ')}.`}
 >
   {#snippet action()}
-    <button class="primary title-action" onclick={checkIn}
+    <button class="title-action" onclick={checkIn}
       ><Icon name="calendar" size={18} /> Edit my availability</button
     >
   {/snippet}
 </PageTitle>
+
+<div class="home-priorities jump-target" id="home-next" tabindex="-1">
+  {#if next || !hasSignups}
+    <section
+      class="panel next-raid"
+      aria-label="Next raid assignment"
+      id={next ? raidAnchor(next.weekIso, next.raidId) : undefined}
+    >
+      {#if next}
+        <div class="panel-kicker">
+          <span class="eyebrow gold">YOUR NEXT RAID</span><Icon name="shield" size={20} />
+        </div>
+        <div class="next-raid-heading">
+          <div class="raid-date" aria-hidden="true">
+            <span>{datePart(next.session.start, { weekday: 'short' })}</span><strong
+              >{datePart(next.session.start, { day: 'numeric' })}</strong
+            ><span>{datePart(next.session.start, { month: 'short' })}</span>
+          </div>
+          <div>
+            <span class="badge published">{next.session.start <= now ? 'IN PROGRESS' : 'SELECTED'}</span>
+            <h2>{next.raid.name}</h2>
+          </div>
+        </div>
+        <p class="raid-time">{compactSessionLabel(next.session, zone)}</p>
+        <div class="assignment">
+          <span class="eyebrow">YOUR CHARACTER</span>
+          <p>
+            <strong>{next.character?.name ?? 'Your assigned character'}</strong>
+            <span class="badge">{next.assignment.role}</span>
+          </p>
+          {#if next.character}<small
+              >{next.character.spec} {next.character.class} · {next.character.realm}</small
+            >{/if}
+        </div>
+        <RaidResponse item={next} {memberId} />
+        {#if online}<RaidBriefing item={next} {now} />{/if}
+        {#if online}<RaidChangeLog item={next} {memberId} />{/if}
+        <button class="text-button" onclick={() => openRaid(next)}
+          >View published roster <span aria-hidden="true">→</span></button
+        >
+        {#if online}
+          <button class="text-button" onclick={showCalendar}
+            >Follow your raids in your calendar <span aria-hidden="true">↓</span></button
+          >
+        {/if}
+      {:else}
+        <div class="empty-raid-mark"><Icon name="shield" size={36} /></div>
+        <span class="eyebrow">UP NEXT</span>
+        <h2>No upcoming assignment yet</h2>
+        <span class="badge">{weekStatus(app.data, thisWeek, memberId)}</span>
+        <p>When an officer publishes a roster with you on it, your raid and character will appear here.</p>
+        <p class="empty-guidance">
+          {checkin.checkedIn
+            ? 'Your availability is in. You’re ready for the next roster.'
+            : 'Start with your availability so your officers can plan around you.'}
+        </p>
+        <button class="primary" onclick={checkIn}
+          >{checkin.checkedIn ? 'Review my times' : 'Set my availability'}
+          <Icon name="arrow" size={17} /></button
+        >
+      {/if}
+    </section>
+  {/if}
+
+  {#if hasSignups}
+    <section class="panel signup-panel" aria-label="Raids to answer">
+      <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} excludeRaidIds={assignedIds} />
+    </section>
+  {/if}
+</div>
+
+<ActionInbox {memberId} {thisWeek} {now} onavailability={checkIn} hideConfirm />
 
 <nav class="home-jump" aria-label="On this page">
   {#each sections as section (section.id)}
@@ -109,116 +195,51 @@
   {/if}
 </nav>
 
-<ActionInbox {memberId} {thisWeek} {now} onavailability={checkIn} />
-
-<div class="home-priorities jump-target" id="home-next" tabindex="-1">
-  <section
-    class="panel next-raid"
-    aria-label="Next raid assignment"
-    id={next ? raidAnchor(next.weekIso, next.raidId) : undefined}
+<section
+  class="panel home-checkin jump-target"
+  id="home-availability"
+  tabindex="-1"
+  aria-label="This week’s check-in"
+>
+  <div class="panel-kicker">
+    <span class="eyebrow">YOUR CHECK-IN</span><Icon name="calendar" size={20} />
+  </div>
+  <h2>This week’s availability</h2>
+  <span class="badge" class:success={checkin.checkedIn}
+    >{availabilitySource(app.data, thisWeek, memberId)}</span
   >
-    {#if next}
-      <div class="panel-kicker">
-        <span class="eyebrow gold">YOUR NEXT RAID</span><Icon name="shield" size={20} />
-      </div>
-      <div class="next-raid-heading">
-        <div class="raid-date" aria-hidden="true">
-          <span>{datePart(next.session.start, { weekday: 'short' })}</span><strong
-            >{datePart(next.session.start, { day: 'numeric' })}</strong
-          ><span>{datePart(next.session.start, { month: 'short' })}</span>
-        </div>
-        <div>
-          <span class="badge published">{next.session.start <= now ? 'IN PROGRESS' : 'SELECTED'}</span>
-          <h2>{next.raid.name}</h2>
-        </div>
-      </div>
-      <p class="raid-time">{compactSessionLabel(next.session, viewerZone)}</p>
-      <RaidResponse item={next} {memberId} />
-      {#if online}<RaidBriefing item={next} {now} />{/if}
-      <div class="assignment">
-        <span class="eyebrow">YOUR CHARACTER</span>
-        <p>
-          <strong>{next.character?.name ?? 'Your assigned character'}</strong>
-          <span class="badge">{next.assignment.role}</span>
-        </p>
-        {#if next.character}<small
-            >{next.character.spec} {next.character.class} · {next.character.realm}</small
-          >{/if}
-      </div>
-      {#if online}<RaidChangeLog item={next} {memberId} />{/if}
-      <button class="text-button" onclick={() => openRaid(next)}
-        >View published roster <span aria-hidden="true">→</span></button
-      >
-      {#if online}
-        <button class="text-button" onclick={showCalendar}
-          >Follow your raids in your calendar <span aria-hidden="true">↓</span></button
-        >
-      {/if}
-    {:else}
-      <div class="empty-raid-mark"><Icon name="shield" size={36} /></div>
-      <span class="eyebrow">UP NEXT</span>
-      <h2>No upcoming assignment yet</h2>
-      <span class="badge">{weekStatus(app.data, thisWeek, memberId)}</span>
-      <p>When an officer publishes a roster with you on it, your raid and character will appear here.</p>
-      <p class="empty-guidance">
-        {checkin.checkedIn
-          ? 'Your availability is in. You’re ready for the next roster.'
-          : 'Start with your availability so your officers can plan around you.'}
+  <p>
+    {!checkin.checkedIn
+      ? 'Your officers are waiting for your times.'
+      : checkin.paused
+        ? 'Your usual schedule is paused, so you count as away this week.'
+        : checkin.ranges.length
+          ? 'Your times are ready for planning. Review them if anything has changed.'
+          : 'You have let officers know you can’t make it this week.'}
+  </p>
+  {#if reviewDue}
+    <div
+      class="schedule-review"
+      id={SCHEDULE_REVIEW_ANCHOR}
+      role="group"
+      aria-label="Review your usual schedule"
+    >
+      <p>
+        Is your usual schedule still right? You last confirmed it {formatMonthDay(
+          templateConfirmedOn(template),
+        )}.
       </p>
-      <button class="primary" onclick={checkIn}
-        >{checkin.checkedIn ? 'Review my times' : 'Set my availability'}
-        <Icon name="arrow" size={17} /></button
-      >
-    {/if}
-  </section>
-
-  <section
-    class="panel home-checkin jump-target"
-    id="home-availability"
-    tabindex="-1"
-    aria-label="This week’s check-in"
-  >
-    <div class="panel-kicker">
-      <span class="eyebrow">YOUR CHECK-IN</span><Icon name="calendar" size={20} />
-    </div>
-    <h2>This week’s availability</h2>
-    <span class="badge" class:success={checkin.checkedIn}
-      >{availabilitySource(app.data, thisWeek, memberId)}</span
-    >
-    <p>
-      {!checkin.checkedIn
-        ? 'Your officers are waiting for your times.'
-        : checkin.paused
-          ? 'Your usual schedule is paused, so you count as away this week.'
-          : checkin.ranges.length
-            ? 'Your times are ready for planning. Review them if anything has changed.'
-            : 'You have let officers know you can’t make it this week.'}
-    </p>
-    {#if reviewDue}
-      <div
-        class="schedule-review"
-        id={SCHEDULE_REVIEW_ANCHOR}
-        role="group"
-        aria-label="Review your usual schedule"
-      >
-        <p>
-          Is your usual schedule still right? You last confirmed it {formatMonthDay(
-            templateConfirmedOn(template),
-          )}.
-        </p>
-        <div class="buttons">
-          <button class="primary" onclick={confirmSchedule}>Still right</button>
-          <button onclick={checkIn}>Review it</button>
-        </div>
+      <div class="buttons">
+        <button class="primary" onclick={confirmSchedule}>Still right</button>
+        <button onclick={checkIn}>Review it</button>
       </div>
-    {/if}
-    <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} />
-    <button class="checkin-action" class:primary={!checkin.checkedIn} onclick={checkIn}
-      >Update my availability <Icon name="arrow" size={17} /></button
-    >
-    <InlineSaveStatus />
-  </section>
-</div>
+    </div>
+  {/if}
+  <button class="checkin-action" class:primary={!checkin.checkedIn} onclick={checkIn}
+    >Update my availability <Icon name="arrow" size={17} /></button
+  >
+  <InlineSaveStatus />
+</section>
 
 <OnboardingChecklist {memberId} weekIso={thisWeek} />
 
@@ -246,7 +267,7 @@
           </div>
           <div>
             <h3>{item.raid.name}</h3>
-            <p>{compactSessionLabel(item.session, viewerZone)}</p>
+            <p>{compactSessionLabel(item.session, zone)}</p>
             <p>
               {item.assignment
                 ? `${item.character?.name ?? 'Assigned character'} · ${item.assignment.role}`
@@ -351,16 +372,20 @@
   .schedule-review p {
     margin: 0 0 0.5rem;
   }
+  .signup-panel {
+    padding: 20px;
+  }
   .home-priorities {
     display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
     gap: 20px;
     align-items: start;
+    margin-bottom: 12px;
   }
   .next-raid {
     border: 1px solid #706044;
     background: linear-gradient(120deg, #302b22 0%, var(--panel) 65%);
-    padding: 28px;
+    padding: 20px;
     position: relative;
     overflow: hidden;
   }
@@ -370,7 +395,7 @@
     justify-content: space-between;
     gap: 12px;
     color: var(--gold);
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
   .empty-raid-mark {
     display: grid;
@@ -399,7 +424,7 @@
   }
   .next-raid h2 {
     font-size: 26px;
-    margin-top: 12px;
+    margin-top: 4px;
   }
   .next-raid-heading {
     display: flex;
@@ -407,7 +432,7 @@
     align-items: center;
   }
   .raid-date {
-    flex: 0 0 72px;
+    flex: 0 0 58px;
     display: grid;
     text-align: center;
     padding: 10px;
@@ -421,11 +446,11 @@
     text-transform: uppercase;
   }
   .raid-date strong {
-    font-size: 32px;
+    font-size: 26px;
     line-height: 1.2;
   }
   .assignment {
-    padding: 18px 0;
+    padding: 10px 0;
     border-block: 1px solid var(--line);
   }
   .assignment p {

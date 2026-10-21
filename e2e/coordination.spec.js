@@ -21,7 +21,8 @@ test('officers see upcoming raids that need attention and a month calendar', asy
   await expect(dashboard.getByText('Not planned yet').first()).toBeVisible()
   await dashboard.getByRole('button', { name: /^Open 20-player Raid, week of Sep 28/ }).click()
   await expect(page.getByRole('heading', { name: '20-player Raid', level: 1 })).toBeVisible()
-  await expect(page.getByText(/2026 · .* guild time/)).toBeVisible()
+  await expect(page.locator('.title-row .subtitle')).toContainText(/Oct 2.*PM/)
+  await expect(page.locator('.time-details > summary')).toContainText('Times in')
   await navigate(page, 'My raids')
   await expect(
     page.getByRole('region', { name: 'Raid calendar' }).getByRole('heading', { name: 'September 2026' }),
@@ -76,6 +77,7 @@ test('a weekly schedule creates drafts without publishing, and rules are saved p
 
 test('players mark tentative times and away dates without losing their usual times', async ({ page }) => {
   await page.goto('./#/availability')
+  await page.getByText('Editing options', { exact: true }).click()
   await page.getByRole('button', { name: 'Paint grid', exact: true }).click()
   await page.getByRole('button', { name: 'Tentative', exact: true }).click()
   await page

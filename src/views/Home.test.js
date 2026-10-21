@@ -45,8 +45,10 @@ test('shows the current member’s published assignment and opens its week and r
 test('another player is not shown someone else’s assignment', () => {
   app.data = { ...app.data, currentMemberId: 'm1' }
   render(Home)
-  expect(screen.getByRole('heading', { name: 'No upcoming assignment yet' })).toBeTruthy()
-  expect(screen.getByText('You are not on this roster')).toBeTruthy()
+  expect(screen.queryByRole('region', { name: 'Next raid assignment' })).toBeNull()
+  expect(screen.getByRole('region', { name: 'Answer this week’s raids' })).toBeTruthy()
+  expect(screen.queryByText('YOUR CHARACTER')).toBeNull()
+  expect(screen.getByRole('button', { name: 'View published roster' })).toBeTruthy()
 })
 
 test('a newly joined player is guided to add a character and check in', async () => {
@@ -111,21 +113,23 @@ test('the On this page bar jumps to and focuses each part of the page', async ()
   expect(document.activeElement.id).toBe('home-month')
 })
 
-test('a rostered player’s answer buttons come before the raid details', () => {
+test('the confirmation includes the assigned character and does not duplicate a signup', () => {
   render(Home)
   const next = screen.getByRole('region', { name: 'Next raid assignment' })
   const answer = within(next).getByRole('button', { name: 'I’ll be there' })
   const character = within(next).getByText('YOUR CHARACTER')
-  expect(answer.compareDocumentPosition(character) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(character.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.queryByRole('region', { name: 'Answer this week’s raids' })).toBeNull()
 })
 
 test('a player answers a raid in one tap, and only that raid changes', async () => {
+  app.data = { ...app.data, currentMemberId: 'm1' }
   render(Home)
   const quick = screen.getByRole('region', { name: 'Answer this week’s raids' })
   const group = within(quick).getByRole('group', { name: /Your answer for/ })
   await fireEvent.click(within(group).getByRole('button', { name: 'Can’t make it' }))
   const [raid] = announcedRaids(app.data, SEED_WEEK)
-  expect(raidAnswer(app.data, SEED_WEEK, 'm0', raid)).toBe('out')
+  expect(raidAnswer(app.data, SEED_WEEK, 'm1', raid)).toBe('out')
   expect(within(group).getByRole('button', { name: 'Can’t make it' }).getAttribute('aria-pressed')).toBe(
     'true',
   )
@@ -171,10 +175,9 @@ test('before a first assignment the calendar link waits behind a disclosure', ()
   }
 })
 
-test('the Needs you list asks a rostered player to confirm, and clears once they do', async () => {
+test('a rostered player confirms directly on their assignment without an inbox duplicate', async () => {
   render(Home)
-  const inbox = await screen.findByRole('region', { name: 'Needs you' })
-  expect(within(inbox).getByText('Confirm your place in 20-player Raid')).toBeTruthy()
+  expect(screen.queryByText('Confirm your place in 20-player Raid')).toBeNull()
   const next = screen.getByRole('region', { name: 'Next raid assignment' })
   await fireEvent.click(within(next).getByRole('button', { name: 'I’ll be there' }))
   await within(next).findByText('You confirmed you’ll be there.')

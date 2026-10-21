@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
+    // Seed raids are in Pacific time and days group in the viewer's zone; keep CI (UTC) identical.
+    timezoneId: 'America/Los_Angeles',
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },

@@ -193,24 +193,26 @@ export const revokeCalendarSubscription = (client, guildId) =>
 export const calendarSubscriptionUrl = (baseUrl, token) =>
   `${baseUrl.replace(/\/$/, '')}/functions/v1/raid-calendar?token=${encodeURIComponent(token)}`
 
-/** A one-tap app answer as a Discord sign-up status; no answer takes the sign-up back. */
-export const SIGNUP_STATUS = { in: 'signed', tentative: 'tentative', out: 'absent' }
-
-/**
- * Put the member's app answer on the raid's Discord sign-up list, as a button press there would.
- * The check-in itself is saved with the rest of the guild; this writes only the sign-up.
- * @param {'in' | 'tentative' | 'out' | null} answer
- */
-export function saveAppSignup(client, guildId, { weekIso, raidId, memberId, answer, characterId = null }) {
-  return rpc(client, 'signup_from_app', {
+/** A member's event answer and its availability consequences commit in one transaction. */
+export const saveRaidAnswer = (
+  client,
+  guildId,
+  { weekIso, raidId, memberId, status, characterId, spec, role, requestId },
+) =>
+  rpc(client, 'answer_raid', {
     p_guild_id: guildId,
     p_week: weekIso,
     p_raid_id: raidId,
-    p_status: answer ? SIGNUP_STATUS[answer] : 'none',
-    p_character_id: answer && answer !== 'out' ? characterId : null,
-    p_member_id: memberId,
+    p_status: status,
+    p_character_id: characterId ?? null,
+    p_spec: spec ?? null,
+    p_role: role ?? null,
+    p_request_id: requestId,
+    p_member_id: memberId ?? null,
   })
-}
+
+export const undoRaidAnswer = (client, requestId) =>
+  rpc(client, 'undo_raid_answer', { p_request_id: requestId })
 
 // Standby and place offers (online guilds, app only). Accepting never changes the published roster.
 

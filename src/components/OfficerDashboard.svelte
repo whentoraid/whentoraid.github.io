@@ -19,7 +19,7 @@
   const raids = $derived(weeks.flatMap((week) => week.raids))
   const publishedCount = $derived(raids.filter((raid) => raid.status === 'published').length)
   const checkedIn = $derived(app.data.members.length - (weeks[0]?.waiting ?? 0))
-  let filter = $state('all')
+  let filter = $state('attention')
   const visibleWeeks = $derived(
     weeks
       .map((week) => ({
@@ -446,23 +446,30 @@
   }
   @media (max-width: 600px) {
     .workload {
-      gap: 8px;
-      margin-bottom: 24px;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin-bottom: 18px;
     }
     .workload > button,
     .checkin-metric {
-      padding: 14px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
     .metric-label {
-      font-size: 11px;
+      font-size: 14px;
       gap: 6px;
       align-items: start;
     }
     .workload strong {
-      font-size: 28px;
+      font-size: 22px;
+      margin: 0;
     }
-    .workload small {
-      font-size: 11px;
+    .workload small,
+    .metric-track {
+      display: none;
     }
     .raid-row {
       grid-template-columns: 32px minmax(0, 1fr) auto;
