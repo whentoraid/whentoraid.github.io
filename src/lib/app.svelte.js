@@ -26,6 +26,8 @@ export const app = $state({
   data: initialData(saved.state, route),
   /** Temporarily show owner setup while keeping a sample guild available for return. */
   showSetup: false,
+  /** Open the personal, hands-on tutorial; consumed by the current guild's tutorial. */
+  tutorialRequested: false,
   view: route.view,
   /**
    * One-time navigation intent, never saved with guild data: 'published' from a personal assignment or

@@ -25,6 +25,8 @@ test('an unassigned member can answer Late with a raid spec after the weekly dea
   await page.goto('./#/home')
   const quick = page.getByRole('region', { name: 'Answer this week’s raids' })
   await expect(quick.getByRole('button', { name: 'Late', exact: true })).toBeInViewport()
+  await expect(quick.getByLabel('Spec for this raid')).toBeHidden()
+  await quick.locator('summary').filter({ hasText: 'Change character or spec' }).click()
   await quick.getByLabel('Spec for this raid').selectOption('Arms|DPS')
   await quick.getByRole('button', { name: 'Late', exact: true }).click()
   await expect(quick.getByRole('button', { name: 'Late', exact: true })).toHaveAttribute(

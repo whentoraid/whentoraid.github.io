@@ -20,6 +20,8 @@
   import Sidebar from './components/Sidebar.svelte'
   import Toast from './components/Toast.svelte'
   import FeedbackDialog from './components/FeedbackDialog.svelte'
+  import RaiderTutorial from './components/RaiderTutorial.svelte'
+  import { availabilityPreferenceScope } from './lib/view-preferences.js'
   import UnsavedChanges from './components/UnsavedChanges.svelte'
   import Availability from './views/Availability.svelte'
   import Characters from './views/Characters.svelte'
@@ -248,6 +250,9 @@
 
     <footer>Built for real life. Ready for raid night.<span>WHEN TO RAID · FOREVER</span></footer>
   </main>
+  {#key availabilityPreferenceScope(app.data, remote)}
+    <RaiderTutorial scope={availabilityPreferenceScope(app.data, remote)} />
+  {/key}
 {:else}
   <Setup />
 {/if}

@@ -42,6 +42,7 @@
       add alts later.
     </p>
     <button class="primary" onclick={() => (editing = { characterId: null })}>Add my first character</button>
+    <button onclick={() => (app.tutorialRequested = true)}>Guide me through setup</button>
   </section>
 {:else if needsAvailability}
   <section class="panel" aria-label="Next setup step">

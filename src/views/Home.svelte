@@ -112,6 +112,8 @@
   {/snippet}
 </PageTitle>
 
+<OnboardingChecklist {memberId} weekIso={thisWeek} />
+
 <div class="home-priorities jump-target" id="home-next" tabindex="-1">
   {#if next || !hasSignups}
     <section
@@ -210,7 +212,9 @@
   >
   <p>
     {!checkin.checkedIn
-      ? 'Your officers are waiting for your times.'
+      ? hasSignups
+        ? 'Answer the raids above, or share your weekly times here if that is easier.'
+        : 'Your officers are waiting for your times.'
       : checkin.paused
         ? 'Your usual schedule is paused, so you count as away this week.'
         : checkin.ranges.length
@@ -240,8 +244,6 @@
   >
   <InlineSaveStatus />
 </section>
-
-<OnboardingChecklist {memberId} weekIso={thisWeek} />
 
 {#if later.length}
   <section

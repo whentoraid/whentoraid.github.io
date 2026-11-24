@@ -547,7 +547,7 @@ export function saveCharacter(state, memberId, input, makeId = () => crypto.rand
       },
     }
   }
-  const added = { id: makeId(), memberId, main: false, ...value }
+  const added = { id: makeId(), memberId, main: charactersOf(state, memberId).length === 0, ...value }
   return { state: { ...state, characters: [...state.characters, added] } }
 }
 

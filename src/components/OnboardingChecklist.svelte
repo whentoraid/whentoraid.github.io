@@ -11,11 +11,10 @@
 {:else}
   <section class="panel onboarding" aria-label="Getting ready to raid">
     <h2>Get ready for raid planning</h2>
-    <p>
-      {complete
-        ? 'Your character and availability are ready for the officers.'
-        : 'Complete these steps so officers can include you in a roster.'}
-    </p>
+    <p>Add your character, give an availability answer, and learn how to confirm your raid spot.</p>
+    <button class="primary tutorial-start" onclick={() => (app.tutorialRequested = true)}
+      >Start guided tutorial</button
+    >
     <ol>
       {#each steps as step (step.id)}
         <li class:done={step.complete}>
@@ -46,6 +45,9 @@
   }
   .onboarding {
     margin: 1.5rem 0;
+  }
+  .tutorial-start {
+    margin-bottom: 1.25rem;
   }
   ol {
     list-style: none;

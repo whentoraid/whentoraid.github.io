@@ -104,6 +104,15 @@
       <button
         class="feedback-link"
         onclick={() => {
+          requestLeave(() => {
+            moreOpen = false
+            app.tutorialRequested = true
+          })
+        }}>Raider tutorial</button
+      >
+      <button
+        class="feedback-link"
+        onclick={() => {
           moreOpen = false
           onfeedback()
         }}

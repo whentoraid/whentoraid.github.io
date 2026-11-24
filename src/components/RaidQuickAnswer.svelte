@@ -13,7 +13,14 @@
   import StandbyOffer from './StandbyOffer.svelte'
   import { standbyOnline } from '../lib/standby.svelte.js'
 
-  let { memberId, weekIso, now = Date.now(), excludeRaidIds = [] } = $props()
+  let {
+    memberId,
+    weekIso,
+    now = Date.now(),
+    excludeRaidIds = [],
+    onanswered = () => {},
+    heading = 'This week’s raids',
+  } = $props()
   const ANSWERS = [
     { id: 'in', status: 'signed', label: 'I’m in', saved: 'Signed up · awaiting roster' },
     { id: 'late', status: 'late', label: 'Late', saved: 'Signed up · arriving late' },
@@ -159,6 +166,7 @@
       })
       app.data = next
       offerUndo(`${choice.saved} for ${item.raid.name}.`, previous)
+      onanswered()
       return
     }
     const guildId = remote.guildId
@@ -184,6 +192,7 @@
       choices = { ...choices, [key]: undefined }
       saved = { ...saved, [key]: true }
       refreshOnlineGuild()
+      onanswered()
       showToast(`Answer saved for ${item.raid.name}.`, {
         label: 'Undo',
         run: () => void undo(guildId, originalScope, item, result.undoId),
@@ -197,8 +206,14 @@
 </script>
 
 {#if raids.length}
-  <section class="quick-answers" aria-label="Answer this week’s raids">
-    <h2>This week’s raids</h2>
+  <section
+    class="quick-answers"
+    aria-label={heading === 'This week’s raids' ? 'Answer this week’s raids' : heading}
+  >
+    <h2>{heading}</h2>
+    <p class="note">
+      These answers go straight to your officers. You don’t need to enter weekly times for the same raids.
+    </p>
     {#if online && loaded.scope !== scope}<p role="status">Loading your answers…</p>{/if}
     {#if online && loaded.scope === scope && loaded.error}
       <p role="alert">Your answers could not be loaded: {loaded.error}</p>
@@ -226,28 +241,41 @@
           >
         {/if}
         {#if characters.length}
-          <div class="signup-choices">
-            <label class="field"
-              >Character<select
-                value={character?.id}
-                disabled={pending[key]}
-                onchange={(event) => setChoice(item, { characterId: event.currentTarget.value, spec: null })}
-              >
-                {#each characters as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-              </select></label
+          <details class="signup-options">
+            <summary
+              >Change character or spec <span
+                >· {character?.name} · {specFor(item).split('|').join(' · ')}</span
+              ></summary
             >
-            <label class="field"
-              >Spec for this raid<select
-                value={specFor(item)}
-                disabled={pending[key]}
-                onchange={(event) => setChoice(item, { spec: event.currentTarget.value })}
+            <div class="signup-choices">
+              <label class="field"
+                >Character<select
+                  value={character?.id}
+                  disabled={pending[key]}
+                  onchange={(event) =>
+                    setChoice(item, { characterId: event.currentTarget.value, spec: null })}
+                >
+                  {#each characters as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+                </select></label
               >
-                {#each specOptions(character) as option (option.value)}<option value={option.value}
-                    >{option.spec} · {option.role}</option
-                  >{/each}
-              </select></label
-            >
-          </div>
+              <label class="field"
+                >Spec for this raid<select
+                  value={specFor(item)}
+                  disabled={pending[key]}
+                  onchange={(event) => setChoice(item, { spec: event.currentTarget.value })}
+                >
+                  {#each specOptions(character) as option (option.value)}<option value={option.value}
+                      >{option.spec} · {option.role}</option
+                    >{/each}
+                </select></label
+              >
+            </div>
+            <p class="note">
+              Changes apply when you choose an answer{selected && selected.id !== 'out'
+                ? ' or save below'
+                : ''}.
+            </p>
+          </details>
         {:else}<button onclick={() => (app.view = 'characters')}>Add a character</button>{/if}
         <div class="answer-buttons" role="group" aria-label={`Your answer for ${item.raid.name}`}>
           {#each ANSWERS as choice (choice.id)}
@@ -324,6 +352,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     margin: 12px 0;
+  }
+  .signup-options {
+    margin: 12px 0;
+  }
+  .signup-options summary {
+    cursor: pointer;
+    padding-block: 10px;
+    font-size: 13px;
+    color: var(--gold);
+  }
+  .signup-options summary span {
+    color: var(--muted);
+    overflow-wrap: anywhere;
   }
   select {
     width: 100%;
