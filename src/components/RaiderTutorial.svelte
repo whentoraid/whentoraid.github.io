@@ -120,7 +120,6 @@
   }
 
   function finish() {
-    if (!practiced) return
     saveTutorial(scope, 'complete', 2)
     open = false
     app.view = 'home'
@@ -211,7 +210,7 @@
     {:else}
       <p>
         Signing up tells officers you’re available. Once they publish a roster with you on it, confirm your
-        place on <strong>My raids</strong>.
+        place in <strong>Raids</strong>.
       </p>
       <section class="tutorial-card practice" aria-label="Practice confirmation">
         <span class="badge">PRACTICE ONLY</span>
@@ -229,7 +228,7 @@
         {/if}
       </section>
       <p>If plans change, open that raid and use <strong>I can’t make it</strong> to tell your officers.</p>
-      <button class="primary" disabled={!practiced} onclick={finish}>Finish tutorial & view my raids</button>
+      <button class="primary" onclick={finish}>Finish tutorial & view Raids</button>
     {/if}
 
     {#if error}<p class="warning" role="alert">{error}</p>{/if}

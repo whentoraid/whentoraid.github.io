@@ -1,4 +1,5 @@
 import { SLOT_MINUTES } from './constants.js'
+import { addDays } from './time.js'
 import { own } from './ids.js'
 import { covers } from './intervals.js'
 import {
@@ -40,6 +41,21 @@ export function announcedRaids(state, weekIso) {
       return [{ raid, start: occurrence.start, end: occurrence.start + length }]
     })
     .sort((a, b) => a.start - b.start)
+}
+
+/** Announced raid dates across a bounded number of guild weeks, with draft times kept private. */
+export function announcedRaidHorizon(state, firstWeekIso, weekCount = 4) {
+  const count = Math.max(0, Math.min(weekCount, 53))
+  return Array.from({ length: count }, (_, offset) => addDays(firstWeekIso, offset * 7))
+    .flatMap((weekIso) =>
+      announcedRaids(state, weekIso).map((item) => ({
+        ...item,
+        weekIso,
+        raidId: item.raid.id,
+        kind: own(getWeek(state, weekIso).plans, item.raid.id)?.published ? 'published' : 'scheduled',
+      })),
+    )
+    .sort((a, b) => a.start - b.start || a.raid.name.localeCompare(b.raid.name))
 }
 
 /** @returns {'in' | 'tentative' | 'out' | null} the player's current answer for one announced raid */

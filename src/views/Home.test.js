@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { app } from '../lib/app.svelte.js'
+import { markUnavailable, setAvailabilityKind } from '../lib/model.js'
 import { createSeedState, SEED_WEEK } from '../lib/seed.js'
 import Home from './Home.svelte'
+import Profile from './Profile.svelte'
 import { announcedRaids, raidAnswer } from '../lib/raid-answers.js'
 import { templateFromRanges } from '../lib/availability-template.js'
 import { localRaidResponses, saveLocalRaidResponse } from '../lib/raid-services.js'
@@ -27,6 +29,65 @@ beforeEach(() => {
 })
 
 afterEach(() => vi.useRealTimers())
+
+test('announced future raid dates can be answered from Home without exposing a draft time', () => {
+  app.data.settings.raids.find((raid) => raid.id === 'raid-20').series = {
+    startDate: '2026-10-05',
+    endDate: '2026-10-10',
+    day: 5,
+    minutes: 19 * 60,
+    timezone: app.data.guild.timezone,
+  }
+  app.data.weeks['2026-10-05'] = {
+    checkins: {},
+    plans: { 'raid-20': { start: Date.parse('2026-10-10T02:00:00Z'), team: [] } },
+  }
+  render(Home)
+
+  const future = screen.getByRole('region', { name: 'Future raids to answer' })
+  expect(within(future).getByRole('heading', { name: /Oct 5/ })).toBeTruthy()
+  expect(within(future).getByRole('group', { name: /Your answer for 20-player Raid/ })).toBeTruthy()
+  expect(within(future).queryByText(/Draft/)).toBeNull()
+})
+
+test('List and Calendar show the same announced raids and statuses', async () => {
+  render(Home)
+
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  expect(within(agenda).getByText('20-player Raid')).toBeTruthy()
+  expect(within(agenda).getByText('Your spot')).toBeTruthy()
+  const views = within(agenda).getByRole('group', { name: 'Raid view' })
+  await fireEvent.click(within(views).getByRole('button', { name: /Calendar/ }))
+  const calendarRaid = within(agenda).getByRole('button', { name: /20-player Raid/ })
+  expect(calendarRaid).toBeTruthy()
+  expect(within(agenda).getByText(/Your spot/)).toBeTruthy()
+  await fireEvent.click(calendarRaid)
+  const raidRow = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => entry.textContent.includes('20-player Raid'))
+  expect(document.activeElement).toBe(raidRow)
+  expect(within(raidRow).getByRole('button', { name: 'I’ll be there' })).toBeTruthy()
+})
+
+test('an upcoming raid action opens its week answer controls', async () => {
+  app.data.settings.raids.find((raid) => raid.id === 'raid-20').series = {
+    startDate: '2026-10-05',
+    endDate: '2026-10-10',
+    day: 5,
+    minutes: 19 * 60,
+    timezone: app.data.guild.timezone,
+  }
+  app.data.weeks['2026-10-05'] = { checkins: {}, plans: {} }
+  app.data = { ...app.data, currentMemberId: 'm1' }
+  render(Home)
+
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const answerButtons = within(agenda).getAllByRole('button', { name: 'Answer raid' })
+  await fireEvent.click(answerButtons[answerButtons.length - 1])
+  const details = document.getElementById('raid-answers-2026-10-05')
+  expect(details.open).toBe(true)
+  expect(document.activeElement.id).toBe('raid-answers-2026-10-05')
+})
 
 test('shows the current member’s published assignment and opens its week and raid', async () => {
   render(Home)
@@ -65,7 +126,10 @@ test('a newly joined player is guided to add a character and check in', async ()
 
 test('a rostered player confirms their place, then reports a late problem with a note', async () => {
   render(Home)
-  const next = screen.getByRole('region', { name: 'Next raid assignment' })
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const next = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => entry.textContent.includes('20-player Raid'))
   await fireEvent.click(within(next).getByRole('button', { name: 'Tentative' }))
   expect(await within(next).findByText(/You’re tentative/)).toBeTruthy()
   expect(localRaidResponses('browser', SEED_WEEK, 'raid-20')[0].status).toBe('tentative')
@@ -91,7 +155,10 @@ test('a response given before the raid time changed is not shown as current', as
   const earlier = { ...published, start: published.start - 3600000, end: published.end - 3600000 }
   saveLocalRaidResponse('browser', SEED_WEEK, 'raid-20', 'm0', earlier, 'unavailable', 'Old')
   render(Home)
-  const next = screen.getByRole('region', { name: 'Next raid assignment' })
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const next = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => entry.textContent.includes('20-player Raid'))
   expect(await within(next).findByRole('button', { name: 'I’ll be there' })).toBeTruthy()
   expect(within(next).queryByText(/Old/)).toBeNull()
 })
@@ -109,16 +176,18 @@ test('the On this page bar jumps to and focuses each part of the page', async ()
   const jump = screen.getByRole('navigation', { name: 'On this page' })
   await fireEvent.click(within(jump).getByRole('button', { name: 'Availability' }))
   expect(document.activeElement).toBe(screen.getByRole('region', { name: 'This week’s check-in' }))
-  await fireEvent.click(within(jump).getByRole('button', { name: 'Month' }))
-  expect(document.activeElement.id).toBe('home-month')
+  await fireEvent.click(within(jump).getByRole('button', { name: 'Raids' }))
+  expect(document.activeElement.id).toBe('home-agenda')
 })
 
 test('the confirmation includes the assigned character and does not duplicate a signup', () => {
   render(Home)
-  const next = screen.getByRole('region', { name: 'Next raid assignment' })
-  const answer = within(next).getByRole('button', { name: 'I’ll be there' })
-  const character = within(next).getByText('YOUR CHARACTER')
-  expect(character.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const next = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => entry.textContent.includes('20-player Raid'))
+  expect(within(next).getByText(/Stoneguard · Tank/)).toBeTruthy()
+  expect(within(next).getByRole('button', { name: 'I’ll be there' })).toBeTruthy()
   expect(screen.queryByRole('region', { name: 'Answer this week’s raids' })).toBeNull()
 })
 
@@ -130,9 +199,37 @@ test('a player answers a raid in one tap, and only that raid changes', async () 
   await fireEvent.click(within(group).getByRole('button', { name: 'Can’t make it' }))
   const [raid] = announcedRaids(app.data, SEED_WEEK)
   expect(raidAnswer(app.data, SEED_WEEK, 'm1', raid)).toBe('out')
-  expect(within(group).getByRole('button', { name: 'Can’t make it' }).getAttribute('aria-pressed')).toBe(
-    'true',
+  expect(within(group).getByRole('button', { name: 'Change answer' })).toBeTruthy()
+  expect(within(quick).getByText(/Your answer/).textContent).toContain('Not attending')
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const answeredRaid = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => within(entry).queryByRole('heading', { name: raid.raid.name }))
+  expect(within(answeredRaid).getByRole('button', { name: 'Change answer' })).toBeTruthy()
+})
+
+test('weekly summary distinguishes tentative-only times from an empty availability answer', () => {
+  const interval = { start: Date.parse('2026-09-29T18:00:00Z'), end: Date.parse('2026-09-29T20:00:00Z') }
+  app.data = setAvailabilityKind(
+    markUnavailable(app.data, SEED_WEEK, 'm0'),
+    SEED_WEEK,
+    'm0',
+    interval,
+    'tentative',
+    true,
   )
+  render(Home)
+  const summary = screen.getByRole('region', { name: 'This week’s check-in' })
+  expect(summary.textContent).toContain('You saved tentative times. Officers can see them when planning.')
+  expect(summary.textContent).not.toContain('can’t make it this week')
+})
+
+test('weekly summary describes empty legacy times neutrally', () => {
+  app.data = markUnavailable(app.data, SEED_WEEK, 'm0')
+  render(Home)
+  const summary = screen.getByRole('region', { name: 'This week’s check-in' })
+  expect(summary.textContent).toContain('No available times are saved for this week.')
+  expect(summary.textContent).not.toContain('can’t make it this week')
 })
 
 test('a usual schedule due for review is confirmed from Home in one tap', async () => {
@@ -147,29 +244,25 @@ test('a usual schedule due for review is confirmed from Home in one tap', async 
   expect(screen.queryByRole('group', { name: 'Review your usual schedule' })).toBeNull()
 })
 
-test('an online player with a first assignment can open the calendar link from their raid', async () => {
+test('an online player with a first assignment can open Profile for calendar settings', async () => {
   Object.assign(remote, { guildId: 'guild-1', memberId: 'm0', officer: false })
   try {
     render(Home)
     const next = screen.getByRole('region', { name: 'Next raid assignment' })
-    const summary = screen.getByText('Calendar link', { selector: 'summary' })
-    expect(summary.closest('details').open).toBe(false)
     await fireEvent.click(within(next).getByRole('button', { name: /Follow your raids in your calendar/ }))
-    expect(summary.closest('details').open).toBe(true)
-    expect(document.activeElement).toBe(summary)
+    expect(app.view).toBe('profile')
   } finally {
     Object.assign(remote, { guildId: null, memberId: null, officer: false })
   }
 })
 
-test('before a first assignment the calendar link waits behind a disclosure', () => {
+test('Profile remains available before a first assignment', () => {
   Object.assign(remote, { guildId: 'guild-1', memberId: 'm1', officer: false })
   app.data = { ...app.data, currentMemberId: 'm1' }
   try {
     render(Home)
     expect(screen.queryByRole('button', { name: /Follow your raids in your calendar/ })).toBeNull()
-    const summary = screen.getByText('Calendar link', { selector: 'summary' })
-    expect(summary.closest('details').open).toBe(false)
+    expect(screen.getByRole('button', { name: /Open Profile/ })).toBeTruthy()
   } finally {
     Object.assign(remote, { guildId: null, memberId: null, officer: false })
   }
@@ -178,7 +271,10 @@ test('before a first assignment the calendar link waits behind a disclosure', ()
 test('a rostered player confirms directly on their assignment without an inbox duplicate', async () => {
   render(Home)
   expect(screen.queryByText('Confirm your place in 20-player Raid')).toBeNull()
-  const next = screen.getByRole('region', { name: 'Next raid assignment' })
+  const agenda = screen.getByRole('region', { name: 'Upcoming raids' })
+  const next = within(agenda)
+    .getAllByRole('listitem')
+    .find((entry) => entry.textContent.includes('20-player Raid'))
   await fireEvent.click(within(next).getByRole('button', { name: 'I’ll be there' }))
   await within(next).findByText('You confirmed you’ll be there.')
   await vi.waitFor(() => expect(screen.queryByText('Confirm your place in 20-player Raid')).toBeNull())
@@ -203,7 +299,7 @@ test('a player sees their recent raids and how sitting out is counted', async ()
       },
     },
   }
-  render(Home)
+  render(Profile)
   const record = screen.getByText('Your recent raids').closest('details')
   expect(within(record).getByText('Played')).toBeTruthy()
   expect(within(record).getByText(/doesn’t measure skill or effort/)).toBeTruthy()

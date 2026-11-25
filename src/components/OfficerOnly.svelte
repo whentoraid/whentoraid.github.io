@@ -10,4 +10,4 @@
   title="This page is for officers"
   subtitle="Your raids, availability and characters are all in the menu. Ask an officer if you need more access."
 />
-<button class="primary" onclick={() => (app.view = 'home')}>Go to My raids</button>
+<button class="primary" onclick={() => (app.view = 'home')}>Go to Raids</button>

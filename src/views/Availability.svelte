@@ -1,4 +1,4 @@
-<script>
+﻿<script>
   import AvailabilityGrid from '../components/AvailabilityGrid.svelte'
   import AvailabilityRanges from '../components/AvailabilityRanges.svelte'
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
@@ -10,6 +10,7 @@
   import SectionTabs from '../components/SectionTabs.svelte'
   import UsualScheduleEditor from '../components/UsualScheduleEditor.svelte'
   import UsualSchedule from '../components/UsualSchedule.svelte'
+  import Modal from '../components/Modal.svelte'
   import { getRaid } from '../lib/raids.js'
   import { app } from '../lib/app.svelte.js'
   import { checkinsClosed, deadlineUtc, formatDeadline } from '../lib/checkins.js'
@@ -24,6 +25,7 @@
   } from '../lib/view-preferences.js'
   import { CLASS_COLORS } from '../lib/constants.js'
   import { availabilitySource, hasGivenAvailability } from '../lib/personal-raids.js'
+  import { templateFor } from '../lib/availability-template.js'
   import { weekStatus } from '../lib/raid-status.js'
   import { untrack } from 'svelte'
   import { slotWindow } from '../lib/grid.js'
@@ -41,6 +43,7 @@
     setAvailabilityKind,
     setCharacterOffered,
     setRaidParticipation,
+    useAvailabilityTemplate,
     upcomingAbsences,
   } from '../lib/model.js'
   import { showToast, offerUndo } from '../lib/toast.svelte.js'
@@ -95,18 +98,20 @@
   const deadlineAhead = $derived(deadline !== null && now < deadline)
 
   const status = $derived.by(() => {
-    if (!checkin.checkedIn) return 'Not checked in yet · mark your times and they save automatically'
+    if (!checkin.checkedIn) return 'Not checked in yet Â· mark your times and they save automatically'
     if (checkin.ranges.length === 0 && checkin.tentativeRanges?.length)
-      return 'Checked in · only tentative times this week'
-    if (checkin.ranges.length === 0) return 'Checked in · not available this week'
-    return 'Checked in · changes save automatically and count right away'
+      return 'Checked in Â· only tentative times this week'
+    if (checkin.ranges.length === 0) return 'Checked in Â· no available times saved'
+    return 'Checked in Â· changes save automatically and count right away'
   })
 
   /** What painting marks. Preferred times are firm; tentative times never count as firm. */
   let kind = $state('firm')
   let usualOpen = $state(false)
+  let resetConfirm = $state(false)
   let editingOptionsOpen = $state(false)
   const usual = $derived(own(app.data.templates, memberId))
+  const canResetToUsual = $derived(Boolean(checkin.checkedIn && templateFor(usual, weekIso)))
   function editThisWeek() {
     chooseView('section', 'times')
     document.querySelector('.day-editor summary, .availability-times [role=grid] button')?.focus()
@@ -124,6 +129,13 @@
     const previous = app.data
     app.data = saveAvailabilityTemplate(app.data, weekIso, memberId)
     offerUndo('These times now repeat each week. Existing weekly answers are kept.', previous)
+  }
+  function resetWeekToUsual() {
+    if (closed || !canResetToUsual) return
+    const previous = app.data
+    app.data = useAvailabilityTemplate(app.data, weekIso, memberId)
+    resetConfirm = false
+    offerUndo('This week now uses your usual times. Raid and character choices are unchanged.', previous)
   }
   const KIND_LABELS = { firm: 'available', preferred: 'preferred', tentative: 'tentative' }
   const kindRanges = $derived(
@@ -210,7 +222,7 @@
       label: 'Undo',
       run: () => {
         if (stableJson(saved(app.data)) !== stableJson(after)) {
-          showToast('Can’t undo: your availability has changed since.')
+          showToast('Canâ€™t undo: your availability has changed since.')
           return
         }
         app.data = restoreCheckin(app.data, week, member, before)
@@ -250,13 +262,17 @@
     <div>
       <strong>{checkin.paused ? 'Usual schedule paused' : 'Your usual schedule is saved'}</strong>
       <small
-        >{availabilitySource(app.data, weekIso, memberId)} · One-off changes keep future weeks unchanged.</small
+        >{availabilitySource(app.data, weekIso, memberId)} Â· One-off changes keep future weeks unchanged.</small
       >
     </div>
     <div class="buttons">
       <button disabled={closed} onclick={editThisWeek}>Change this week</button>
       <button onclick={() => (usualOpen = true)}>Change my usual schedule</button>
       <button disabled={closed} onclick={markAway}>Mark away</button>
+      {#if canResetToUsual}
+        <button disabled={closed} onclick={() => (resetConfirm = true)}>Reset this week to usual times</button
+        >
+      {/if}
     </div>
   {:else if checkin.ranges.length && !closed}
     <button onclick={repeatWeek}>Repeat these times each week</button>
@@ -264,31 +280,48 @@
     <button onclick={() => (usualOpen = true)}>Set my usual schedule</button>
   {/if}
 </section>
-<UsualScheduleEditor open={usualOpen} onclose={() => (usualOpen = false)} {memberId} />
+<UsualScheduleEditor
+  open={usualOpen}
+  onclose={() => (usualOpen = false)}
+  {memberId}
+  {editor}
+  oneditorchange={(value) => chooseView('editor', value)}
+/>
+<Modal open={resetConfirm} onclose={() => (resetConfirm = false)} label="Reset this week to usual times">
+  <h2>Reset this week to your usual times?</h2>
+  <p>
+    This replaces the available, preferred, and tentative times saved for {formatWeekRange(weekIso)}. Raid
+    participation and character choices stay as they are, and other weeks are unchanged.
+  </p>
+  <div class="buttons">
+    <button onclick={() => (resetConfirm = false)}>Keep this week’s times</button>
+    <button class="primary" onclick={resetWeekToUsual}>Reset this week</button>
+  </div>
+</Modal>
 
 {#if !myCharacters.length}
   <OnboardingChecklist {memberId} {weekIso} />
 {:else if firstVisit && !answered}
   <p class="note first-answer">
-    Your times are in <strong>{zoneName}</strong>, where it’s {zoneClock} now. Mark when you can raid, or choose
-    <em>Can’t make it this week</em>. Either answer completes your setup.
+    Your times are in <strong>{zoneName}</strong>, where itâ€™s {zoneClock} now. Mark when you can raid, or choose
+    <em>Canâ€™t make it this week</em>. Either answer completes your setup.
   </p>
 {:else if firstVisit && answered}
   <section class="panel setup-done" aria-label="Setup complete">
-    <h2>You’re set for raid planning</h2>
+    <h2>Youâ€™re set for raid planning</h2>
     <ul>
       <li>
-        Character: <strong>{mainCharacter?.name}</strong> · {mainCharacter?.spec}
+        Character: <strong>{mainCharacter?.name}</strong> Â· {mainCharacter?.spec}
         {mainCharacter?.class}
       </li>
       <li>Times in: <strong>{zoneName}</strong></li>
       <li>This week: <strong>{weekStatus(app.data, weekIso, memberId)}</strong></li>
     </ul>
     <p>
-      Your officers can now consider you for the roster. Signing up doesn’t guarantee a place: when a roster
-      with you on it is published, it appears on My raids for you to confirm.
+      Your officers can now consider you for the roster. Signing up doesnâ€™t guarantee a place: when a roster
+      with you on it is published, it appears in Raids for you to confirm.
     </p>
-    <button class="primary" onclick={() => (app.view = 'home')}>Go to My raids</button>
+    <button class="primary" onclick={() => (app.view = 'home')}>Go to Raids</button>
   </section>
 {/if}
 
@@ -331,11 +364,24 @@
     <!-- Stays in view on long phone forms: which week this edits, what it covers, and whether it saved. -->
     <div class="availability-save">
       <p class="edit-scope">
-        Week of {formatWeekRange(weekIso)} · applies to {app.data.settings.raids.length === 1
+        Week of {formatWeekRange(weekIso)} Â· applies to {app.data.settings.raids.length === 1
           ? app.data.settings.raids[0].name
           : `all ${app.data.settings.raids.length} raids`}
       </p>
       <InlineSaveStatus />
+    </div>
+    <div class="editor-toolbar">
+      <div class="buttons editor-choice segmented" role="group" aria-label="Availability editor">
+        <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
+          ><Icon name="clock" size={16} /> Enter times</button
+        >
+        <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}
+          ><Icon name="dashboard" size={16} /> Paint grid</button
+        >
+      </div>
+      <span class="editor-hint"
+        >{editor === 'ranges' ? 'Open a day to add or edit times' : 'Click or drag to mark your times'}</span
+      >
     </div>
     {#if checkin.absentDates?.length}
       <p class="note" role="status">
@@ -344,28 +390,14 @@
     {/if}
     <details
       class="editor-options"
-      open={editingOptionsOpen || editor === 'grid' || kind !== 'firm'}
+      open={editingOptionsOpen || kind !== 'firm'}
       ontoggle={(event) => (editingOptionsOpen = event.currentTarget.open)}
     >
       <summary
-        ><span>Editing options</span>
-        <span>· {kind === 'firm' ? 'Available times' : KIND_LABELS[kind]}</span></summary
+        ><span>More time options</span>
+        <span>Â· {kind === 'firm' ? 'Available times' : KIND_LABELS[kind]}</span></summary
       >
-      <div class="editor-toolbar">
-        <div class="buttons editor-choice segmented" role="group" aria-label="Availability editor">
-          <button aria-pressed={editor === 'ranges'} onclick={() => chooseView('editor', 'ranges')}
-            ><Icon name="clock" size={16} /> Time ranges</button
-          >
-          <button aria-pressed={editor === 'grid'} onclick={() => chooseView('editor', 'grid')}
-            ><Icon name="dashboard" size={16} /> Paint grid</button
-          >
-        </div>
-        <span class="editor-hint"
-          >{editor === 'ranges'
-            ? 'Open a day to add or edit times'
-            : 'Click or drag to mark your times'}</span
-        >
-      </div>
+
       <div class="buttons kind-choice" role="group" aria-label="Mark times as">
         <button class="kind-firm" aria-pressed={kind === 'firm'} onclick={() => (kind = 'firm')}
           ><Icon name="check" size={16} /> Available</button
@@ -412,7 +444,7 @@
       />
     {/if}
     <div class="buttons form-actions">
-      <button onclick={cantMakeIt}>Can’t make it this week</button>
+      <button onclick={cantMakeIt}>Canâ€™t make it this week</button>
       <small role="status">{status}</small>
     </div>
     <div class="schedule-extras">
@@ -423,10 +455,10 @@
             ><Icon name="calendar" size={17} /> Away dates{absences.length
               ? ` (${absences.length})`
               : ''}</span
-          ><small>Going away? Keep your schedule and skip those dates.</small></summary
+          ><small>Only skips the dates you choose; your other weeks stay unchanged.</small></summary
         >
         <form class="away-form" onsubmit={addAbsence}>
-          <label class="field">From<input type="date" required bind:value={awayFrom} /></label>
+          <label class="field">Away from<input type="date" required bind:value={awayFrom} /></label>
           <label class="field">To<input type="date" min={awayFrom} bind:value={awayTo} /></label>
           <button>Mark away</button>
         </form>
@@ -436,7 +468,7 @@
               <li>
                 <span
                   >{formatMonthDay(span.from)}{span.to !== span.from
-                    ? ` – ${formatMonthDay(span.to)}`
+                    ? ` â€“ ${formatMonthDay(span.to)}`
                     : ''}</span
                 ><button onclick={() => changeAbsence(span.from, span.to, false)}>Remove</button>
               </li>
@@ -485,7 +517,7 @@
             <span class="character-avatar"><Icon name="character" size={22} /></span>
             <div>
               <strong>{character.name}</strong><small
-                >{character.spec} {character.class} · {character.role}</small
+                >{character.spec} {character.class} Â· {character.role}</small
               >
             </div>
           </div>
@@ -503,7 +535,7 @@
     </fieldset>
     {#if !offeringAny}
       <p class="note warning">
-        You aren’t offering any characters this week, so the planner can’t place you.
+        You arenâ€™t offering any characters this week, so the planner canâ€™t place you.
       </p>
     {/if}
     <p class="note">
@@ -512,8 +544,8 @@
     <div class="availability-finish">
       <span class="step-number"><Icon name="check" size={17} /></span>
       <div>
-        <strong>That’s your check-in.</strong>
-        <p>Your changes save automatically. When you’re selected, your assignment appears in My raids.</p>
+        <strong>Thatâ€™s your check-in.</strong>
+        <p>Your changes save automatically. When youâ€™re selected, your assignment appears in Raids.</p>
         <button class="text-button" onclick={() => (app.view = 'home')}
           >View my raids <Icon name="arrow" size={15} /></button
         >

@@ -136,7 +136,7 @@
       ><Icon name="repeat" size={17} /> Usual schedule{pause && pause.from <= thisWeek
         ? ' · paused'
         : ''}</span
-    ><small>Repeat your times each week, or take a break.</small></summary
+    ><small>Repeats across weeks. Pause it to mark whole weeks away until you resume.</small></summary
   >
   <div class="buttons">
     <button onclick={() => changeTemplate('save')}>Save as usual schedule</button>
@@ -210,7 +210,7 @@
           <p class="warning">
             You’re on the roster for {rosteredDuring
               .map((item) => `${item.raid.name} (${formatMonthDay(item.weekIso)})`)
-              .join(', ')}. A break doesn’t take you off it: tell your officers from My raids.
+              .join(', ')}. A break doesn’t take you off it: tell your officers from Raids.
           </p>
         {/if}
       {/if}

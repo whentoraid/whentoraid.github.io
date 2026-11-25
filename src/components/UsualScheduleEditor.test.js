@@ -19,7 +19,8 @@ afterEach(() => {
   vi.useRealTimers()
   display.localTime = true
 })
-const open = () => render(UsualScheduleEditor, { open: true, memberId: 'm0', onclose: vi.fn() })
+const open = (props = {}) =>
+  render(UsualScheduleEditor, { open: true, memberId: 'm0', onclose: vi.fn(), ...props })
 async function addMonday(week = SEED_WEEK) {
   const interval = slotWindow(week, 0, 0, 2, app.data.guild)
   await fireEvent.change(screen.getByLabelText('Mon from'), { target: { value: String(interval.start) } })
@@ -41,6 +42,17 @@ test('saving a usual schedule changes future inherited weeks without rewriting e
   await fireEvent.click(screen.getByRole('button', { name: 'Save usual schedule' }))
   expect(getCheckin(app.data, SEED_WEEK, 'm0')).toEqual(before)
   expect(app.data.templates.m0.slots).toEqual(expect.arrayContaining([...slots, 0, 1]))
+})
+test('the usual schedule can be painted and saved as a draft', async () => {
+  const originalSlots = [...app.data.templates.m0.slots]
+  open({ editor: 'grid' })
+  expect(screen.getByRole('group', { name: 'Usual schedule editor' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Paint grid' }).getAttribute('aria-pressed')).toBe('true')
+  await fireEvent.click(screen.getByRole('button', { name: /Mark Mon.*unavailable|Mark Mon.*available/ }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Enter times' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Paint grid' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Save usual schedule' }))
+  expect(app.data.templates.m0.slots).not.toEqual(originalSlots)
 })
 test('a closed weekly deadline starts usual-schedule changes next week', async () => {
   app.data.settings.checkinDeadline = { day: 0, minutes: 0 }

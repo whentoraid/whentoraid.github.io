@@ -2,7 +2,16 @@ import { isIsoDate, mondayOf } from './time.js'
 import { DEFAULT_RAID_ID } from './raids.js'
 
 /** Every page, in sidebar order. The first is the default. */
-export const VIEWS = ['home', 'planner', 'availability', 'characters', 'officer', 'members', 'settings']
+export const VIEWS = [
+  'home',
+  'planner',
+  'availability',
+  'profile',
+  'characters',
+  'officer',
+  'members',
+  'settings',
+]
 
 /** Guild tools only officers open. Players reach published rosters from their own raids instead. */
 export const OFFICER_VIEWS = ['officer', 'members', 'settings']
@@ -19,7 +28,7 @@ export function parseHash(hash) {
   // `#/published/<week>/<raid>` is a shareable link to a published roster, shown in the planner.
   const published = view === 'published'
   return {
-    view: published ? 'planner' : VIEWS.includes(view) ? view : VIEWS[0],
+    view: published ? 'planner' : view === 'characters' ? 'profile' : VIEWS.includes(view) ? view : VIEWS[0],
     week: isIsoDate(week) ? mondayOf(week) : null,
     ...(raid && /^[a-z0-9-]{1,64}$/.test(raid) ? { raid } : {}),
     ...(published ? { published: true } : {}),

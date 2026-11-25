@@ -32,13 +32,15 @@
   import Settings from './views/Settings.svelte'
   import Setup from './views/Setup.svelte'
   import Home from './views/Home.svelte'
+  import Profile from './views/Profile.svelte'
   import { localSave } from './lib/save-status.svelte.js'
 
   const VIEW_TITLES = {
-    home: 'My raids',
+    home: 'Raids',
     planner: 'Raid planner',
     availability: 'My availability',
-    characters: 'My characters',
+    characters: 'Profile',
+    profile: 'Profile',
     officer: 'Officer dashboard',
     members: 'Guild members',
     settings: 'Guild settings',
@@ -232,6 +234,8 @@
           <OfficerOnly />
         {:else if app.view === 'home'}
           <Home />
+        {:else if app.view === 'profile'}
+          <Profile />
         {:else if app.view === 'officer'}
           <Officer />
         {:else if app.view === 'availability'}

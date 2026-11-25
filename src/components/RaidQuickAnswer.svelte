@@ -20,6 +20,7 @@
     excludeRaidIds = [],
     onanswered = () => {},
     heading = 'This week’s raids',
+    id,
   } = $props()
   const ANSWERS = [
     { id: 'in', status: 'signed', label: 'I’m in', saved: 'Signed up · awaiting roster' },
@@ -42,6 +43,7 @@
   const checkins = $derived(app.data.weeks[weekIso]?.checkins)
   let loaded = $state({ scope: null, rows: [], error: '' })
   let choices = $state({})
+  let editing = $state({})
   let pending = $state({})
   let failures = $state({})
   let saved = $state({})
@@ -190,6 +192,7 @@
       if (guildId !== remote.guildId || originalScope !== scope) return
       updateRow(originalScope, result.signup, item.raid.id)
       choices = { ...choices, [key]: undefined }
+      editing = { ...editing, [key]: false }
       saved = { ...saved, [key]: true }
       refreshOnlineGuild()
       onanswered()
@@ -208,6 +211,7 @@
 {#if raids.length}
   <section
     class="quick-answers"
+    {id}
     aria-label={heading === 'This week’s raids' ? 'Answer this week’s raids' : heading}
   >
     <h2>{heading}</h2>
@@ -240,7 +244,7 @@
               character?.spec} · {row.role ?? character?.role}</small
           >
         {/if}
-        {#if characters.length}
+        {#if characters.length && (!row || editing[key])}
           <details class="signup-options">
             <summary
               >Change character or spec <span
@@ -276,19 +280,28 @@
                 : ''}.
             </p>
           </details>
-        {:else}<button onclick={() => (app.view = 'characters')}>Add a character</button>{/if}
+        {:else if !characters.length}<button onclick={() => (app.view = 'characters')}>Add a character</button
+          >{/if}
         <div class="answer-buttons" role="group" aria-label={`Your answer for ${item.raid.name}`}>
-          {#each ANSWERS as choice (choice.id)}
+          {#if row && !editing[key]}
             <button
-              aria-pressed={row?.status === choice.status}
-              disabled={pending[key] ||
-                (online && loaded.scope !== scope) ||
-                (choice.id !== 'out' && !characters.length)}
-              onclick={() => send(item, choice)}
+              class="text-button"
+              disabled={pending[key]}
+              onclick={() => (editing = { ...editing, [key]: true })}>Change answer</button
             >
-              {#if row?.status === choice.status}<Icon name="check" size={15} />{/if}{choice.label}
-            </button>
-          {/each}
+          {:else}
+            {#each ANSWERS as choice (choice.id)}
+              <button
+                aria-pressed={row?.status === choice.status}
+                disabled={pending[key] ||
+                  (online && loaded.scope !== scope) ||
+                  (choice.id !== 'out' && !characters.length)}
+                onclick={() => send(item, choice)}
+              >
+                {#if row?.status === choice.status}<Icon name="check" size={15} />{/if}{choice.label}
+              </button>
+            {/each}
+          {/if}
         </div>
         {#if choices[key] && selected && selected.id !== 'out'}
           <button class="save-choices" disabled={pending[key]} onclick={() => send(item, selected)}

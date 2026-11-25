@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   }, createSeedState())
 })
 
-test('officers see upcoming raids that need attention and a month calendar', async ({ page }) => {
+test('officers see upcoming raids and members get the same announced calendar scope', async ({ page }) => {
   await page.goto('./#/home')
   await expect(page.getByRole('region', { name: 'Officer dashboard' })).toHaveCount(0)
   await navigate(page, 'Officer dashboard')
@@ -23,10 +23,12 @@ test('officers see upcoming raids that need attention and a month calendar', asy
   await expect(page.getByRole('heading', { name: '20-player Raid', level: 1 })).toBeVisible()
   await expect(page.locator('.title-row .subtitle')).toContainText(/Oct 2.*PM/)
   await expect(page.locator('.time-details > summary')).toContainText('Times in')
-  await navigate(page, 'My raids')
-  await expect(
-    page.getByRole('region', { name: 'Raid calendar' }).getByRole('heading', { name: 'September 2026' }),
-  ).toBeVisible()
+  await navigate(page, 'Raids')
+  const calendar = page.getByRole('region', { name: 'Upcoming raids' })
+  await calendar.getByRole('button', { name: 'Calendar', exact: false }).click()
+  await expect(calendar.getByRole('button', { name: /Draft/ })).toHaveCount(0)
+  await calendar.getByRole('button', { name: 'List', exact: true }).click()
+  await expect(calendar.getByText('No announced raids in this time range.')).toBeVisible()
 })
 
 test('a weekly schedule creates drafts without publishing, and rules are saved per raid', async ({
@@ -67,17 +69,16 @@ test('a weekly schedule creates drafts without publishing, and rules are saved p
   await page.getByRole('button', { name: 'Save change' }).click()
   await expect(page.getByText('Schedule changed.')).toBeVisible()
 
-  await navigate(page, 'My raids')
-  // The first scheduled Friday is October 2; the calendar opens on September.
-  const calendar = page.getByRole('region', { name: 'Raid calendar' })
-  await calendar.getByRole('button', { name: 'Next month' }).click()
-  await expect(calendar.getByRole('button', { name: /20-player Raid.*Cancelled/ })).toBeVisible()
-  await expect(calendar.getByRole('button', { name: /20-player Raid.*Draft/ }).first()).toBeVisible()
+  await navigate(page, 'Raids')
+  const calendar = page.getByRole('region', { name: 'Upcoming raids' })
+  await calendar.getByRole('button', { name: 'Calendar', exact: false }).click()
+  await expect(calendar.getByRole('button', { name: /20-player Raid/ }).first()).toBeVisible()
+  await expect(calendar.getByRole('button', { name: /Draft/ })).toHaveCount(0)
 })
 
 test('players mark tentative times and away dates without losing their usual times', async ({ page }) => {
   await page.goto('./#/availability')
-  await page.getByText('Editing options', { exact: true }).click()
+  await page.getByText('More time options', { exact: true }).click()
   await page.getByRole('button', { name: 'Paint grid', exact: true }).click()
   await page.getByRole('button', { name: 'Tentative', exact: true }).click()
   await page

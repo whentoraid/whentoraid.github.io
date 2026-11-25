@@ -55,8 +55,8 @@ test('availability starts with readable days, remembers the paint editor, and ke
 }) => {
   await page.goto('./#/home')
   await page.getByRole('button', { name: 'Edit my availability', exact: true }).click()
-  await page.getByText('Editing options', { exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Time ranges', exact: true })).toHaveAttribute(
+  await page.getByText('More time options', { exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Enter times', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   )
@@ -67,7 +67,7 @@ test('availability starts with readable days, remembers the paint editor, and ke
     'true',
   )
   await page.getByRole('button', { name: 'Paint grid', exact: true }).click()
-  await navigate(page, 'My raids')
+  await navigate(page, 'Raids')
   await page.getByRole('button', { name: 'Edit my availability', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Paint grid', exact: true })).toHaveAttribute(
     'aria-pressed',

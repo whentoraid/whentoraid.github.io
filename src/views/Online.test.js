@@ -45,13 +45,13 @@ describe('online guild, as a player', () => {
   })
 
   test.each(['settings', 'members', 'officer'])(
-    'a player opening %s by URL is pointed back to My raids',
+    'a player opening %s by URL is pointed back to Raids',
     async (view) => {
       app.view = view
       render(App)
       expect(screen.getByRole('heading', { level: 1, name: 'This page is for officers' })).toBeTruthy()
       expect(screen.queryByRole('button', { name: 'Save settings' })).toBeNull()
-      await fireEvent.click(screen.getByRole('button', { name: 'Go to My raids' }))
+      await fireEvent.click(screen.getByRole('button', { name: 'Go to Raids' }))
       expect(app.view).toBe('home')
     },
   )

@@ -16,12 +16,13 @@ async function createGuild(page) {
   await page.getByLabel('Raid role').selectOption('Healer')
   await page.getByRole('button', { name: 'Create guild' }).click()
   // A new guild opens on the founder's own raid page, which guides their first steps.
-  await expect(page.getByRole('heading', { name: 'My raids' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raids', exact: true })).toBeVisible()
   await navigate(page, 'Guild members')
   await expect(page.getByRole('heading', { name: 'Guild members' })).toBeVisible()
 }
 
 test('set up a guild, add a player, and check them in', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'))
   await createGuild(page)
 
   await page.getByRole('button', { name: '+ Add player' }).click()
@@ -37,9 +38,9 @@ test('set up a guild, add a player, and check them in', async ({ page }) => {
   const novaRow = page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: /Nova/ }) })
   await novaRow.getByRole('button', { name: 'Act as' }).click()
 
-  await page.getByRole('button', { name: /My availability/ }).click()
-  await page.getByRole('button', { name: 'Can’t make it this week' }).click()
-  await expect(page.getByText('Checked in · not available this week')).toBeVisible()
+  await page.getByRole('button', { name: 'Schedule', exact: true }).click()
+  await page.getByRole('button', { name: /make it this week/ }).click()
+  await expect(page.getByText('Marked as not available this week')).toBeVisible()
 
   await navigate(page, 'Raid planner')
   await expect(page.getByRole('heading', { name: 'Waiting on 1' })).toBeVisible()

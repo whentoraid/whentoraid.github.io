@@ -9,7 +9,9 @@ import { getCheckin } from './model.js'
 export const STATUS = {
   noAnswer: 'No answer yet',
   signedUp: 'Signed up · awaiting roster',
-  absent: 'Absent this week',
+  tentativeTimes: 'Tentative times saved',
+  noTimes: 'No available times saved',
+  absent: 'Away this week',
   selected: 'Selected · confirmation needed',
   confirmed: 'Confirmed',
   tentative: 'Selected · tentative',
@@ -25,7 +27,12 @@ const BY_RESPONSE = {
 /** Where a player without a published place stands for the week; a usual schedule counts as signed up. */
 export function weekStatus(state, weekIso, memberId) {
   const checkin = getCheckin(state, weekIso, memberId)
-  if (checkin.checkedIn) return checkin.ranges.length ? STATUS.signedUp : STATUS.absent
+  if (checkin.paused || checkin.absentDates?.length === 7) return STATUS.absent
+  if (checkin.checkedIn) {
+    if (checkin.ranges.length) return STATUS.signedUp
+    if (checkin.tentativeRanges?.length) return STATUS.tentativeTimes
+    return STATUS.noTimes
+  }
   return templateFor(own(state.templates, memberId), weekIso) ? STATUS.signedUp : STATUS.noAnswer
 }
 

@@ -30,8 +30,7 @@ test('the planner brings each task into view and tabs work from the keyboard', a
 
 test('collapsed days can be edited and copied without losing existing availability', async ({ page }) => {
   await page.goto('./#/availability')
-  await page.getByText('Editing options', { exact: true }).click()
-  await page.getByRole('button', { name: 'Time ranges', exact: true }).click()
+  await page.getByRole('button', { name: 'Enter times', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Fri from', exact: true })).toBeHidden()
   await page.getByLabel('Edit Fri availability', { exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Fri from', exact: true })).toBeVisible()
@@ -63,7 +62,7 @@ test('collapsed days can be edited and copied without losing existing availabili
 test('a personal assignment opens the published roster even for an officer', async ({ page }) => {
   await page.goto('./#/planner')
   await page.getByRole('button', { name: 'Publish roster', exact: true }).click()
-  await navigate(page, 'My raids')
+  await navigate(page, 'Raids')
   await expect(page.getByRole('region', { name: 'Getting ready to raid' })).toHaveCount(0)
   await page.getByRole('button', { name: 'View published roster', exact: true }).click()
   await expect(page.getByRole('tab', { name: /^Roster/ })).toHaveAttribute('aria-selected', 'true')
@@ -108,9 +107,9 @@ test('narrow layouts with long guild and character names do not overflow', async
     }))
     localStorage.setItem('whentoraid-v3', JSON.stringify(state))
   })
-  await navigate(page, 'My characters')
+  await navigate(page, 'Profile')
   await expect(page.getByRole('heading', { name: 'ExtraordinarilyLongCharacterName' }).first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'My characters', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320)
   await other.close()
 })

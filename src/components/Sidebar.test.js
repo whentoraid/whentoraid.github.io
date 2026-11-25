@@ -10,11 +10,11 @@ vi.mock('../lib/remote/sync.svelte.js', () => ({
   remote: { guildId: 'test', status: 'saved' },
 }))
 
-test('a player sees only their own raid week: raids, availability and characters', () => {
+test('a player sees the three member destinations and no guild tools', () => {
   app.data = createSeedState()
   render(Sidebar)
-  const mine = screen.getByRole('navigation', { name: 'Your raid week' })
-  for (const label of ['My raids', 'My availability', 'My characters']) {
+  const mine = screen.getByRole('navigation', { name: 'Member navigation' })
+  for (const label of ['Raids', 'Schedule', 'Profile']) {
     expect(within(mine).getByRole('button', { name: label })).toBeTruthy()
   }
   expect(screen.queryByRole('navigation', { name: 'Guild tools' })).toBeNull()

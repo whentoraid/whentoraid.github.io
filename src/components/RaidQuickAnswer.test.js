@@ -59,7 +59,7 @@ test('one atomic save carries Late and a per-raid spec without optimistic checki
   const before = app.data
   await fireEvent.change(screen.getByLabelText('Spec for this raid'), { target: { value: 'Arms|DPS' } })
   await fireEvent.click(button('Late'))
-  await vi.waitFor(() => expect(button('Late').getAttribute('aria-pressed')).toBe('true'))
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy())
   expect(services.saveRaidAnswer).toHaveBeenCalledWith(
     {},
     'g1',
@@ -77,14 +77,20 @@ test('one atomic save carries Late and a per-raid spec without optimistic checki
   expect(sync.flushOnlineChanges).toHaveBeenCalledOnce()
   expect(sync.refreshOnlineGuild).toHaveBeenCalledOnce()
   expect(app.data).toBe(before)
-  expect(screen.getByText(/Your answer: Signed up · arriving late/)).toBeTruthy()
+  expect(screen.getByText(/Your answer/).textContent).toContain('arriving late')
+  expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Can’t make it' })).toBeNull()
+  await fireEvent.click(screen.getByRole('button', { name: 'Change answer' }))
+  expect(screen.getByRole('button', { name: 'Can’t make it' })).toBeTruthy()
 })
 
 test('answers saved through Discord display their canonical state and spec', async () => {
   services.listRaidSignups.mockResolvedValue([row(), { ...row('absent'), member_id: 'm1' }])
-  await open()
-  expect(button('Late').getAttribute('aria-pressed')).toBe('true')
-  expect(screen.getByLabelText('Spec for this raid').value).toBe('Arms|DPS')
+  render(RaidQuickAnswer, { memberId: 'm0', weekIso: SEED_WEEK, now: NOW })
+  expect(await screen.findByRole('button', { name: 'Change answer' })).toBeTruthy()
+  expect(screen.getByText(/Your answer/).textContent).toContain('arriving late')
+  expect(screen.getByText(/^Signed up as/).textContent).toContain('Stoneguard')
+  expect(screen.getByText(/^Signed up as/).textContent).toContain('Arms')
 })
 
 test('a lost response keeps the same request ID and arguments on retry', async () => {
@@ -97,7 +103,7 @@ test('a lost response keeps the same request ID and arguments on retry', async (
   expect(screen.queryByText('Saved · shared with your guild')).toBeNull()
   const first = services.saveRaidAnswer.mock.calls[0][2]
   await fireEvent.click(screen.getByRole('button', { name: 'Retry save' }))
-  await vi.waitFor(() => expect(button('Tentative').getAttribute('aria-pressed')).toBe('true'))
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy())
   expect(services.saveRaidAnswer.mock.calls[1][2]).toEqual(first)
 })
 
@@ -130,10 +136,10 @@ test('an old background read cannot replace a just-saved answer', async () => {
   }
   await vi.waitFor(() => expect(finishRead).toBeTypeOf('function'))
   await fireEvent.click(button('Late'))
-  await vi.waitFor(() => expect(button('Late').getAttribute('aria-pressed')).toBe('true'))
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy())
   finishRead([row('absent')])
   await Promise.resolve()
-  expect(button('Late').getAttribute('aria-pressed')).toBe('true')
+  expect(screen.getByText(/Your answer/).textContent).toContain('arriving late')
 })
 
 test('weekly deadline does not close an upcoming raid answer', async () => {

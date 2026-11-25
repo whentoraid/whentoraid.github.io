@@ -5,15 +5,12 @@
   import InlineSaveStatus from '../components/InlineSaveStatus.svelte'
   import RaidResponse from '../components/RaidResponse.svelte'
   import RaidQuickAnswer from '../components/RaidQuickAnswer.svelte'
+  import RaidAgenda from '../components/RaidAgenda.svelte'
   import StandbyOffer from '../components/StandbyOffer.svelte'
   import ActionInbox from '../components/ActionInbox.svelte'
-  import ReminderPreferences from '../components/ReminderPreferences.svelte'
-  import RaidRecord from '../components/RaidRecord.svelte'
   import RaidBriefing from '../components/RaidBriefing.svelte'
   import RaidChangeLog from '../components/RaidChangeLog.svelte'
   import { raidAnchor, SCHEDULE_REVIEW_ANCHOR } from '../lib/action-inbox.js'
-  import CalendarSubscription from '../components/CalendarSubscription.svelte'
-  import RaidMonth from '../components/RaidMonth.svelte'
   import { canManage, remote } from '../lib/remote/sync.svelte.js'
   import { app } from '../lib/app.svelte.js'
   import { displayZone } from '../lib/display.svelte.js'
@@ -22,10 +19,11 @@
   import { own } from '../lib/ids.js'
   import { showToast } from '../lib/toast.svelte.js'
   import { personalRaids, availabilitySource, compactSessionLabel } from '../lib/personal-raids.js'
-  import { announcedRaids } from '../lib/raid-answers.js'
+  import { announcedRaidHorizon, announcedRaids } from '../lib/raid-answers.js'
   import { weekStatus } from '../lib/raid-status.js'
   import { standbyOnline } from '../lib/standby.svelte.js'
-  import { formatMonthDay, mondayOf, todayIso } from '../lib/time.js'
+  import { formatMonthDay, formatWeekRange, mondayOf, todayIso } from '../lib/time.js'
+  import { tick } from 'svelte'
 
   let now = $state(Date.now())
   $effect(() => {
@@ -40,10 +38,30 @@
   const assigned = $derived(upcoming.filter((item) => item.assignment))
   const next = $derived(assigned[0])
   const checkin = $derived(getCheckin(app.data, thisWeek, memberId))
-  const later = $derived(
-    upcoming.filter(
-      (item) => item !== next && (item.assignment || item.weekIso !== thisWeek || item.session.start <= now),
+  let horizonWeeks = $state(4)
+  let expandedAnswerWeeks = $state({})
+  const announcedHorizon = $derived(announcedRaidHorizon(app.data, thisWeek, horizonWeeks))
+  const laterSignupWeeks = $derived([
+    ...new Set(
+      announcedHorizon
+        .filter(
+          (item) =>
+            item.weekIso !== thisWeek &&
+            item.start > now &&
+            !upcoming.some(
+              (raid) => raid.weekIso === item.weekIso && raid.raidId === item.raidId && raid.assignment,
+            ),
+        )
+        .map((item) => item.weekIso),
     ),
+  ])
+  const later = $derived(
+    upcoming.filter((item) => {
+      const inAgenda = announcedHorizon.some(
+        (raid) => raid.weekIso === item.weekIso && raid.raidId === item.raidId && raid.start > now,
+      )
+      return item !== next && !inAgenda
+    }),
   )
   const assignedIds = $derived(
     assigned.filter((item) => item.weekIso === thisWeek).map((item) => item.raidId),
@@ -62,6 +80,15 @@
     app.view = 'planner'
   }
 
+  async function openAnswerWeek(item) {
+    const targetId = `raid-answers-${item.weekIso}`
+    if (item.weekIso !== thisWeek) {
+      expandedAnswerWeeks = { ...expandedAnswerWeeks, [item.weekIso]: true }
+      await tick()
+    }
+    jump(targetId)
+  }
+
   const template = $derived(own(app.data.templates, memberId))
   const reviewDue = $derived(templateNeedsReview(template, todayIso(app.data.guild.timezone, now)))
 
@@ -77,20 +104,13 @@
 
   // Onboarding stage 5: the calendar link is offered once there is a raid worth following.
   const online = $derived(Boolean(remote.guildId) && remote.memberId === memberId)
-  let calendarPanel = $state()
-  function showCalendar() {
-    calendarPanel.open = true
-    calendarPanel.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-    calendarPanel.querySelector('summary')?.focus({ preventScroll: true })
-  }
 
   /** The page is long, especially on a phone; these jump straight to each part of it. */
   const sections = $derived([
     { id: 'home-next', label: 'Next raid' },
     { id: 'home-availability', label: 'Availability' },
     ...(later.length ? [{ id: 'home-upcoming', label: 'Upcoming' }] : []),
-    { id: 'home-month', label: 'Month' },
-    ...(online ? [{ id: 'home-settings', label: 'History & settings' }] : []),
+    { id: 'home-agenda', label: 'Raids' },
   ])
   function jump(id) {
     const target = document.getElementById(id)
@@ -102,7 +122,7 @@
 <PageTitle
   icon="shield"
   eyebrow={member ? `YOUR RAID WEEK · ${member.name}` : 'YOUR RAID WEEK'}
-  title="My raids"
+  title="Raids"
   subtitle={`Your assignments and availability, in ${zone.replaceAll('_', ' ')}.`}
 >
   {#snippet action()}
@@ -147,14 +167,14 @@
               >{next.character.spec} {next.character.class} · {next.character.realm}</small
             >{/if}
         </div>
-        <RaidResponse item={next} {memberId} />
+        {#if next.session.start <= now}<RaidResponse item={next} {memberId} />{/if}
         {#if online}<RaidBriefing item={next} {now} />{/if}
         {#if online}<RaidChangeLog item={next} {memberId} />{/if}
         <button class="text-button" onclick={() => openRaid(next)}
           >View published roster <span aria-hidden="true">→</span></button
         >
         {#if online}
-          <button class="text-button" onclick={showCalendar}
+          <button class="text-button" onclick={() => (app.view = 'profile')}
             >Follow your raids in your calendar <span aria-hidden="true">↓</span></button
           >
         {/if}
@@ -166,7 +186,13 @@
         <p>When an officer publishes a roster with you on it, your raid and character will appear here.</p>
         <p class="empty-guidance">
           {checkin.checkedIn
-            ? 'Your availability is in. You’re ready for the next roster.'
+            ? checkin.paused
+              ? 'Your usual schedule is paused for this week.'
+              : checkin.ranges.length
+                ? 'Your availability is in. You’re ready for the next roster.'
+                : checkin.tentativeRanges?.length
+                  ? 'You saved tentative times. Officers can see them when planning.'
+                  : 'No available times are saved for this week. Your raid answers are shown on their raid cards.'
             : 'Start with your availability so your officers can plan around you.'}
         </p>
         <button class="primary" onclick={checkIn}
@@ -179,10 +205,57 @@
 
   {#if hasSignups}
     <section class="panel signup-panel" aria-label="Raids to answer">
-      <RaidQuickAnswer {memberId} weekIso={thisWeek} {now} excludeRaidIds={assignedIds} />
+      <RaidQuickAnswer
+        id={`raid-answers-${thisWeek}`}
+        {memberId}
+        weekIso={thisWeek}
+        {now}
+        excludeRaidIds={assignedIds}
+      />
     </section>
   {/if}
 </div>
+
+<div id="home-agenda" class="jump-target" tabindex="-1">
+  <RaidAgenda
+    items={announcedHorizon.filter((item) => item.start > now)}
+    assignments={upcoming.filter((item) => item.assignment)}
+    personalItems={upcoming}
+    {memberId}
+    {now}
+    standbyEnabled={standbyOnline() && remote.memberId === memberId}
+    onanswer={openAnswerWeek}
+    onopen={openRaid}
+  />
+</div>
+
+{#if laterSignupWeeks.length}
+  <section class="panel future-signups" aria-label="Future raids to answer">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow gold">UPCOMING</span>
+        <h2>More raids to answer</h2>
+      </div>
+    </div>
+    {#each laterSignupWeeks as weekIso (weekIso)}
+      <details id={`raid-answers-${weekIso}`} tabindex="-1" open={expandedAnswerWeeks[weekIso]}>
+        <summary>Raids · {formatWeekRange(weekIso)}</summary>
+        <RaidQuickAnswer
+          {memberId}
+          {weekIso}
+          {now}
+          heading={`Raids · ${formatWeekRange(weekIso)}`}
+          excludeRaidIds={assigned.filter((item) => item.weekIso === weekIso).map((item) => item.raidId)}
+        />
+      </details>
+    {/each}
+  </section>
+{/if}
+{#if horizonWeeks < 53}
+  <button class="load-horizon" onclick={() => (horizonWeeks = Math.min(53, horizonWeeks + 4))}
+    >Load next 4 weeks</button
+  >
+{/if}
 
 <ActionInbox {memberId} {thisWeek} {now} onavailability={checkIn} hideConfirm />
 
@@ -219,7 +292,11 @@
         ? 'Your usual schedule is paused, so you count as away this week.'
         : checkin.ranges.length
           ? 'Your times are ready for planning. Review them if anything has changed.'
-          : 'You have let officers know you can’t make it this week.'}
+          : checkin.tentativeRanges?.length
+            ? 'You saved tentative times. Officers can see them when planning.'
+            : checkin.absentDates?.length === 7
+              ? 'You marked yourself away for the week.'
+              : 'No available times are saved for this week. Raid answers are shown on their raid cards.'}
   </p>
   {#if reviewDue}
     <div
@@ -291,32 +368,13 @@
   </section>
 {/if}
 
-<div class="spaced-top jump-target" id="home-month" tabindex="-1"><RaidMonth /></div>
-
-{#if online}
-  <section
-    class="spaced-top home-settings jump-target"
-    id="home-settings"
-    tabindex="-1"
-    aria-labelledby="home-settings-heading"
-  >
-    <h2 id="home-settings-heading">Your history and settings</h2>
-    <RaidRecord {memberId} {thisWeek} {now} />
-    <!-- Still reachable before a first roster, e.g. to turn off an old link. -->
-    <details class="panel calendar-link" bind:this={calendarPanel}>
-      <summary>Calendar link</summary>
-      {#if !assigned.length}
-        <p class="note">
-          Once an officer puts you on a roster, your raids can follow you into your calendar app.
-        </p>
-      {/if}
-      <CalendarSubscription />
-    </details>
-    <ReminderPreferences discordLinked={Boolean(member?.discordId)} />
-  </section>
-{:else}
-  <div class="spaced-top"><RaidRecord {memberId} {thisWeek} {now} /></div>
-{/if}
+<section class="panel profile-link spaced-top" aria-label="Profile and history">
+  <div>
+    <h2>Profile</h2>
+    <p>Manage characters, raid history, reminders, and your private calendar link.</p>
+  </div>
+  <button onclick={() => (app.view = 'profile')}>Open Profile <Icon name="arrow" size={16} /></button>
+</section>
 
 <style>
   .home-jump {
@@ -355,15 +413,19 @@
   .jump-target:focus {
     outline: none;
   }
-  .home-settings {
-    display: grid;
-    gap: 12px;
+  .profile-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
-  .home-settings h2 {
+  .profile-link h2,
+  .profile-link p {
     margin: 0;
   }
-  .calendar-link summary {
-    cursor: pointer;
+  .profile-link p {
+    color: var(--muted);
   }
   .schedule-review {
     margin: 0.75rem 0;
@@ -376,6 +438,14 @@
   }
   .signup-panel {
     padding: 20px;
+  }
+  .future-signups {
+    margin-top: 1rem;
+    padding: 20px;
+  }
+  .load-horizon {
+    display: block;
+    margin: 1rem auto;
   }
   .home-priorities {
     display: grid;

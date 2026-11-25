@@ -5,6 +5,7 @@ import { deadlineUtc, formatDeadline } from '../lib/checkins.js'
 import { viewerZone } from '../lib/display.svelte.js'
 import { setCurrentWeek } from '../lib/model.js'
 import { createSeedState } from '../lib/seed.js'
+import { formatWeekRange } from '../lib/time.js'
 import Availability from './Availability.svelte'
 
 // An online player, not an officer.
@@ -36,7 +37,9 @@ test('a week whose deadline is ahead stays editable', () => {
   app.data = setCurrentWeek(createSeedState(), OPEN_WEEK)
   const { container } = render(Availability)
   expect(screen.queryByText(/closed at the deadline/)).toBeNull()
-  expect(screen.getByText(/Week of Oct 12–18 · applies to/)).toBeTruthy()
+  const scope = container.querySelector('.edit-scope').textContent
+  expect(scope).toContain(formatWeekRange(OPEN_WEEK))
+  expect(scope).toContain('applies to')
   // Players read the deadline in their own timezone by default.
   const due = formatDeadline(deadlineUtc(app.data, OPEN_WEEK), viewerZone)
   expect(screen.getByText(/Answer by/).textContent).toContain(due)

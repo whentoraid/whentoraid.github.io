@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { getCheckin } from './model.js'
-import { announcedRaids, answerRaid, raidAnswer } from './raid-answers.js'
+import { announcedRaidHorizon, announcedRaids, answerRaid, raidAnswer } from './raid-answers.js'
+import { STATUS, weekStatus } from './raid-status.js'
 import { createSeedState } from './seed.js'
 
 const WEEK = '2026-10-05'
@@ -29,6 +30,48 @@ describe('answering one raid', () => {
     expect(announced[0]).toMatchObject({ start, end })
   })
 
+  test('the bounded horizon includes scheduled future dates and published snapshots, never drafts', () => {
+    const state = fixture()
+    const later = '2026-10-12'
+    state.settings.raids[0].series = {
+      startDate: WEEK,
+      endDate: '2026-10-16',
+      day: 5,
+      minutes: 20 * 60,
+      timezone: state.guild.timezone,
+    }
+    state.settings.raids.find((raid) => raid.id === 'raid-10-2').series = {
+      ...state.settings.raids[0].series,
+      day: 4,
+    }
+    state.weeks[later] = {
+      checkins: {},
+      plans: {
+        'raid-20': {
+          start: start + 14 * 86400_000,
+          team: [],
+          published: { start: start + 14 * 86400_000, team: [] },
+        },
+        'raid-10-2': { start: start + 15 * 86400_000, team: [] },
+      },
+    }
+
+    const entries = announcedRaidHorizon(state, WEEK, 3)
+    expect(entries.find((entry) => entry.weekIso === WEEK && entry.raidId === 'raid-20')?.kind).toBe(
+      'published',
+    )
+    expect(entries.find((entry) => entry.weekIso === later && entry.raidId === 'raid-20')?.kind).toBe(
+      'published',
+    )
+    expect(entries.find((entry) => entry.weekIso === later && entry.raidId === 'raid-10-2')?.kind).toBe(
+      'scheduled',
+    )
+    const scheduled = entries.find((entry) => entry.weekIso === WEEK && entry.raidId === 'raid-10-2')
+    expect(scheduled?.kind).toBe('scheduled')
+    expect(scheduled?.start).not.toBe(state.weeks[WEEK].plans['raid-10-2'].start)
+    expect(announcedRaidHorizon(state, WEEK, 1)).toHaveLength(announcedRaids(state, WEEK).length)
+  })
+
   test('"I’m in" marks the raid time and opts in, offering only the chosen character', () => {
     const state = fixture()
     const [raid] = announcedRaids(state, WEEK)
@@ -44,8 +87,10 @@ describe('answering one raid', () => {
     const [raid] = announcedRaids(state, WEEK)
     const tentative = answerRaid(state, WEEK, 'm0', raid, 'tentative')
     expect(raidAnswer(tentative, WEEK, 'm0', raid)).toBe('tentative')
+    expect(weekStatus(tentative, WEEK, 'm0')).toBe(STATUS.tentativeTimes)
     const out = answerRaid(tentative, WEEK, 'm0', raid, 'out')
     expect(raidAnswer(out, WEEK, 'm0', raid)).toBe('out')
+    expect(weekStatus(out, WEEK, 'm0')).toBe(STATUS.tentativeTimes)
     expect(getCheckin(out, WEEK, 'm0').raids['raid-10-2']).toBeUndefined()
   })
 

@@ -13,13 +13,13 @@ test.beforeEach(async ({ page }) => {
 
 test('navigation names the page and moves keyboard focus to its heading', async ({ page }) => {
   await page.goto('./#/planner')
-  await navigate(page, 'My characters')
-  await expect(page).toHaveTitle('My characters · The After Hours · WhenToRaid')
-  await expect(page.getByRole('heading', { name: 'My characters', exact: true })).toBeFocused()
+  await navigate(page, 'Profile')
+  await expect(page).toHaveTitle('Profile · The After Hours · WhenToRaid')
+  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeFocused()
   await navigate(page, 'Guild members')
   await expect(page).toHaveTitle('Guild members · The After Hours · WhenToRaid')
   await page.goBack()
-  await expect(page.getByRole('heading', { name: 'My characters', exact: true })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeFocused()
 })
 
 test('dialogs have a name, contain validation errors, and restore focus on Escape', async ({ page }) => {
@@ -89,7 +89,7 @@ test('a malformed backup cannot replace the current guild', async ({ page }) => 
 
 test('the first installed app shell can reload offline with the saved guild', async ({ page, context }) => {
   await page.goto('./#/characters')
-  await page.getByRole('heading', { name: 'My characters', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Profile', exact: true }).waitFor()
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true))
   await context.setOffline(true)
   await page.reload()

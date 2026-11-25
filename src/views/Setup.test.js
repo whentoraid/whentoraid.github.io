@@ -43,7 +43,7 @@ describe('first-run setup', () => {
     expect(app.data.guild.name).toBe('Night Shift')
     expect(app.data.members.map((m) => m.name)).toEqual(['Sam'])
     expect(app.view).toBe('home')
-    expect(screen.getByRole('heading', { name: 'My raids' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Raids' })).toBeTruthy()
   })
 
   test('problems are shown on the form', async () => {

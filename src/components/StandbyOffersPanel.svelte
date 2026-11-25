@@ -95,7 +95,7 @@
           characterId: choice.character.id,
           expiresAt: offerDeadline(Date.now(), hours, published.start),
         }),
-      `Place offered to ${choice.member.name}. They’ll see it on My raids.`,
+      `Place offered to ${choice.member.name}. They’ll see it in Raids.`,
     )
     if (done) candidate = ''
   }
@@ -121,7 +121,7 @@
         {/each}
       </ul>
     {:else}
-      <p class="note">No one is on standby yet. Players without a place can join from My raids.</p>
+      <p class="note">No one is on standby yet. Players without a place can join from Raids.</p>
     {/if}
 
     <form class="offer-form" onsubmit={offer} aria-label="Offer a place">

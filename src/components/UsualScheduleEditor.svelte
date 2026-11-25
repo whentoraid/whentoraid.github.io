@@ -2,6 +2,7 @@
   import { untrack } from 'svelte'
   import Modal from './Modal.svelte'
   import AvailabilityRanges from './AvailabilityRanges.svelte'
+  import AvailabilityGrid from './AvailabilityGrid.svelte'
   import { app } from '../lib/app.svelte.js'
   import { templateRanges } from '../lib/availability-template.js'
   import { checkinsClosed, changesClosedWeek } from '../lib/checkins.js'
@@ -11,7 +12,7 @@
   import { addDays, formatWeekRange, mondayOf, todayIso } from '../lib/time.js'
   import { offerUndo } from '../lib/toast.svelte.js'
 
-  let { open, onclose, memberId } = $props()
+  let { open, onclose, memberId, editor = 'ranges', oneditorchange = () => {} } = $props()
   let week = $state('')
   let ranges = $state([])
   let error = $state('')
@@ -53,10 +54,34 @@
 <Modal {open} {onclose} label="Change my usual schedule">
   <h2>Change my usual schedule</h2>
   <p>Repeats from {week ? formatWeekRange(week) : ''}. Weeks you already answered keep their own times.</p>
-  {#if open && week}<AvailabilityRanges weekIso={week} grid={app.data.guild} {ranges} onpaint={paint} />{/if}
+  <div class="editor-toolbar">
+    <div class="buttons editor-choice segmented" role="group" aria-label="Usual schedule editor">
+      <button aria-pressed={editor === 'ranges'} onclick={() => oneditorchange('ranges')}>Enter times</button>
+      <button aria-pressed={editor === 'grid'} onclick={() => oneditorchange('grid')}>Paint grid</button>
+    </div>
+    <p class="note">
+      Paint or enter your usual available times. This draft is saved only when you choose Save.
+    </p>
+  </div>
+  {#if open && week}
+    {#if editor === 'grid'}
+      <AvailabilityGrid weekIso={week} grid={app.data.guild} {ranges} onpaint={paint} />
+    {:else}
+      <AvailabilityRanges weekIso={week} grid={app.data.guild} {ranges} onpaint={paint} />
+    {/if}
+  {/if}
   {#if error}<p role="alert" class="warning">{error}</p>{/if}
   <div class="buttons spaced-top">
     <button class="primary" onclick={save}>Save usual schedule</button>
     <button onclick={onclose}>Cancel</button>
   </div>
 </Modal>
+
+<style>
+  .editor-toolbar {
+    margin: 12px 0;
+  }
+  .editor-toolbar p {
+    margin: 8px 0 0;
+  }
+</style>

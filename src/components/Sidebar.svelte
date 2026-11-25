@@ -11,9 +11,9 @@
   let { onfeedback = () => {} } = $props()
 
   const NAV_ITEMS = [
-    { view: 'home', icon: 'home', label: 'My raids' },
-    { view: 'availability', icon: 'calendar', label: 'My availability' },
-    { view: 'characters', icon: 'character', label: 'My characters' },
+    { view: 'home', icon: 'home', label: 'Raids' },
+    { view: 'availability', icon: 'calendar', label: 'Schedule' },
+    { view: 'profile', icon: 'character', label: 'Profile' },
     { view: 'officer', icon: 'dashboard', label: 'Officer dashboard' },
     { view: 'planner', icon: 'planner', label: 'Raid planner' },
     { view: 'members', icon: 'members', label: 'Guild members' },
@@ -66,7 +66,7 @@
     <span class="guild-icon">✦</span>
     <div>{app.data.guild.name}<small>WoW: Forever · {app.data.members.length} players</small></div>
   </div>
-  <nav class="personal-nav" aria-label="Your raid week">
+  <nav class="personal-nav" aria-label="Member navigation">
     <p class="nav-label">YOUR RAID WEEK</p>
     {#each NAV_ITEMS.slice(0, 3) as item (item.view)}
       <button

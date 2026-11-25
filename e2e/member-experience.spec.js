@@ -29,16 +29,12 @@ test('an unassigned member can answer Late with a raid spec after the weekly dea
   await quick.locator('summary').filter({ hasText: 'Change character or spec' }).click()
   await quick.getByLabel('Spec for this raid').selectOption('Arms|DPS')
   await quick.getByRole('button', { name: 'Late', exact: true }).click()
-  await expect(quick.getByRole('button', { name: 'Late', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
+  await expect(quick.getByRole('button', { name: 'Change answer', exact: true })).toBeVisible()
+  await expect(quick.getByRole('status').filter({ hasText: /arriving late/ })).toBeVisible()
   await page.reload()
-  await expect(quick.getByRole('button', { name: 'Late', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
-  await expect(quick.getByLabel('Spec for this raid')).toHaveValue('Arms|DPS')
+  await expect(quick.getByRole('button', { name: 'Change answer', exact: true })).toBeVisible()
+  await expect(quick.getByRole('status').filter({ hasText: /arriving late/ })).toBeVisible()
+  await expect(quick.getByText(/Signed up as Stoneguard/)).toBeVisible()
   const data = await page.evaluate(() => JSON.parse(localStorage.getItem('whentoraid-v3')))
   expect(data.characters.find((character) => character.id === 'c0a').spec).toBe('Protection')
 })
@@ -52,7 +48,7 @@ test('timezone choice controls day dates and the Home raid label, and feedback i
   await times.click()
   await page.getByRole('checkbox', { name: /Use my timezone/ }).uncheck()
   await expect(times).toHaveText('Times in America/Los Angeles')
-  await navigate(page, 'My raids')
+  await navigate(page, 'Raids')
   const quick = page.getByRole('region', { name: 'Answer this week’s raids' })
   await expect(quick.locator('.raid-time')).toContainText('PDT')
   const feedback = page.getByRole('button', { name: 'Something confusing? Send feedback' })

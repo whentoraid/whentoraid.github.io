@@ -7,6 +7,8 @@
   import { hasGivenAvailability } from '../lib/personal-raids.js'
   import { showToast } from '../lib/toast.svelte.js'
 
+  let { embedded = false } = $props()
+
   function makeMain(character) {
     app.data = setMainCharacter(app.data, app.data.currentMemberId, character.id)
     showToast(`${character.name} is now your main.`)
@@ -24,15 +26,25 @@
   )
 </script>
 
-<PageTitle
-  eyebrow="YOUR ADVENTURERS"
-  title="My characters"
-  subtitle="Manage your main and alts. Choose who to bring on My availability."
->
-  {#snippet action()}
+{#if embedded}
+  <div class="embedded-heading">
+    <div>
+      <h2>Your characters</h2>
+      <p>Choose who to bring on Schedule.</p>
+    </div>
     <button class="primary" onclick={() => (editing = { characterId: null })}>+ Add character</button>
-  {/snippet}
-</PageTitle>
+  </div>
+{:else}
+  <PageTitle
+    eyebrow="YOUR ADVENTURERS"
+    title="My characters"
+    subtitle="Manage your main and alts. Choose who to bring on Schedule."
+  >
+    {#snippet action()}
+      <button class="primary" onclick={() => (editing = { characterId: null })}>+ Add character</button>
+    {/snippet}
+  </PageTitle>
+{/if}
 
 {#if !myCharacters.length}
   <section class="panel" aria-label="Your first character">
@@ -72,3 +84,17 @@
 </div>
 
 <CharacterDialog open={editing !== null} character={editingCharacter} onclose={() => (editing = null)} />
+
+<style>
+  .embedded-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .embedded-heading h2,
+  .embedded-heading p {
+    margin: 0;
+  }
+</style>

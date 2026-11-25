@@ -20,6 +20,11 @@ describe('parseHash', () => {
     expect(parseHash('#/settings')).toEqual({ view: 'settings', week: null })
   })
 
+  test('keeps the old characters link working through Profile', () => {
+    expect(parseHash('#/characters')).toEqual({ view: 'profile', week: null })
+    expect(parseHash('#/characters/2026-10-08')).toEqual({ view: 'profile', week: '2026-10-05' })
+  })
+
   test('round-trips with formatHash', () => {
     expect(parseHash(formatHash('availability', '2026-10-05'))).toEqual({
       view: 'availability',
