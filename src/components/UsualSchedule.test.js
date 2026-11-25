@@ -33,7 +33,9 @@ test('taking a break warns about a published place, then counts the paused weeks
   open()
   const pause = screen.getByRole('region', { name: 'Take a break' })
   expect(within(pause).getByText(/You’re on the roster for 20-player Raid \(Sep 28\)/)).toBeTruthy()
-  await fireEvent.change(within(pause).getByLabelText('Resume'), { target: { value: addDays(NEXT, 7) } })
+  await fireEvent.change(within(pause).getByLabelText('Resume on (optional)'), {
+    target: { value: addDays(NEXT, 7) },
+  })
   expect(within(pause).getByText(/2 weeks \(Sep 28 – Oct 11\) count as away/)).toBeTruthy()
   await fireEvent.click(within(pause).getByRole('button', { name: 'Take a break' }))
   expect(getCheckin(app.data, NEXT, 'm0')).toMatchObject({ checkedIn: true, ranges: [], paused: true })

@@ -24,7 +24,6 @@
   } = $props()
   const ANSWERS = [
     { id: 'in', status: 'signed', label: 'I’m in', saved: 'Signed up · awaiting roster' },
-    { id: 'late', status: 'late', label: 'Late', saved: 'Signed up · arriving late' },
     { id: 'tentative', status: 'tentative', label: 'Tentative', saved: 'Tentative' },
     { id: 'out', status: 'absent', label: 'Can’t make it', saved: 'Not attending' },
   ]
@@ -47,6 +46,7 @@
   let pending = $state({})
   let failures = $state({})
   let saved = $state({})
+  let arrival = $state({})
   let refresh = $state(0)
   let readVersion = 0
 
@@ -139,19 +139,17 @@
   async function send(item, choice, retry = null) {
     const key = keyFor(item.raid.id)
     if (pending[key] || item.start <= now) return
+    const responseStatus =
+      choice.id === 'in' &&
+      (arrival[key] ?? (current(item)?.status === 'late' ? 'late' : 'on-time')) === 'late'
+        ? 'late'
+        : choice.status
     const character = characterFor(item)
     const [spec, role] = specFor(item).split('|')
     if (choice.id !== 'out' && !character) return showToast('Add a character before signing up.')
     if (!online) {
       const previous = app.data
-      let next = answerRaid(
-        app.data,
-        weekIso,
-        memberId,
-        item,
-        choice.id === 'late' ? 'in' : choice.id,
-        character?.id,
-      )
+      let next = answerRaid(app.data, weekIso, memberId, item, choice.id, character?.id)
       const checkin = getCheckin(next, weekIso, memberId)
       next = restoreCheckin(next, weekIso, memberId, {
         ...checkin,
@@ -159,7 +157,7 @@
           ...checkin.raids,
           [item.raid.id]: {
             ...checkin.raids[item.raid.id],
-            signupStatus: choice.status,
+            signupStatus: responseStatus,
             ...(character && choice.id !== 'out'
               ? { signedAs: { characterId: character.id, spec, role } }
               : {}),
@@ -167,7 +165,10 @@
         },
       })
       app.data = next
-      offerUndo(`${choice.saved} for ${item.raid.name}.`, previous)
+      offerUndo(
+        `${responseStatus === 'late' ? 'Signed up · arriving late' : choice.saved} for ${item.raid.name}.`,
+        previous,
+      )
       onanswered()
       return
     }
@@ -177,7 +178,7 @@
       weekIso,
       memberId,
       raidId: item.raid.id,
-      status: choice.status,
+      status: responseStatus,
       characterId: choice.id === 'out' ? null : character?.id,
       spec: choice.id === 'out' ? null : spec,
       role: choice.id === 'out' ? null : role,
@@ -226,14 +227,18 @@
     {#each raids as item (item.raid.id)}
       {@const key = keyFor(item.raid.id)}
       {@const row = current(item)}
-      {@const selected = ANSWERS.find((choice) => choice.status === row?.status)}
+      {@const selected = ANSWERS.find(
+        (choice) => choice.status === row?.status || (choice.id === 'in' && row?.status === 'late'),
+      )}
       {@const character = characterFor(item)}
       {@const roster = published.find((entry) => entry.raidId === item.raid.id)}
       <article class="quick-raid">
         <h3>{item.raid.name}</h3>
         <p class="raid-time" title={exactSessionLabel(item, zone)}>{compactSessionLabel(item, zone)}</p>
         <p class="answer-state" role="status">
-          {#if selected}<Icon name="check" size={16} /> Your answer: {selected.saved}
+          {#if selected}<Icon name="check" size={16} /> Your answer: {row.status === 'late'
+              ? 'Signed up · arriving late'
+              : selected.saved}
           {:else if online && loaded.scope !== scope}Checking your answer…
           {:else if online && loaded.error}Answer unavailable
           {:else}Choose your answer{/if}
@@ -247,8 +252,7 @@
         {#if characters.length && (!row || editing[key])}
           <details class="signup-options">
             <summary
-              >Change character or spec <span
-                >· {character?.name} · {specFor(item).split('|').join(' · ')}</span
+              >More signup options <span>· {character?.name} · {specFor(item).split('|').join(' · ')}</span
               ></summary
             >
             <div class="signup-choices">
@@ -273,6 +277,16 @@
                     >{/each}
                 </select></label
               >
+              <label class="field"
+                >Arrival<select
+                  value={arrival[key] ?? (row?.status === 'late' ? 'late' : 'on-time')}
+                  disabled={pending[key]}
+                  onchange={(event) => (arrival = { ...arrival, [key]: event.currentTarget.value })}
+                >
+                  <option value="on-time">On time</option>
+                  <option value="late">Arriving late</option>
+                </select></label
+              >
             </div>
             <p class="note">
               Changes apply when you choose an answer{selected && selected.id !== 'out'
@@ -292,7 +306,7 @@
           {:else}
             {#each ANSWERS as choice (choice.id)}
               <button
-                aria-pressed={row?.status === choice.status}
+                aria-pressed={row?.status === choice.status || (choice.id === 'in' && row?.status === 'late')}
                 disabled={pending[key] ||
                   (online && loaded.scope !== scope) ||
                   (choice.id !== 'out' && !characters.length)}

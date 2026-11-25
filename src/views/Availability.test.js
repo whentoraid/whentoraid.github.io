@@ -60,9 +60,7 @@ describe('Availability view', () => {
   test('away dates explain they affect chosen dates while usual schedule repeats across weeks', () => {
     render(Availability)
     expect(screen.getByText('Only skips the dates you choose; your other weeks stay unchanged.')).toBeTruthy()
-    expect(
-      screen.getByText('Repeats across weeks. Pause it to mark whole weeks away until you resume.'),
-    ).toBeTruthy()
+    expect(screen.getByText('Repeats weekly. Pause it to skip whole weeks until you resume.')).toBeTruthy()
   })
 
   test('resetting a one-week exception to usual times asks first and preserves raid choices', async () => {

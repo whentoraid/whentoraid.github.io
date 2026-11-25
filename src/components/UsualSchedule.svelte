@@ -136,7 +136,7 @@
       ><Icon name="repeat" size={17} /> Usual schedule{pause && pause.from <= thisWeek
         ? ' · paused'
         : ''}</span
-    ><small>Repeats across weeks. Pause it to mark whole weeks away until you resume.</small></summary
+    ><small>Repeats weekly. Pause it to skip whole weeks until you resume.</small></summary
   >
   <div class="buttons">
     <button onclick={() => changeTemplate('save')}>Save as usual schedule</button>
@@ -187,7 +187,7 @@
       {:else}
         <form class="pause-form" onsubmit={takeBreak}>
           <label class="field"
-            >Pause from
+            >Pause starting
             <select bind:value={pauseFrom}>
               {#each weeks as week (week)}<option value={week === firstWeek ? '' : week}
                   >Week of {formatMonthDay(week)}</option
@@ -195,9 +195,9 @@
             </select></label
           >
           <label class="field"
-            >Resume
+            >Resume on (optional)
             <select bind:value={pauseUntil}>
-              <option value="">When I resume it</option>
+              <option value="">No date · until I resume it</option>
               {#each weeks.filter((week) => week > from) as week (week)}<option value={week}
                   >Week of {formatMonthDay(week)}</option
                 >{/each}
@@ -205,7 +205,10 @@
           >
           <button>Take a break</button>
         </form>
-        <p class="note">{pausePreview} Your times stay saved and you won’t be reminded.</p>
+        <p class="note">
+          {pausePreview} Your times stay saved and you won’t be reminded. This affects the usual schedule only;
+          it does not change a published roster.
+        </p>
         {#if rosteredDuring.length}
           <p class="warning">
             You’re on the roster for {rosteredDuring
@@ -230,7 +233,8 @@
         </select></label
       >
       <p class="note">
-        After its last week you’ll be asked for your times again; nothing is marked unavailable.
+        After this week, you’ll be asked for your times again. Later weeks are left unanswered, not marked
+        away.
       </p>
     </section>
   {/if}

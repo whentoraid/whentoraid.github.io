@@ -32,7 +32,7 @@ const group = () => screen.getByRole('group', { name: /Your answer for/ })
 const button = (name) => within(group()).getByRole('button', { name })
 async function open() {
   const component = render(RaidQuickAnswer, { memberId: 'm0', weekIso: SEED_WEEK, now: NOW })
-  await vi.waitFor(() => expect(button('Late').disabled).toBe(false))
+  await vi.waitFor(() => expect(button('I’m in').disabled).toBe(false))
   return component
 }
 beforeEach(() => {
@@ -57,8 +57,10 @@ beforeEach(() => {
 test('one atomic save carries Late and a per-raid spec without optimistic checkin mutation', async () => {
   await open()
   const before = app.data
+  await fireEvent.click(screen.getByText(/More signup options/))
+  await fireEvent.change(screen.getByLabelText('Arrival'), { target: { value: 'late' } })
   await fireEvent.change(screen.getByLabelText('Spec for this raid'), { target: { value: 'Arms|DPS' } })
-  await fireEvent.click(button('Late'))
+  await fireEvent.click(button('I’m in'))
   await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy())
   expect(services.saveRaidAnswer).toHaveBeenCalledWith(
     {},
@@ -82,6 +84,11 @@ test('one atomic save carries Late and a per-raid spec without optimistic checki
   expect(screen.queryByRole('button', { name: 'Can’t make it' })).toBeNull()
   await fireEvent.click(screen.getByRole('button', { name: 'Change answer' }))
   expect(screen.getByRole('button', { name: 'Can’t make it' })).toBeTruthy()
+  expect(screen.getByLabelText('Arrival').value).toBe('late')
+  await fireEvent.change(screen.getByLabelText('Arrival'), { target: { value: 'on-time' } })
+  await fireEvent.click(button('I’m in'))
+  await vi.waitFor(() => expect(services.saveRaidAnswer).toHaveBeenCalledTimes(2))
+  expect(services.saveRaidAnswer.mock.calls[1][2].status).toBe('signed')
 })
 
 test('answers saved through Discord display their canonical state and spec', async () => {
@@ -135,7 +142,9 @@ test('an old background read cannot replace a just-saved answer', async () => {
     weeks: { ...app.data.weeks, [SEED_WEEK]: { ...app.data.weeks[SEED_WEEK], checkins: {} } },
   }
   await vi.waitFor(() => expect(finishRead).toBeTypeOf('function'))
-  await fireEvent.click(button('Late'))
+  await fireEvent.click(screen.getByText(/More signup options/))
+  await fireEvent.change(screen.getByLabelText('Arrival'), { target: { value: 'late' } })
+  await fireEvent.click(button('I’m in'))
   await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Change answer' })).toBeTruthy())
   finishRead([row('absent')])
   await Promise.resolve()
